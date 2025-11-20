@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Eazy Store',
-      theme: ThemeData(primarySwatch: Colors.deepOrange), // เปลี่ยนสี Theme เล็กน้อย
+      theme: ThemeData(fontFamily: 'AbhayaLibre'), // เปลี่ยนสี Theme เล็กน้อย
       home: const AddProductScreen(), // เริ่มที่หน้า Login โดยตรง
     );
   }

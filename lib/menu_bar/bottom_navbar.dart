@@ -28,36 +28,70 @@ class BottomNavBar extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: _kActiveColor,
         unselectedItemColor: _kInactiveColor,
-        selectedLabelStyle: const TextStyle(fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        selectedLabelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold, 
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold, 
+        ),
         showUnselectedLabels: true,
         currentIndex: currentIndex,
         onTap: onTap,
         items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
+          // 1. หน้าหลัก (icon_home.png)
+          BottomNavigationBarItem(
+            icon: Image.asset(
+              'assets/image/icon_home.png',
+              height: 24,
+              width: 24,
+              color: currentIndex == 0 ? _kActiveColor : _kInactiveColor,
+            ),
             label: 'หน้าหลัก',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.description_outlined),
+
+          // 2. บัญชี (icon_check_book.png) - สันนิษฐานว่าใช้แทน Icons.description_outlined
+          BottomNavigationBarItem(
+            icon: Image.asset(
+              'assets/image/icon_check_book.png',
+              height: 24,
+              width: 24,
+              color: currentIndex == 1 ? _kActiveColor : _kInactiveColor,
+            ),
             label: 'บัญชี',
           ),
+
+          // 3. สแกนชำระ (icon_barcode.png) - ใช้แทน 'assets/qr_scanner_icon.png' เดิม
           BottomNavigationBarItem(
-            // ใช้ Image.asset ในกรณีที่ต้องการ icon พิเศษ
             icon: Image.asset(
-              'assets/qr_scanner_icon.png', // เปลี่ยนเป็น path ไอคอนที่ถูกต้อง
+              'assets/image/icon_barcode.png',
               height: 24,
               width: 24,
               color: currentIndex == 2 ? _kActiveColor : _kInactiveColor,
             ),
             label: 'สแกนชำระ',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_outlined),
+
+          // 4. คนค้างชำระ (icon_debt.png) - สันนิษฐานว่าใช้แทน Icons.people_alt_outlined
+          BottomNavigationBarItem(
+            icon: Image.asset(
+              'assets/image/icon_debt.png',
+              height: 24,
+              width: 24,
+              color: currentIndex == 3 ? _kActiveColor : _kInactiveColor,
+            ),
             label: 'คนค้างชำระ',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
+
+          // 5. ตั้งค่า (icon_settings.png)
+          BottomNavigationBarItem(
+            icon: Image.asset(
+              'assets/image/icon_settings.png',
+              height: 24,
+              width: 24,
+              color: currentIndex == 4 ? _kActiveColor : _kInactiveColor,
+            ),
             label: 'ตั้งค่า',
           ),
         ],
