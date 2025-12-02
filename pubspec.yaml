@@ -34,12 +34,12 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  get: ^4.7.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   image_picker: ^1.1.2
-  get: ^4.6.5 
   google_fonts: ^6.2.1 
   flutter_lints: ^5.0.0
 
@@ -56,9 +56,3 @@ flutter:
 
   assets:
     - assets/image/
-
-  fonts: # <-- ส่วนนี้สำคัญมาก
-    - family: AbhayaLibre # กำหนดชื่อตระกูลฟอนต์ (Font Family Name)
-      fonts:
-        - asset: assets/fonts/AbhayaLibre-SemiBold.ttf
-          weight: 600 # กำหนดน้ำหนักของฟอนต์ (SemiBold มักเป็น 600)
