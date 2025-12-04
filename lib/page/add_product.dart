@@ -10,6 +10,28 @@ import 'package:google_fonts/google_fonts.dart';
 // กำหนดสีหลักที่ใช้ในแอปพลิเคชัน (อ้างอิงจากรูปภาพ)
 const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร
 const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // 2. เปลี่ยนจุดนี้จาก MaterialApp เป็น GetMaterialApp
+    return GetMaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Eazy Store',
+      theme: ThemeData(
+        fontFamily: 'AbhayaLibre',
+        useMaterial3: true, // แนะนำให้เปิด Material 3 เพื่อ UI ที่ดูทันสมัยขึ้น
+      ),
+      // จุดนี้กำหนดหน้าแรกที่จะให้แอปเปิด
+      home: const AddProductScreen(),
+    );
+  }
+}
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
