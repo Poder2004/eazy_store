@@ -1,4 +1,5 @@
 import 'package:eazy_store/auth/register.dart';
+import 'package:eazy_store/shop/myshop.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -27,7 +28,7 @@ class LoginController extends GetxController {
         colorText: Colors.white,
         snackPosition: SnackPosition.BOTTOM,
       );
-      // ใส่คำสั่งเปลี่ยนหน้าตรงนี้ เช่น Get.offAll(() => HomePage());
+      Get.offAll(() => const MyShopPage());
     });
   }
 

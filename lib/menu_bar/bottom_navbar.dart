@@ -49,6 +49,7 @@ class BottomNavBar extends StatelessWidget {
               color: currentIndex == 0 ? _kActiveColor : _kInactiveColor,
             ),
             label: 'หน้าหลัก',
+            
           ),
 
           // 2. บัญชี (icon_check_book.png) - สันนิษฐานว่าใช้แทน Icons.description_outlined
