@@ -1,27 +1,23 @@
 import 'package:eazy_store/homepage/home_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-// ตรวจสอบ path ของ HomePage ให้ตรงกับโปรเจกต์ของคุณพี่นะครับ
-// ถ้าอยู่ใน folder เดียวกันใช้ import 'home_page.dart'; ได้เลย
+import 'dart:convert';
+// import 'package:eazy_store/homepage/home_page.dart'; // สมมติว่ามีหน้านี้อยู่
 
-// ----------------------------------------------------------------------
-// 1. Controller: จัดการ Logic การสร้างร้านค้า + รูปภาพ
-// ----------------------------------------------------------------------
 class CreateShopController extends GetxController {
+  // Input Controllers
   final shopNameController = TextEditingController();
   final shopPhoneController = TextEditingController();
-  final addressController = TextEditingController();
+  final addressController = TextEditingController(); // บ้านเลขที่/หมู่ที่
 
   // --- Image Picker Logic ---
   final ImagePicker _picker = ImagePicker();
-
-  // ตัวแปรเก็บไฟล์รูปภาพ
   Rx<File?> profileImage = Rx<File?>(null);
   Rx<File?> qrImage = Rx<File?>(null);
 
-  // ฟังก์ชันเลือกรูปภาพ
   Future<void> pickImage(ImageSource source, {required bool isProfile}) async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -37,15 +33,151 @@ class CreateShopController extends GetxController {
         }
       }
     } catch (e) {
-      print("Error picking image: $e");
       Get.snackbar("เกิดข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้");
     }
   }
 
-  // --- Dropdown Logic ---
-  var selectedProvince = "".obs;
-  var selectedDistrict = "".obs;
-  var selectedSubDistrict = "".obs;
+  // -------------------------
+  // --- Address Logic (Reactive) ---
+  // -------------------------
+
+  // สถานะสำหรับ Dropdown (ใช้ .obs เพื่อให้เป็น Reactive)
+  final selectedProvince = Rx<String?>(null);
+  final selectedDistrict = Rx<String?>(null);
+  final selectedSubDistrict = Rx<String?>(null);
+
+  // สถานะสำหรับข้อมูลที่อยู่ทั้งหมดที่โหลดมา
+  // Map<ชื่อจังหวัด, ข้อมูลจังหวัดทั้งหมด (รวมอำเภอ, ตำบล)>
+  Map<String, dynamic>? _fullAddressData;
+
+  // รายการสำหรับ Dropdown (ใช้ .obs เพื่อให้เป็น Reactive)
+  final provinces = <String>[].obs;
+  final districts = <String>[].obs;
+  final subdistricts = <String>[].obs;
+
+  // 📌 2. Logic การโหลดไฟล์ JSON
+  // เมธอดนี้ถูกเรียกใน onInit()
+  Future<void> _loadAddressData() async {
+    try {
+      // ตรวจสอบ Asset Path ให้ตรงกับที่คุณตั้งใน pubspec.yaml
+      const assetPath =
+          'assets/data_address/province_with_district_and_sub_district.json';
+      final String response = await rootBundle.loadString(assetPath);
+
+      final List<dynamic> rawData = jsonDecode(response);
+
+      final Map<String, dynamic> structuredData = {};
+      // จัดโครงสร้างข้อมูล: ใช้ชื่อจังหวัด (name_th) เป็น Key หลัก
+      for (var province in rawData) {
+        String provinceName =
+            province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
+        structuredData[provinceName] = province;
+      }
+      
+      _fullAddressData = structuredData;
+      // อัปเดตรายการจังหวัด (Trigger UI update ผ่าน .obs)
+      provinces.value = _fullAddressData!.keys.toList();
+
+      Get.log("✅ Load Address Data Successful. Found ${provinces.length} provinces.");
+
+    } catch (e) {
+      // แจ้งเตือนข้อผิดพลาด: มักเกิดจากไม่ได้ตั้งค่า pubspec.yaml หรือชื่อไฟล์ผิด
+      Get.snackbar(
+          "ข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลที่อยู่ได้: $e",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8), colorText: Colors.white
+      );
+      Get.log("🚨 Error loading address data. Did you forget to add the file to assets in pubspec.yaml? Error: $e");
+    }
+  }
+
+  // 📌 ใช้ onInit แทน initState สำหรับ GetxController
+  @override
+  void onInit() {
+    super.onInit();
+    _loadAddressData();
+  }
+
+  // 📌 3. Logic การจัดการการเปลี่ยนแปลง (Cascading Logic) - public methods
+  
+  void _resetDistrictAndSubdistrict() {
+    selectedDistrict.value = null;
+    selectedSubDistrict.value = null;
+    districts.clear();
+    subdistricts.clear();
+  }
+
+  void _resetSubdistrict() {
+    selectedSubDistrict.value = null;
+    subdistricts.clear();
+  }
+
+  void onProvinceChanged(String? newValue) {
+    if (newValue == null || _fullAddressData == null) {
+      _resetDistrictAndSubdistrict();
+      return;
+    }
+
+    selectedProvince.value = newValue; // ตั้งค่าจังหวัดที่เลือก
+    _resetDistrictAndSubdistrict(); // รีเซ็ตอำเภอ/ตำบลก่อน
+
+    // กรองและดึงรายการอำเภอจากจังหวัดที่เลือก
+    final provinceData = _fullAddressData![newValue];
+    final List<dynamic>? rawDistricts =
+        provinceData?['districts'] as List<dynamic>?;
+
+    if (rawDistricts != null) {
+      districts.value = rawDistricts
+          .map((district) => district['name_th'] as String? ?? 'ไม่ระบุอำเภอ')
+          .whereType<String>() // กรองเอาแต่ String
+          .toList();
+    }
+  }
+
+  void onDistrictChanged(String? newValue) {
+    if (newValue == null ||
+        selectedProvince.value == null ||
+        _fullAddressData == null) {
+      _resetSubdistrict();
+      return;
+    }
+
+    selectedDistrict.value = newValue; // ตั้งค่าอำเภอที่เลือก
+    _resetSubdistrict(); // รีเซ็ตตำบลก่อน
+
+    final provinceData = _fullAddressData![selectedProvince.value!];
+    final List<dynamic>? rawDistricts =
+        provinceData?['districts'] as List<dynamic>?;
+
+    if (rawDistricts != null) {
+      // ค้นหาอำเภอที่ตรงกับที่เลือก
+      final selectedDistrictData = rawDistricts.firstWhere(
+        (d) => d['name_th'] == newValue,
+        orElse: () => null,
+      );
+
+      if (selectedDistrictData != null) {
+        // ดึงรายการตำบลจากอำเภอนั้น
+        final List<dynamic>? rawSubdistricts =
+            selectedDistrictData['sub_districts'] as List<dynamic>?;
+
+        if (rawSubdistricts != null) {
+          subdistricts.value = rawSubdistricts
+              .map((sub) => sub['name_th'] as String? ?? 'ไม่ระบุตำบล')
+              .whereType<String>() // กรองเอาแต่ String
+              .toList();
+        }
+      }
+    }
+  }
+  
+  // 📌 เมธอดสำหรับเปลี่ยนตำบล
+  void onSubDistrictChanged(String? newValue) {
+    selectedSubDistrict.value = newValue;
+  }
+  // -------------------------
+  // --- End Address Logic ---
+  // -------------------------
 
   void submitShopInfo() {
     Get.dialog(
@@ -85,6 +217,13 @@ class CreateShopController extends GetxController {
                   color: Color(0xFF8BC34A),
                 ),
               ),
+              // แสดงข้อมูลที่ผู้ใช้กรอกเพื่อยืนยัน (ตัวอย่าง)
+              const SizedBox(height: 10),
+              Obx(() => Text( // ใช้ Obx ครอบเพื่อให้สามารถอ่านค่า Reactive ได้
+                'ที่อยู่: ${addressController.text}, ${selectedSubDistrict.value ?? ''}, ${selectedDistrict.value ?? ''}, ${selectedProvince.value ?? ''}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              )),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
@@ -120,9 +259,7 @@ class CreateShopController extends GetxController {
   }
 }
 
-// ----------------------------------------------------------------------
-// 2. The View: หน้าจอ UI
-// ----------------------------------------------------------------------
+
 class CreateShopPage extends StatelessWidget {
   const CreateShopPage({super.key});
 
@@ -243,6 +380,10 @@ class CreateShopPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ใช้ Get.put เพื่อสร้าง Controller และทำให้เข้าถึงได้
+    // (ใช้ Get.find() ใน BuildContext หรือ Get.put() ก่อนหน้านี้)
+    // การเรียก Get.put ใน Build method อาจทำให้เกิดการสร้างใหม่
+    // แต่เพื่อความง่ายในตัวอย่างนี้ เราจะคงไว้ตามโค้ดเดิม
     final CreateShopController controller = Get.put(CreateShopController());
     final Color primaryGreen = const Color(0xFF00C853);
 
@@ -325,20 +466,55 @@ class CreateShopPage extends StatelessWidget {
                 inputType: TextInputType.phone,
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
+              
+              // ----------------------------------------------------
+              // ➡️ 4. ส่วน Dropdown ที่อยู่ (ใหม่)
+              // ----------------------------------------------------
               const Text(
                 "ที่อยู่ร้าน",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF333333)),
               ),
-              _buildDropdown(hint: "จังหวัด"),
-              _buildDropdown(hint: "อำเภอ"),
-              _buildDropdown(hint: "ตำบล"),
+              
+              // Dropdown จังหวัด
+              Obx(() => _buildAddressDropdown<String>(
+                hint: 'จังหวัด',
+                selectedValue: controller.selectedProvince.value,
+                items: controller.provinces.toList(), // แปลง RxList เป็น List
+                onChanged: controller.onProvinceChanged,
+                disabled: controller.provinces.isEmpty,
+              )),
+
+              // Dropdown อำเภอ
+              Obx(() => _buildAddressDropdown<String>(
+                hint: 'อำเภอ',
+                selectedValue: controller.selectedDistrict.value,
+                items: controller.districts.toList(), // แปลง RxList เป็น List
+                onChanged: controller.onDistrictChanged,
+                // Disabled ถ้ายังไม่เลือกจังหวัด หรือไม่มีรายการอำเภอ
+                disabled: controller.selectedProvince.value == null || controller.districts.isEmpty,
+              )),
+
+              // Dropdown ตำบล
+              Obx(() => _buildAddressDropdown<String>(
+                hint: 'ตำบล',
+                selectedValue: controller.selectedSubDistrict.value,
+                items: controller.subdistricts.toList(), // แปลง RxList เป็น List
+                onChanged: controller.onSubDistrictChanged,
+                // Disabled ถ้ายังไม่เลือกอำเภอ หรือไม่มีรายการตำบล
+                disabled: controller.selectedDistrict.value == null || controller.subdistricts.isEmpty,
+              )),
+
+              // บ้านเลขที่
               _buildLineInput(
                 label: "",
                 hint: "บ้านเลขที่ หมู่ที่",
                 controller: controller.addressController,
                 noLabel: true,
               ),
+              // ----------------------------------------------------
+              // ⬅️ สิ้นสุดส่วน Dropdown ที่อยู่
+              // ----------------------------------------------------
 
               const SizedBox(height: 20),
 
@@ -359,12 +535,12 @@ class CreateShopPage extends StatelessWidget {
                   width: 150,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(5),
+                    color: primaryGreen.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Center(
                     child: Text(
-                      "อัพโหลดภาพ",
+                      "อัพโหลดภาพ QR",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -418,6 +594,7 @@ class CreateShopPage extends StatelessWidget {
 
               const SizedBox(height: 40),
 
+              // ปุ่มดำเนินการต่อ
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -471,7 +648,7 @@ class CreateShopPage extends StatelessWidget {
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400]),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.green.withOpacity(0.3)),
+              borderSide: BorderSide(color: const Color(0xFF00C853).withOpacity(0.3)),
             ),
             focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Color(0xFF00C853)),
@@ -482,31 +659,48 @@ class CreateShopPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdown({required String hint}) {
-    return Column(
-      children: [
-        const SizedBox(height: 10),
-        TextField(
-          readOnly: true,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[400]),
-            suffixIcon: const Icon(
-              Icons.keyboard_arrow_down,
-              color: Colors.grey,
-            ),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.green.withOpacity(0.3)),
-            ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF00C853)),
-            ),
+  // Helper Widget สำหรับ Dropdown ที่อยู่
+  Widget _buildAddressDropdown<T>({
+    required String hint,
+    required T? selectedValue,
+    required List<T> items, // เปลี่ยนเป็น List<T> ธรรมดา
+    required void Function(T?) onChanged,
+    required bool disabled,
+  }) {
+    final Color primaryGreen = const Color(0xFF00C853);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: DropdownButtonFormField<T>(
+        value: selectedValue,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.grey[400]),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: primaryGreen.withOpacity(0.3)),
           ),
-          onTap: () {
-            print("เลือก $hint");
-          },
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: primaryGreen),
+          ),
+          disabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
         ),
-      ],
+        isExpanded: true,
+        icon: Icon(Icons.keyboard_arrow_down, color: disabled ? Colors.grey[300] : primaryGreen),
+        style: TextStyle(color: disabled ? Colors.grey : Colors.black, fontSize: 16),
+        dropdownColor: Colors.white,
+        // ถ้า disabled ให้เป็น null เพื่อไม่ให้เลือกได้
+        onChanged: disabled ? null : onChanged, 
+        items: items.isEmpty
+            ? null // ถ้าไม่มีรายการ ให้ items เป็น null เพื่อไม่ให้เกิด error
+            : items.map((T value) {
+                return DropdownMenuItem<T>(
+                  value: value,
+                  child: Text(value.toString()),
+                );
+              }).toList(),
+      ),
     );
   }
 }
