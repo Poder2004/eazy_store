@@ -12,25 +12,7 @@ const Color _kIncomeColor = Color(0xFF333333); // สีเข้มสำหร
 
 // ----------------------------
 
-void main() {
-  runApp(const MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store Account',
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
-      home: const AccountScreen(),
-    );
-  }
-}
 
 // --- DATA MODEL (Mock Data) ---
 class AccountSummary {
@@ -56,14 +38,14 @@ final Map<String, AccountSummary> _kMockData = {
 
 // ----------------------------
 
-class AccountScreen extends StatefulWidget {
-  const AccountScreen({super.key});
+class SalesAccountScreen extends StatefulWidget {
+  const SalesAccountScreen({super.key});
 
   @override
-  State<AccountScreen> createState() => _AccountScreenState();
+  State<SalesAccountScreen> createState() => _SalesAccountScreenState();
 }
 
-class _AccountScreenState extends State<AccountScreen> {
+class _SalesAccountScreenState extends State<SalesAccountScreen> {
   String _selectedView = 'วัน'; // สถานะปัจจุบัน: 'วัน', 'เดือน', 'ปี'
   int _selectedIndex = 1; // Index 1 คือ "บัญชี" ใน BottomNavBar
 

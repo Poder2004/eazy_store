@@ -11,35 +11,18 @@ const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหล�
 const Color _kFieldFillColor = Color(0xFFFAFFEF); // สีอ่อนสำหรับช่องกรอกข้อมูล
 const Color _kBorderColor = Color(0xFFE0E0E0); // สีขอบอ่อน
 
-void main() {
-  runApp(const MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store Order List',
-      theme: ThemeData(useMaterial3: true),
-      // ต้องให้ Home เป็น DebtorRegistrationScreen ที่ถูกแปลงเป็น Stateful
-      home: const DebtorRegistrationScreen(),
-    );
-  }
-}
 
 // 📌 1. เปลี่ยนเป็น StatefulWidget เพื่อจัดการสถานะการโหลดข้อมูลและ Dropdown
-class DebtorRegistrationScreen extends StatefulWidget {
-  const DebtorRegistrationScreen({super.key});
+class DebtRegisterScreen extends StatefulWidget {
+  const DebtRegisterScreen({super.key});
 
   @override
-  State<DebtorRegistrationScreen> createState() =>
-      _DebtorRegistrationScreenState();
+  State<DebtRegisterScreen> createState() =>
+      _DebtRegisterScreenState();
 }
 
-class _DebtorRegistrationScreenState extends State<DebtorRegistrationScreen> {
+class _DebtRegisterScreenState extends State<DebtRegisterScreen> {
   // สถานะสำหรับ Dropdown
   String? _selectedProvince;
   String? _selectedDistrict;

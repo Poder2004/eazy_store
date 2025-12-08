@@ -7,29 +7,6 @@ const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะ�
 const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
 const Color _kInputFillColor = Color(0xFFF0F0E0); // สีพื้นหลังของ Input/Card และ Barcode Input
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // 2. เปลี่ยนจุดนี้จาก MaterialApp เป็น GetMaterialApp
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store',
-      theme: ThemeData(
-        // fontFamily: 'AbhayaLibre', // หากไม่มี font นี้ ต้องเอาออก
-        useMaterial3: true,
-      ),
-      // จุดนี้กำหนดหน้าแรกที่จะให้แอปเปิด
-      home: const AddStockScreen(),
-    );
-  }
-}
-
 class AddStockScreen extends StatefulWidget {
   const AddStockScreen({super.key});
 

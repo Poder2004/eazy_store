@@ -1,9 +1,14 @@
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/page/order_list.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/get_navigation.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 
 // --- THEME & CONSTANTS ---
-const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร (สำหรับปุ่มหลัก)
+const Color _kPrimaryColor = Color(
+  0xFF6B8E23,
+); // สีเขียวมะกอก/ทหาร (สำหรับปุ่มหลัก)
 const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
 const Color _kCardColor = Colors.white; // สีพื้นหลังของการ์ดสินค้า
 const Color _kInputFillColor = Color(0xFFF0F0E0); // สีพื้นหลังของ Input Field
@@ -17,13 +22,13 @@ class Product {
   final String unit;
   final String imageUrl;
   final bool isSelected; // สถานะการสั่งซื้อ/เติมสต็อก
-  
+
   Product({
-    required this.id, 
-    required this.name, 
-    required this.remaining, 
-    required this.unit, 
-    required this.imageUrl, 
+    required this.id,
+    required this.name,
+    required this.remaining,
+    required this.unit,
+    required this.imageUrl,
     this.isSelected = false,
   });
 
@@ -77,36 +82,16 @@ final List<Product> _kMockProducts = [
 
 // ----------------------------
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BuyProductsScreen extends StatefulWidget {
+  const BuyProductsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store Purchase Order',
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
-      home: const SupplierOrderScreen(),
-    );
-  }
+  State<BuyProductsScreen> createState() => _BuyProductsScreenState();
 }
 
-class SupplierOrderScreen extends StatefulWidget {
-  const SupplierOrderScreen({super.key});
-
-  @override
-  State<SupplierOrderScreen> createState() => _SupplierOrderScreenState();
-}
-
-class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
+class _BuyProductsScreenState extends State<BuyProductsScreen> {
   // จำลอง Index 4 เป็นปุ่ม "สั่งซื้อ" ใน BottomNavBar
-  int _selectedIndex = 4; 
+  int _selectedIndex = 4;
   List<Product> _products = _kMockProducts;
   final TextEditingController _searchController = TextEditingController();
 
@@ -116,7 +101,7 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
     });
     print('Tab tapped: $index');
   }
-  
+
   // 🔘 ฟังก์ชันสำหรับจัดการการเลือก/ไม่เลือกสินค้า
   void _toggleProductSelection(String id, bool? isSelected) {
     setState(() {
@@ -152,9 +137,18 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'ค้นหาหรือสแกนบาร์โค้ด',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFFB0B0B0)),
-                  suffixIcon: Icon(Icons.qr_code_scanner_outlined, color: Colors.grey.shade500),
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 16,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(0xFFB0B0B0),
+                  ),
+                  suffixIcon: Icon(
+                    Icons.qr_code_scanner_outlined,
+                    color: Colors.grey.shade500,
+                  ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
                 ),
@@ -179,10 +173,7 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
                 children: [
                   Text(
                     'เรียงจาก',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
                   ),
                   Icon(Icons.unfold_more, size: 18, color: Colors.black54),
                 ],
@@ -196,12 +187,11 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
 
   // 📦 Widget สำหรับการ์ดสินค้าแต่ละรายการ (ตามภาพ)
   Widget _buildProductCard(Product product) {
-    
     // กำหนดสีขอบเมื่อถูกเลือก (เหมือน โค้กกระป๋อง ในภาพ)
     final bool isSelected = product.isSelected;
     final Color borderColor = isSelected ? _kPrimaryColor : Colors.white;
     final double borderWidth = isSelected ? 3.0 : 0.0;
-    
+
     // กำหนดสี Radio Button
     final Color radioColor = isSelected ? _kPrimaryColor : Colors.grey.shade400;
 
@@ -285,7 +275,9 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
               ),
               child: Radio<bool>(
                 value: true,
-                groupValue: product.isSelected ? true : null, // ถ้าเป็น true ให้ GroupValue เป็น true เพื่อให้เลือก
+                groupValue: product.isSelected
+                    ? true
+                    : null, // ถ้าเป็น true ให้ GroupValue เป็น true เพื่อให้เลือก
                 onChanged: (bool? value) {
                   _toggleProductSelection(product.id, value);
                 },
@@ -323,23 +315,28 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
           height: 55,
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: selectedCount > 0 ? () {
-              // Logic ยืนยันการสั่งซื้อสินค้า
-              final List<String> selectedNames = _products
-                  .where((p) => p.isSelected)
-                  .map((p) => p.name)
-                  .toList();
-              
-              print('Confirmed Order for: $selectedNames');
-              
-              // แสดง SnackBar แจ้งเตือน
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('ยืนยันการสั่งซื้อ ${selectedCount} รายการสำเร็จ'),
-                  backgroundColor: _kPrimaryColor,
-                ),
-              );
-            } : null, // ปิดการใช้งานปุ่มถ้าไม่มีการเลือกสินค้า
+            onPressed: selectedCount > 0
+                ? () {
+                  Get.to(() => const OrderListScreen());
+                    // Logic ยืนยันการสั่งซื้อสินค้า
+                    final List<String> selectedNames = _products
+                        .where((p) => p.isSelected)
+                        .map((p) => p.name)
+                        .toList();
+
+                    print('Confirmed Order for: $selectedNames');
+
+                    // แสดง SnackBar แจ้งเตือน
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'ยืนยันการสั่งซื้อ ${selectedCount} รายการสำเร็จ',
+                        ),
+                        backgroundColor: _kPrimaryColor,
+                      ),
+                    );
+                  }
+                : null, // ปิดการใช้งานปุ่มถ้าไม่มีการเลือกสินค้า
             style: ElevatedButton.styleFrom(
               backgroundColor: _kPrimaryColor,
               shape: RoundedRectangleBorder(
@@ -360,13 +357,10 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
       ),
     );
   }
-  
+
   // --- BOTTOM NAV BAR (COMPACT VERSION FOR THIS FILE) ---
   Widget _buildBottomNavBar() {
-    return BottomNavBar(
-      currentIndex: _selectedIndex,
-      onTap: _onItemTapped,
-    );
+    return BottomNavBar(currentIndex: _selectedIndex, onTap: _onItemTapped);
   }
 
   @override
@@ -391,7 +385,7 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
         backgroundColor: _kBackgroundColor,
         elevation: 0,
       ),
-      
+
       // Body ส่วนเนื้อหา
       body: Column(
         children: [
@@ -399,17 +393,20 @@ class _SupplierOrderScreenState extends State<SupplierOrderScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 25.0),
             child: _buildSearchBar(),
           ),
-          
+
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 0.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 25.0,
+                vertical: 0.0,
+              ),
               itemCount: _products.length,
               itemBuilder: (context, index) {
                 return _buildProductCard(_products[index]);
               },
             ),
           ),
-          
+
           // ปุ่มยืนยันด้านล่าง
           _buildConfirmButton(),
         ],

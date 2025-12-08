@@ -1,5 +1,8 @@
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/page/buy_products.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/get_navigation.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 
 // --- THEME & CONSTANTS ---
@@ -56,26 +59,6 @@ final List<OrderItem> _kMockOrderItems = [
 ];
 
 // ----------------------------
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store Order List',
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
-      home: const OrderListScreen(),
-    );
-  }
-}
 
 class OrderListScreen extends StatefulWidget {
   const OrderListScreen({super.key});
@@ -379,7 +362,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: () {
-            print('Go to Add Item Screen...');
+             Get.to(() => const BuyProductsScreen());
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('เปิดหน้าเพิ่มรายการสินค้า')),
             );

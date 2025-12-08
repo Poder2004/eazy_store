@@ -1,6 +1,11 @@
 // File: lib/widgets/bottom_nav_bar.dart
 
+import 'package:eazy_store/homepage/home_page.dart';
+import 'package:eazy_store/page/debt_ledger.dart';
+import 'package:eazy_store/page/sales_account.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/get_navigation.dart';
 
 // กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
 const Color _kInactiveColor = Color(0xFF999999);
@@ -28,19 +33,25 @@ class BottomNavBar extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: _kActiveColor,
         unselectedItemColor: _kInactiveColor,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold, 
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold, 
-        ),
-        showUnselectedLabels: true,
         currentIndex: currentIndex,
-        onTap: onTap,
-        items: <BottomNavigationBarItem>[
-          // 1. หน้าหลัก (icon_home.png)
+
+        onTap: (index) {
+          onTap(index);
+
+          if (index == 0) {
+            Get.to(() => const HomePage());
+          } else if (index == 1) {
+            Get.to(() => const SalesAccountScreen());
+          } else if (index == 2) {
+            // Get.to(() => const ScanPage());
+          } else if (index == 3) {
+            Get.to(() => const DebtLedgerScreen());
+          } else if (index == 4) {
+            // Get.to(() => const SettingsPage());
+          }
+        },
+
+        items: [
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/image/icon_home.png',
@@ -49,10 +60,7 @@ class BottomNavBar extends StatelessWidget {
               color: currentIndex == 0 ? _kActiveColor : _kInactiveColor,
             ),
             label: 'หน้าหลัก',
-            
           ),
-
-          // 2. บัญชี (icon_check_book.png) - สันนิษฐานว่าใช้แทน Icons.description_outlined
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/image/icon_check_book.png',
@@ -62,8 +70,6 @@ class BottomNavBar extends StatelessWidget {
             ),
             label: 'บัญชี',
           ),
-
-          // 3. สแกนชำระ (icon_barcode.png) - ใช้แทน 'assets/qr_scanner_icon.png' เดิม
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/image/icon_barcode.png',
@@ -73,8 +79,6 @@ class BottomNavBar extends StatelessWidget {
             ),
             label: 'สแกนชำระ',
           ),
-
-          // 4. คนค้างชำระ (icon_debt.png) - สันนิษฐานว่าใช้แทน Icons.people_alt_outlined
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/image/icon_debt.png',
@@ -84,8 +88,6 @@ class BottomNavBar extends StatelessWidget {
             ),
             label: 'คนค้างชำระ',
           ),
-
-          // 5. ตั้งค่า (icon_settings.png)
           BottomNavigationBarItem(
             icon: Image.asset(
               'assets/image/icon_settings.png',

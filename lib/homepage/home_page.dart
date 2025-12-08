@@ -1,7 +1,9 @@
 import 'package:eazy_store/page/add_product.dart';
 import 'package:eazy_store/page/add_stock.dart';
+import 'package:eazy_store/page/buy_products.dart';
 import 'package:eazy_store/page/check_price.dart';
 import 'package:eazy_store/page/check_stock.dart';
+import 'package:eazy_store/page/order_list.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -103,7 +105,7 @@ class HomePage extends StatelessWidget {
                             imagePath: 'assets/image/stock.png',
                             title: "เช็คสต็อก\nสินค้า",
                             onTap: () {
-                              Get.to(() => const StockCheckScreen());
+                              Get.to(() => const CheckStockScreen());
                             },
                           ),
                         ],
@@ -111,9 +113,9 @@ class HomePage extends StatelessWidget {
 
                       const SizedBox(height: 40),
 
-                      // --- 3. ปุ่มยาวด้านล่าง (สั่งซื้อสินค้า) -> Bill.png ---
+                      // --- 3. ปุ่มยาวด้านล่าง (สั่งซื้อสินค้า)
                       GestureDetector(
-                        onTap: () {
+                        onTap: () {  Get.to(() => const BuyProductsScreen());
                           print("กดปุ่มสั่งซื้อสินค้า");
                         },
                         child: Container(

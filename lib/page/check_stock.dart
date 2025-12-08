@@ -33,36 +33,16 @@ final List<Product> dummyProducts = [
 ];
 // ----------------------------
 
-void main() {
-  runApp(const MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+
+class CheckStockScreen extends StatefulWidget {
+  const CheckStockScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store',
-      theme: ThemeData(
-        // fontFamily: 'AbhayaLibre', // หากไม่มี font นี้ ต้องเอาออก
-        useMaterial3: true,
-      ),
-      // กำหนดหน้าแรกที่จะให้แอปเปิด
-      home: const StockCheckScreen(),
-    );
-  }
+  State<CheckStockScreen> createState() => _CheckStockScreenState();
 }
 
-class StockCheckScreen extends StatefulWidget {
-  const StockCheckScreen({super.key});
-
-  @override
-  State<StockCheckScreen> createState() => _StockCheckScreenState();
-}
-
-class _StockCheckScreenState extends State<StockCheckScreen> {
+class _CheckStockScreenState extends State<CheckStockScreen> {
   int _selectedIndex = 0;
   final TextEditingController _searchController = TextEditingController();
 

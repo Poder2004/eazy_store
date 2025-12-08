@@ -7,28 +7,7 @@ const Color _kPrimaryColor = Color(0xFF929292);
 const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
 const Color _kSearchFillColor = Color(0xFFF4F5F7); 
 
-void main() {
-  runApp(const MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // 2. เปลี่ยนจุดนี้จาก MaterialApp เป็น GetMaterialApp
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store',
-      theme: ThemeData(
-        fontFamily: 'AbhayaLibre',
-        useMaterial3: true, // แนะนำให้เปิด Material 3 เพื่อ UI ที่ดูทันสมัยขึ้น
-      ),
-      // จุดนี้กำหนดหน้าแรกที่จะให้แอปเปิด
-      home: const CheckPriceScreen(),
-    );
-  }
-}
 
 class CheckPriceScreen extends StatefulWidget {
   const CheckPriceScreen({super.key});

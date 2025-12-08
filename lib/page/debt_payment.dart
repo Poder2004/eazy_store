@@ -19,37 +19,17 @@ const String _kStorePin = '123456';
 
 // ----------------------------
 
-void main() {
-  runApp(const MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class DebtPaymentScreen extends StatefulWidget {
+  const DebtPaymentScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store Payment',
-      theme: ThemeData(
-        // fontFamily: 'AbhayaLibre',
-        useMaterial3: true,
-      ),
-      home: const PaymentScreen(),
-    );
-  }
-}
-
-class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
-
-  @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  State<DebtPaymentScreen> createState() => _DebtPaymentScreenState();
 }
 
 enum PaymentMethod { cash, transfer }
 
-class _PaymentScreenState extends State<PaymentScreen> {
+class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
   int _selectedIndex = 3; // Index 3: คนค้างชำระ
   PaymentMethod _selectedMethod = PaymentMethod.cash;
 

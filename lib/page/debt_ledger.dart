@@ -1,5 +1,8 @@
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/page/debt_payment.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_navigation/get_navigation.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 
 // กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
@@ -33,26 +36,6 @@ final List<DebtEntry> dummyDebts = [
 ];
 // ----------------------------
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Eazy Store Debt Ledger',
-      theme: ThemeData(
-        // fontFamily: 'AbhayaLibre', 
-        useMaterial3: true,
-      ),
-      home: const DebtLedgerScreen(),
-    );
-  }
-}
 
 class DebtLedgerScreen extends StatefulWidget {
   const DebtLedgerScreen({super.key});
@@ -229,6 +212,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                   height: 35,
                   child: ElevatedButton(
                     onPressed: () {
+                      Get.to(() => const DebtPaymentScreen());
                       print('Processing payment for ${debt.name}');
                       // Logic for processing payment
                     },
