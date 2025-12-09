@@ -3,7 +3,6 @@ import 'package:eazy_store/page/add_stock.dart';
 import 'package:eazy_store/page/buy_products.dart';
 import 'package:eazy_store/page/check_price.dart';
 import 'package:eazy_store/page/check_stock.dart';
-import 'package:eazy_store/page/order_list.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -27,7 +26,6 @@ class HomePage extends StatelessWidget {
     final Color textDark = const Color(0xFF2D2D2D);
     // สีเขียวสดใสสำหรับไอคอน (เผื่อรูปเป็นสีขาว หรือใช้ tint)
     // *หมายเหตุ: ถ้ารูป png มีสีเขียวอยู่แล้ว ให้เอา color: ... ออกใน Image.asset ด้านล่าง
-    final Color iconTint = const Color(0xFF64DD17);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F7FB),
@@ -115,7 +113,8 @@ class HomePage extends StatelessWidget {
 
                       // --- 3. ปุ่มยาวด้านล่าง (สั่งซื้อสินค้า)
                       GestureDetector(
-                        onTap: () {  Get.to(() => const BuyProductsScreen());
+                        onTap: () {
+                          Get.to(() => const BuyProductsScreen());
                           print("กดปุ่มสั่งซื้อสินค้า");
                         },
                         child: Container(

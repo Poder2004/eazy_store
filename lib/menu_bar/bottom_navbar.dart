@@ -3,6 +3,7 @@
 import 'package:eazy_store/homepage/home_page.dart';
 import 'package:eazy_store/page/debt_ledger.dart';
 import 'package:eazy_store/page/sales_account.dart';
+import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
@@ -43,7 +44,7 @@ class BottomNavBar extends StatelessWidget {
           } else if (index == 1) {
             Get.to(() => const SalesAccountScreen());
           } else if (index == 2) {
-            // Get.to(() => const ScanPage());
+            Get.to(() => const ScanBarcodePage());
           } else if (index == 3) {
             Get.to(() => const DebtLedgerScreen());
           } else if (index == 4) {

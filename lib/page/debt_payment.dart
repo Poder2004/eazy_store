@@ -5,20 +5,23 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 // กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
 const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร
 const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
-const Color _kButtonGreen = Color(0xFF8BC34A); // สีเขียวสว่างสำหรับปุ่ม "เงินสด" และ "ยืนยัน"
+const Color _kButtonGreen = Color(
+  0xFF8BC34A,
+); // สีเขียวสว่างสำหรับปุ่ม "เงินสด" และ "ยืนยัน"
 const Color _kButtonBlue = Color(0xFF6495ED); // สีฟ้าสำหรับปุ่ม "เงินโอน"
 const Color _kInputFillColor = Color(0xFFF7F7F0); // สีพื้นหลังของ Input Field
-const Color _kQRCodePlaceholderColor = Color(0xFFE0E0E0); // สีพื้นหลังของ QR Code Placeholder
+const Color _kQRCodePlaceholderColor = Color(
+  0xFFE0E0E0,
+); // สีพื้นหลังของ QR Code Placeholder
 
 // --- DATA MODEL (จำลอง) ---
 // ข้อมูลจำลองของลูกค้าที่กำลังจะชำระเงิน
 const String _kCustomerName = 'ป้าดา';
 const double _kDebtAmount = 45.00;
 // รหัส PIN จำลอง (สำหรับการทดสอบ)
-const String _kStorePin = '123456'; 
+const String _kStorePin = '123456';
 
 // ----------------------------
-
 
 class DebtPaymentScreen extends StatefulWidget {
   const DebtPaymentScreen({super.key});
@@ -35,7 +38,9 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
 
   // Controllers และ State สำหรับการคำนวณ
   final TextEditingController _amountPaidController = TextEditingController();
-  final TextEditingController _payerNameController = TextEditingController(text: 'ปอ'); // ชื่อผู้รับเงิน/พนักงาน
+  final TextEditingController _payerNameController = TextEditingController(
+    text: 'ปอ',
+  ); // ชื่อผู้รับเงิน/พนักงาน
   double _amountPaid = 0.0;
   double _remainingDebt = _kDebtAmount;
   double _change = 0.0;
@@ -46,7 +51,7 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
     // ตั้งค่าเริ่มต้นของช่อง "จ่าย" เป็นยอดค้างชำระ
     _amountPaidController.text = _kDebtAmount.toStringAsFixed(0);
     _amountPaid = _kDebtAmount;
-    
+
     // Listener สำหรับการเปลี่ยนแปลงในช่อง 'จ่าย'
     _amountPaidController.addListener(_calculateChange);
     // ทำการคำนวณครั้งแรก
@@ -65,10 +70,10 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
   void _calculateChange() {
     final input = _amountPaidController.text;
     final paid = double.tryParse(input) ?? 0.0;
-    
+
     setState(() {
       _amountPaid = paid;
-      
+
       if (paid >= _kDebtAmount) {
         // จ่ายพอดีหรือเกิน
         _change = paid - _kDebtAmount;
@@ -87,7 +92,7 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
     });
     print('Tab tapped: $index');
   }
-  
+
   // 💰 Widget สำหรับปุ่มสลับ "เงินสด" / "เงินโอน"
   Widget _buildPaymentMethodButtons() {
     return Row(
@@ -99,22 +104,31 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                 _selectedMethod = PaymentMethod.cash;
               });
               // เรียกคำนวณใหม่เมื่อเปลี่ยนวิธีการชำระ
-              _calculateChange(); 
+              _calculateChange();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedMethod == PaymentMethod.cash ? _kButtonGreen : Colors.white,
-              foregroundColor: _selectedMethod == PaymentMethod.cash ? Colors.white : Colors.black87,
+              backgroundColor: _selectedMethod == PaymentMethod.cash
+                  ? _kButtonGreen
+                  : Colors.white,
+              foregroundColor: _selectedMethod == PaymentMethod.cash
+                  ? Colors.white
+                  : Colors.black87,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 side: BorderSide(
-                  color: _selectedMethod == PaymentMethod.cash ? _kButtonGreen : Colors.grey.shade400,
+                  color: _selectedMethod == PaymentMethod.cash
+                      ? _kButtonGreen
+                      : Colors.grey.shade400,
                   width: 1.5,
                 ),
               ),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: const Text('เงินสด', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'เงินสด',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         const SizedBox(width: 15),
@@ -125,22 +139,31 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                 _selectedMethod = PaymentMethod.transfer;
               });
               // เรียกคำนวณใหม่เมื่อเปลี่ยนวิธีการชำระ
-              _calculateChange(); 
+              _calculateChange();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedMethod == PaymentMethod.transfer ? _kButtonBlue : Colors.white,
-              foregroundColor: _selectedMethod == PaymentMethod.transfer ? Colors.white : Colors.black87,
+              backgroundColor: _selectedMethod == PaymentMethod.transfer
+                  ? _kButtonBlue
+                  : Colors.white,
+              foregroundColor: _selectedMethod == PaymentMethod.transfer
+                  ? Colors.white
+                  : Colors.black87,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 side: BorderSide(
-                  color: _selectedMethod == PaymentMethod.transfer ? _kButtonBlue : Colors.grey.shade400,
+                  color: _selectedMethod == PaymentMethod.transfer
+                      ? _kButtonBlue
+                      : Colors.grey.shade400,
                   width: 1.5,
                 ),
               ),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: const Text('เงินโอน', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'เงินโอน',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],
@@ -157,15 +180,22 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
     VoidCallback? onActionTap,
   }) {
     // กำหนดสีและสไตล์ตามประเภทของข้อมูล
-    final Color valueColor = isAction ? Colors.black87 : (label == 'เงินค้างชำระคงเหลือ' && _remainingDebt > 0 ? Colors.red : Colors.black87);
-    final FontWeight valueWeight = (label == 'เงินค้างชำระคงเหลือ' || label == 'เงินทอน') ? FontWeight.bold : FontWeight.w500;
-    
+    final Color valueColor = isAction
+        ? Colors.black87
+        : (label == 'เงินค้างชำระคงเหลือ' && _remainingDebt > 0
+              ? Colors.red
+              : Colors.black87);
+    final FontWeight valueWeight =
+        (label == 'เงินค้างชำระคงเหลือ' || label == 'เงินทอน')
+        ? FontWeight.bold
+        : FontWeight.w500;
+
     // ฟอร์แมตจำนวนเงิน (ถ้าเป็นตัวเลข)
     String displayValue = value;
     if (double.tryParse(value) != null) {
       displayValue = double.parse(value).toStringAsFixed(2);
     }
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
@@ -175,13 +205,10 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
             flex: 3,
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 18, color: Colors.black87),
             ),
           ),
-          
+
           // Value/Input (ขวา)
           Expanded(
             flex: 2,
@@ -197,9 +224,16 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                       controller: controller,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 18, fontWeight: valueWeight, color: valueColor),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: valueWeight,
+                        color: valueColor,
+                      ),
                       decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 0),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 8.0,
+                          vertical: 0,
+                        ),
                         border: InputBorder.none,
                       ),
                       onChanged: (text) => _calculateChange(),
@@ -210,9 +244,13 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     decoration: BoxDecoration(
-                      color: isAction ? _kInputFillColor : _kBackgroundColor, // ใช้สีพื้นหลัง
+                      color: isAction
+                          ? _kInputFillColor
+                          : _kBackgroundColor, // ใช้สีพื้นหลัง
                       borderRadius: BorderRadius.circular(8.0),
-                      border: isAction ? Border.all(color: Colors.grey.shade400, width: 1) : null,
+                      border: isAction
+                          ? Border.all(color: Colors.grey.shade400, width: 1)
+                          : null,
                     ),
                     child: Text(
                       displayValue,
@@ -241,7 +279,7 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
       crossAxisAlignment: CrossAxisAlignment.start, // ให้ Text ชิดซ้าย
       children: [
         const SizedBox(height: 20),
-        
+
         // Text ชิดซ้ายโดยธรรมชาติ
         const Text(
           'คิวอาร์โค้ดชำระเงิน',
@@ -251,11 +289,11 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
             color: Color(0xFFB2B2B2), // สีตามที่ร้องขอ
           ),
         ),
-        
+
         const SizedBox(height: 10),
-        
+
         // QR Code Placeholder ต้องถูกห่อด้วย Center เพื่อให้มันอยู่ตรงกลาง
-        Center( 
+        Center(
           child: Container(
             width: 150,
             height: 150,
@@ -282,13 +320,15 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
     // ใช้ Get.dialog แทน showDialog เพื่อให้จัดการ Navigation ได้ง่ายขึ้น (ถ้าใช้ GetX)
     // หรือใช้ showDialog ปกติก็ได้
     final pinController = TextEditingController();
-    
+
     await showDialog(
       context: context,
       barrierDismissible: false, // ห้ามปิดโดยการแตะนอก Dialog
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
           contentPadding: const EdgeInsets.all(24.0),
           title: const Text(
             'กรุณากรอกรหัสร้านเพื่อยืนยัน',
@@ -323,7 +363,9 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kButtonGreen,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   // Logic ตรวจสอบ PIN
@@ -333,20 +375,29 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                   } else {
                     // หาก Pin ไม่ถูกต้อง อาจจะแสดงข้อความเตือนสั้นๆ
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('รหัสไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง')),
+                      const SnackBar(
+                        content: Text('รหัสไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง'),
+                      ),
                     );
                   }
                 },
                 child: const Text(
                   'ยืนยัน',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // ยกเลิกและปิด Dialog
                 },
-                child: const Text('ยกเลิก', style: TextStyle(color: Colors.red)),
+                child: const Text(
+                  'ยกเลิก',
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
             ],
           ),
@@ -362,12 +413,18 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
       barrierDismissible: false, // ห้ามปิดโดยการแตะนอก Dialog
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
           contentPadding: const EdgeInsets.all(24.0),
           title: const Text(
             'ชำระเงินสำเร็จ',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -379,18 +436,16 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(15.0),
-                child: const Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 50,
-                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 50),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kButtonGreen,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   Navigator.of(context).pop(); // ปิด Dialog
@@ -401,7 +456,11 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                 },
                 child: const Text(
                   'ตกลง',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -465,7 +524,7 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
         backgroundColor: _kBackgroundColor,
         elevation: 0,
       ),
-      
+
       // Body ส่วนเนื้อหา
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
@@ -507,21 +566,21 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
               isInput: true,
               controller: _amountPaidController,
             ),
-            
+
             _buildPaymentDetailRow(
               label: 'เงินค้างชำระคงเหลือ',
               value: _remainingDebt.toString(),
               isInput: false,
             ),
-            
+
             _buildPaymentDetailRow(
               label: 'เงินทอน',
               value: _change.toString(),
               isInput: false,
             ),
-            
+
             Divider(color: Colors.grey.shade400, thickness: 1),
-            
+
             _buildPaymentDetailRow(
               label: 'จ่ายกับ',
               value: _payerNameController.text,
@@ -529,7 +588,7 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
               isInput: true, // ใช้ input field สำหรับจ่ายกับ
               controller: _payerNameController,
             ),
-            
+
             // ส่วน QR Code ที่ถูกจัดให้อยู่ตรงกลางแล้ว แต่หัวข้อชิดซ้าย
             _buildQRCodeSection(),
 

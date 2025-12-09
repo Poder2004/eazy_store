@@ -7,7 +7,9 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 
 // --- THEME & CONSTANTS ---
 const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร (ปุ่มหลัก)
-const Color _kSecondaryButtonColor = Color(0xFF5390F2); // สีน้ำเงินสำหรับปุ่ม PDF
+const Color _kSecondaryButtonColor = Color(
+  0xFF5390F2,
+); // สีน้ำเงินสำหรับปุ่ม PDF
 const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
 const Color _kCardColor = Colors.white; // สีพื้นหลังของการ์ดสินค้า
 const Color _kInputFillColor = Color(0xFFF0F0E0); // สีพื้นหลังของ Input Field
@@ -21,15 +23,17 @@ class OrderItem {
   // Controllers สำหรับ Quantity และ Note
   final TextEditingController quantityController;
   final TextEditingController noteController;
-  
+
   OrderItem({
-    required this.id, 
-    required this.name, 
-    required this.unit, 
-    required this.imageUrl, 
+    required this.id,
+    required this.name,
+    required this.unit,
+    required this.imageUrl,
     required int initialQuantity,
     String initialNote = '',
-  }) : quantityController = TextEditingController(text: initialQuantity.toString()),
+  }) : quantityController = TextEditingController(
+         text: initialQuantity.toString(),
+       ),
        noteController = TextEditingController(text: initialNote);
 
   // เพื่อให้มั่นใจว่า Controllers ถูก Dispose เมื่อรายการถูกลบ
@@ -44,14 +48,14 @@ final List<OrderItem> _kMockOrderItems = [
   OrderItem(
     id: 'P001',
     name: 'ขนมปังปอนด์',
-    initialQuantity: 30, 
+    initialQuantity: 30,
     unit: 'แถว',
     imageUrl: 'https://placehold.co/80x80/E0E0E0/333333?text=Bread',
   ),
   OrderItem(
     id: 'P002',
     name: 'โค้กกระป๋อง',
-    initialQuantity: 2, 
+    initialQuantity: 2,
     unit: 'ถาด',
     imageUrl: 'https://placehold.co/80x80/FF0000/FFFFFF?text=Coke',
     initialNote: 'ต้องการรสซ่าพิเศษ',
@@ -69,9 +73,9 @@ class OrderListScreen extends StatefulWidget {
 
 class _OrderListScreenState extends State<OrderListScreen> {
   // Index 4: สั่งค่า (ตามที่เห็นใน BottomNavBar ของภาพ)
-  int _selectedIndex = 4; 
+  int _selectedIndex = 4;
   List<OrderItem> _orderItems = _kMockOrderItems;
-  
+
   @override
   void dispose() {
     // ต้อง Dispose Controllers ทั้งหมดเมื่อ State ถูกทำลาย
@@ -87,7 +91,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
     });
     print('Tab tapped: $index');
   }
-  
+
   // ➕ ฟังก์ชันสำหรับเพิ่ม/ลดจำนวนสินค้าที่สั่ง (รองรับทั้งปุ่มและช่องกรอก)
   void _updateQuantity(OrderItem item, int change) {
     int currentQuantity = int.tryParse(item.quantityController.text) ?? 0;
@@ -101,7 +105,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
       item.quantityController.text = newQuantity.toString();
     }
   }
-  
+
   // 🎯 Widget สำหรับปุ่มเพิ่ม/ลดจำนวน
   Widget _buildQuantityButton({
     required IconData icon,
@@ -109,8 +113,8 @@ class _OrderListScreenState extends State<OrderListScreen> {
     required bool isPlus,
   }) {
     // ใช้ขนาดที่เหมาะสมสำหรับปุ่มควบคุม
-    const double size = 30; 
-    
+    const double size = 30;
+
     return Container(
       width: size,
       height: size,
@@ -121,16 +125,11 @@ class _OrderListScreenState extends State<OrderListScreen> {
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(8.0),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 18,
-          ),
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
       ),
     );
   }
-
 
   // 📦 Widget สำหรับการ์ดสินค้าในรายการสั่งซื้อ (มีช่องกรอกและปุ่ม +/-)
   Widget _buildOrderItemCard(OrderItem item) {
@@ -186,15 +185,12 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     const SizedBox(height: 5),
                     const Text(
                       'ใส่จำนวนและหมายเหตุ:', // เพิ่ม Label นำ
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black45,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.black45),
                     ),
                   ],
                 ),
               ),
-              
+
               // ปุ่มลบรายการ (ไอคอน X)
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.grey),
@@ -202,7 +198,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
               ),
             ],
           ),
-          
+
           // 2. แถว Quantity Control (ปุ่ม +/- และช่องกรอก)
           const SizedBox(height: 15),
           Row(
@@ -217,14 +213,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              
+
               // ปุ่ม -
               _buildQuantityButton(
                 icon: Icons.remove,
                 onPressed: () => _updateQuantity(item, -1),
                 isPlus: false,
               ),
-              
+
               // ช่องกรอกจำนวน
               SizedBox(
                 width: 70, // กำหนดความกว้างของช่องกรอก
@@ -238,13 +234,22 @@ class _OrderListScreenState extends State<OrderListScreen> {
                     isDense: true,
                     filled: true,
                     fillColor: _kInputFillColor,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 8,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
-                      borderSide: const BorderSide(color: Color(0xFFE0E0E0), width: 1.0),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE0E0E0),
+                        width: 1.0,
+                      ),
                     ),
                   ),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                   // ตรวจสอบเมื่อมีการเปลี่ยนแปลง
                   onChanged: (value) {
                     if (value.isEmpty || int.tryParse(value) == 0) {
@@ -253,28 +258,25 @@ class _OrderListScreenState extends State<OrderListScreen> {
                   },
                 ),
               ),
-              
+
               // ปุ่ม +
               _buildQuantityButton(
                 icon: Icons.add,
                 onPressed: () => _updateQuantity(item, 1),
                 isPlus: true,
               ),
-              
+
               const SizedBox(width: 10),
               // หน่วยนับ
               Text(
                 item.unit,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                ),
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
               ),
-              
+
               const SizedBox(width: 15), // ขอบขวา
             ],
           ),
-          
+
           // 3. ช่องหมายเหตุ (New Position: Below Quantity Control)
           const SizedBox(height: 15), // แยกจากแถวจำนวน
           TextField(
@@ -282,10 +284,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
             decoration: InputDecoration(
               hintText: 'เพิ่มหมายเหตุ (ถ้ามี)',
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: const Icon(Icons.note_alt_outlined, size: 20, color: Colors.black54),
+              prefixIcon: const Icon(
+                Icons.note_alt_outlined,
+                size: 20,
+                color: Colors.black54,
+              ),
               filled: true,
               fillColor: Colors.grey.shade100,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 10,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.0),
                 borderSide: BorderSide.none,
@@ -297,30 +306,40 @@ class _OrderListScreenState extends State<OrderListScreen> {
       ),
     );
   }
-  
+
   // 🗑️ Modal สำหรับยืนยันการลบรายการสินค้า
   void _showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {
     // เก็บค่าปัจจุบันไว้ เผื่อกดยกเลิก
     String originalQuantity = item.quantityController.text;
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
-          title: const Text('ลบรายการสินค้า', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Text('คุณต้องการลบ "${item.name}" ออกจากรายการสั่งซื้อหรือไม่?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          title: const Text(
+            'ลบรายการสินค้า',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'คุณต้องการลบ "${item.name}" ออกจากรายการสั่งซื้อหรือไม่?',
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 // ถ้ามากจากการกดปุ่ม - หรือกรอก 0 ให้คืนค่าเป็น 1
-                if (isFromButton || int.tryParse(item.quantityController.text) == 0 || item.quantityController.text.isEmpty) {
+                if (isFromButton ||
+                    int.tryParse(item.quantityController.text) == 0 ||
+                    item.quantityController.text.isEmpty) {
                   // ถ้ามีการเคลียร์ช่องกรอก/ลดเหลือ 0 ให้คืนค่าเป็น 1 (ถ้าค่าเดิมไม่ว่าง)
-                  if (int.tryParse(originalQuantity) == 0 || originalQuantity.isEmpty) {
-                     item.quantityController.text = '1';
+                  if (int.tryParse(originalQuantity) == 0 ||
+                      originalQuantity.isEmpty) {
+                    item.quantityController.text = '1';
                   } else {
-                     item.quantityController.text = originalQuantity;
+                    item.quantityController.text = originalQuantity;
                   }
                 }
               },
@@ -343,7 +362,9 @@ class _OrderListScreenState extends State<OrderListScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
               ),
               child: const Text('ลบ', style: TextStyle(color: Colors.white)),
             ),
@@ -362,7 +383,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: () {
-             Get.to(() => const BuyProductsScreen());
+            Get.to(() => const BuyProductsScreen());
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('เปิดหน้าเพิ่มรายการสินค้า')),
             );
@@ -398,13 +419,17 @@ class _OrderListScreenState extends State<OrderListScreen> {
         child: ElevatedButton.icon(
           onPressed: () {
             // ดึงข้อมูลทั้งหมดจาก Controller ก่อนส่งออก
-            final orderData = _orderItems.map((item) => {
-              'name': item.name,
-              'quantity': item.quantityController.text,
-              'unit': item.unit,
-              'note': item.noteController.text,
-            }).toList();
-            
+            final orderData = _orderItems
+                .map(
+                  (item) => {
+                    'name': item.name,
+                    'quantity': item.quantityController.text,
+                    'unit': item.unit,
+                    'note': item.noteController.text,
+                  },
+                )
+                .toList();
+
             print('Exporting PDF with data: $orderData');
 
             ScaffoldMessenger.of(context).showSnackBar(
@@ -431,13 +456,10 @@ class _OrderListScreenState extends State<OrderListScreen> {
       ),
     );
   }
-  
+
   // --- BOTTOM NAV BAR (COMPACT VERSION FOR THIS FILE) ---
   Widget _buildBottomNavBar() {
-    return BottomNavBar(
-      currentIndex: _selectedIndex,
-      onTap: _onItemTapped,
-    );
+    return BottomNavBar(currentIndex: _selectedIndex, onTap: _onItemTapped);
   }
 
   @override
@@ -462,31 +484,37 @@ class _OrderListScreenState extends State<OrderListScreen> {
         backgroundColor: _kBackgroundColor,
         elevation: 0,
       ),
-      
+
       // Body ส่วนเนื้อหา
       body: Column(
         children: [
           // รายการสินค้า
           Expanded(
-            child: _orderItems.isEmpty 
-              ? const Center(
-                  child: Text(
-                    'ไม่มีรายการสินค้าที่ต้องสั่งซื้อ',
-                    style: TextStyle(fontSize: 18, color: Colors.black54),
+            child: _orderItems.isEmpty
+                ? const Center(
+                    child: Text(
+                      'ไม่มีรายการสินค้าที่ต้องสั่งซื้อ',
+                      style: TextStyle(fontSize: 18, color: Colors.black54),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 25.0,
+                      vertical: 15.0,
+                    ),
+                    itemCount: _orderItems.length,
+                    itemBuilder: (context, index) {
+                      return _buildOrderItemCard(_orderItems[index]);
+                    },
                   ),
-                )
-              : ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 15.0),
-                itemCount: _orderItems.length,
-                itemBuilder: (context, index) {
-                  return _buildOrderItemCard(_orderItems[index]);
-                },
-              ),
           ),
-          
+
           // ปุ่มหลักด้านล่าง
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 25.0,
+              vertical: 10.0,
+            ),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
@@ -500,17 +528,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
             ),
             child: SafeArea(
               child: Column(
-                children: [
-                  _buildAddItemButton(),
-                  _buildExportPdfButton(),
-                ],
+                children: [_buildAddItemButton(), _buildExportPdfButton()],
               ),
             ),
           ),
         ],
       ),
 
-     // Bottom Navigation Bar
+      // Bottom Navigation Bar
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,

@@ -11,15 +11,12 @@ const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหล�
 const Color _kFieldFillColor = Color(0xFFFAFFEF); // สีอ่อนสำหรับช่องกรอกข้อมูล
 const Color _kBorderColor = Color(0xFFE0E0E0); // สีขอบอ่อน
 
-
-
 // 📌 1. เปลี่ยนเป็น StatefulWidget เพื่อจัดการสถานะการโหลดข้อมูลและ Dropdown
 class DebtRegisterScreen extends StatefulWidget {
   const DebtRegisterScreen({super.key});
 
   @override
-  State<DebtRegisterScreen> createState() =>
-      _DebtRegisterScreenState();
+  State<DebtRegisterScreen> createState() => _DebtRegisterScreenState();
 }
 
 class _DebtRegisterScreenState extends State<DebtRegisterScreen> {
