@@ -18,7 +18,6 @@ class CheckPriceScreen extends StatefulWidget {
 
 class _CheckPriceScreenState extends State<CheckPriceScreen> {
   // State สำหรับจัดการ Bottom Navigation Bar
-  // 💡 ตั้งค่าให้เป็น Index 2 (สแกนชำระเงิน) ตามภาพตัวอย่าง
   int _selectedIndex = 2; 
 
   // Controller สำหรับ Search Field
@@ -171,24 +170,17 @@ class _CheckPriceScreenState extends State<CheckPriceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Search Bar
+            //  Search Bar
             _buildSearchInput(),
             
-            // 2. ผลลัพธ์ราคาสินค้า (จำลองข้อมูลจากภาพที่คุณให้มา)
+            //  ผลลัพธ์ราคาสินค้า (จำลองข้อมูลจากภาพที่คุณให้มา)
             _buildProductResultCard(
               name: 'สบู่นกแก้วสีชมพู',
               price: 15.00,
-              // ⚠️ ต้องมี Image Asset นี้ใน pubspec.yaml
               imageUrl: 'assets/image/soap_image.png', 
             ),
 
-            // หากไม่มีผลลัพธ์สินค้า (ในกรณีเริ่มต้น) คุณสามารถแสดง Widget อื่นได้
-            // const SizedBox(height: 50),
-            // Center(
-            //   child: Text('สแกนบาร์โค้ดหรือค้นหาชื่อสินค้าเพื่อตรวจสอบราคา',
-            //     style: TextStyle(color: Colors.grey),
-            //   ),
-            // )
+  
           ],
         ),
       ),
