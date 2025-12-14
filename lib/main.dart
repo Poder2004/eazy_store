@@ -1,4 +1,5 @@
 import 'package:eazy_store/auth/login.dart';
+import 'package:eazy_store/homepage/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // 1. ต้องเพิ่ม Import นี้ครับ
 
@@ -20,7 +21,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true, // แนะนำให้เปิด Material 3 เพื่อ UI ที่ดูทันสมัยขึ้น
       ),
       // จุดนี้กำหนดหน้าแรกที่จะให้แอปเปิด
-      home: const LoginPage(),
+      home: const HomePage(),
     );
   }
 }
