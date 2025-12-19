@@ -16,7 +16,7 @@ class MyShopController extends GetxController {
 }
 
 // ----------------------------------------------------------------------
-// 2. The View: หน้าจอ UI
+// 2. The View: หน้าจอ UI  
 // ----------------------------------------------------------------------
 class MyShopPage extends StatelessWidget {
   const MyShopPage({super.key});
