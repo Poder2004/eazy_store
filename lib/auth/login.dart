@@ -1,44 +1,83 @@
+import 'package:eazy_store/api/api_service.dart';
 import 'package:eazy_store/auth/register.dart';
+import 'package:eazy_store/model/request/login_request.dart';
 import 'package:eazy_store/shop/myshop.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// ----------------------------------------------------------------------
-// 1. Controller: สมองของหน้านี้ (GetX Logic)
-// ----------------------------------------------------------------------
 class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
-  // ตัวแปรสำหรับเช็คว่ากำลังโหลดอยู่ไหม (เผื่อต่อ API จริง)
   var isLoading = false.obs;
 
-  void login() {
-    // จำลองการ Login
-    isLoading.value = true;
-    print("Email: ${emailController.text}");
-    print("Password: ${passwordController.text}");
+  Future<void> login() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "กรุณากรอกข้อมูลให้ครบ",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(10),
+      );
+      return;
+    }
 
-    Future.delayed(const Duration(seconds: 2), () {
-      isLoading.value = false;
+    isLoading.value = true;
+
+    LoginRequest request = LoginRequest(
+      username: emailController.text,
+      password: passwordController.text,
+    );
+
+    var res = await ApiService.login(request);
+
+    isLoading.value = false;
+
+    if (res.token != null) {
+      // --- Login สำเร็จ ---
+      print("Token: ${res.token}");
+
+      // 2. เริ่มต้นกระบวนการบันทึก Token
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      // บันทึก Token ลงเครื่อง (Key ชื่อ 'token')
+      await prefs.setString('token', res.token!);
+
+      // แถม: บันทึกข้อมูล User ไว้ด้วย (เผื่อเอาไปโชว์หน้าอื่น)
+      await prefs.setInt('userId', res.user?.id ?? 0);
+      await prefs.setString('username', res.user?.username ?? "");
+
       Get.snackbar(
         "สำเร็จ",
-        "เข้าสู่ระบบเรียบร้อย",
+        "ยินดีต้อนรับคุณ ${res.user?.username}",
         backgroundColor: Colors.green.withOpacity(0.8),
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP, // ✅ แก้เป็น TOP
+        margin: const EdgeInsets.all(10), // เพิ่ม margin ให้ไม่ติดขอบเกินไป
       );
+
       Get.offAll(() => const MyShopPage());
-    });
+    } else {
+      Get.snackbar(
+        "เข้าสู่ระบบไม่สำเร็จ",
+        res.error ?? "รหัสผ่านไม่ถูกต้อง",
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP, // ✅ แก้เป็น TOP
+        margin: const EdgeInsets.all(10), // เพิ่ม margin ให้ไม่ติดขอบเกินไป
+      );
+    }
   }
 
   void goToSignup() {
-    Get.to(() => SignupPage());
+    Get.to(() => SignupPage()); // เปิดคอมเมนต์เมื่อมีหน้าสมัครสมาชิก
+    print("ไปหน้าสมัครสมาชิก");
   }
 
   void goToForgotPassword() {
     print("ไปหน้าลืมรหัสผ่าน");
-    // Get.to(() => ForgotPasswordPage());
   }
 }
 

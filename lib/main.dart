@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true, // แนะนำให้เปิด Material 3 เพื่อ UI ที่ดูทันสมัยขึ้น
       ),
       // จุดนี้กำหนดหน้าแรกที่จะให้แอปเปิด
-      home: const HomePage(),
+      home: const LoginPage(),
     );
   }
 }
