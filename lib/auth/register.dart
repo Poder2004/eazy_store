@@ -189,7 +189,7 @@ class _SignupPageState extends State<SignupPage> {
 
               _buildLineInput(
                 label: "รหัสผ่าน",
-                hint: "ต้องมากกว่า 5 ตัวอักษร",
+                hint: "กรอกรหัสผ่าน",
                 controller: controller.passwordController,
                 isPassword: true,
                 // เพิ่ม: ถ้าแก้รหัสผ่านหลัก ให้ไปเช็คตัวยืนยันใหม่ด้วย
