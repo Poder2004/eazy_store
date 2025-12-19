@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -41,4 +42,15 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // นำเข้า Firebase BoM (ช่วยจัดการเวอร์ชั่นให้ตรงกัน)
+    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
+
+    // เพิ่มตัวหลักสำหรับ Firebase
+    implementation("com.google.firebase:firebase-analytics")
+    
+    // 🔥 สำคัญมาก: เพิ่มตัวนี้เพื่อใช้ระบบ SMS OTP (Authentication)
+    implementation("com.google.firebase:firebase-auth")
 }
