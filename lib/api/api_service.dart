@@ -1,6 +1,12 @@
 import 'dart:convert';
 import 'package:eazy_store/model/request/register_request.dart';
+import 'package:eazy_store/model/request/reset_request.dart';
+import 'package:eazy_store/model/request/update_password_request.dart';
+import 'package:eazy_store/model/request/verify_otp_request.dart';
 import 'package:eazy_store/model/response/register_response.dart';
+import 'package:eazy_store/model/response/reset_response.dart';
+import 'package:eazy_store/model/response/update_password_response.dart';
+import 'package:eazy_store/model/response/verify_otp_response.dart';
 import 'package:http/http.dart' as http;
 import 'package:eazy_store/config/app_config.dart'; // import config ของคุณ
 import 'package:eazy_store/model/request/login_request.dart';
@@ -75,6 +81,90 @@ class ApiService {
       return RegisterResponse(
         message: "Error",
         error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: $e",
+      );
+    }
+  }
+
+  // ✨ ฟังก์ชันสำหรับขอรหัส OTP
+  static Future<ResetResponse> requestResetOTP(ResetRequest request) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/auth/request-reset');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(request.toJson()),
+      );
+
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return ResetResponse.fromJson(responseData);
+      } else {
+        return ResetResponse(
+          message: "Error",
+          error: responseData['error'] ?? "ไม่สามารถส่งคำขอได้",
+        );
+      }
+    } catch (e) {
+      return ResetResponse(message: "Error", error: "การเชื่อมต่อขัดข้อง: $e");
+    }
+  }
+
+  static Future<VerifyOtpResponse> verifyOTP(VerifyOtpRequest request) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/auth/verify-otp');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(request.toJson()),
+      );
+
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return VerifyOtpResponse.fromJson(responseData);
+      } else {
+        return VerifyOtpResponse(
+          message: "Error",
+          error: responseData['error'] ?? "รหัส OTP ไม่ถูกต้อง",
+        );
+      }
+    } catch (e) {
+      return VerifyOtpResponse(
+        message: "Error",
+        error: "การเชื่อมต่อขัดข้อง: $e",
+      );
+    }
+  }
+
+  static Future<UpdatePasswordResponse> updatePassword(
+    UpdatePasswordRequest request,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/auth/reset-password');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(request.toJson()),
+      );
+
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return UpdatePasswordResponse.fromJson(responseData);
+      } else {
+        return UpdatePasswordResponse(
+          message: "Error",
+          error: responseData['error'] ?? "ไม่สามารถเปลี่ยนรหัสผ่านได้",
+        );
+      }
+    } catch (e) {
+      return UpdatePasswordResponse(
+        message: "Error",
+        error: "การเชื่อมต่อขัดข้อง: $e",
       );
     }
   }

@@ -1,4 +1,5 @@
 import 'package:eazy_store/api/api_service.dart';
+import 'package:eazy_store/auth/forgot_password.dart';
 
 import 'package:eazy_store/auth/register.dart';
 import 'package:eazy_store/model/request/login_request.dart';
@@ -76,7 +77,9 @@ class LoginController extends GetxController {
     Get.to(() => SignupPage()); // เปิดคอมเมนต์เมื่อมีหน้าสมัครสมาชิก
   }
 
-  void goToForgotPassword() {}
+  void goToForgotPassword() {
+    Get.to(ForgotPasswordPage());
+  }
 }
 
 // ----------------------------------------------------------------------
