@@ -3,6 +3,8 @@ import 'package:eazy_store/model/request/register_request.dart';
 import 'package:eazy_store/model/request/reset_request.dart';
 import 'package:eazy_store/model/request/update_password_request.dart';
 import 'package:eazy_store/model/request/verify_otp_request.dart';
+import 'package:eazy_store/model/request/verify_registration_request.dart';
+import 'package:eazy_store/model/request/change_email_verify_request.dart';
 import 'package:eazy_store/model/response/register_response.dart';
 import 'package:eazy_store/model/response/reset_response.dart';
 import 'package:eazy_store/model/response/update_password_response.dart';
@@ -166,6 +168,43 @@ class ApiService {
         message: "Error",
         error: "การเชื่อมต่อขัดข้อง: $e",
       );
+    }
+  }
+
+  // เพิ่มในคลาส ApiService
+
+  // เพิ่มในคลาส ApiService
+  static Future<RegisterResponse> verifyRegistration(
+    VerifyRegistrationRequest request,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/auth/verify-registration');
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(request.toJson()),
+      );
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      return RegisterResponse.fromJson(responseData);
+    } catch (e) {
+      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ: $e");
+    }
+  }
+
+  static Future<RegisterResponse> changeEmailVerify(
+    ChangeEmailVerifyRequest request,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/auth/change-email-verify');
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(request.toJson()),
+      );
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      return RegisterResponse.fromJson(responseData);
+    } catch (e) {
+      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ: $e");
     }
   }
 }
