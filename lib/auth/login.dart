@@ -8,9 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ----------------------------------------------------------------------
-// 1. Controller: จัดการ Logic การเข้าสู่ระบบ
-// ----------------------------------------------------------------------
 class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
