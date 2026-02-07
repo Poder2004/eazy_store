@@ -1,11 +1,13 @@
 import 'package:dotted_border/dotted_border.dart';
-import 'package:eazy_store/api/api_product.dart'; // ✨ เพิ่ม Import API
+import 'package:eazy_store/api/api_product.dart';
+import '../model/request/category_model.dart';
 import '../model/request/product_model.dart';
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert'; // เพิ่มสำหรับ jsonEncode/Decode
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,37 +26,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
   int _selectedIndex = 0;
   File? _imageFile;
   final _picker = ImagePicker();
-  bool _isSaving = false; // ✨ สำหรับแสดง Loading
+  bool _isSaving = false;
+
+  // รายการหมวดหมู่จากฐานข้อมูล
+  List<CategoryModel> _categoryList = [];
+  CategoryModel? _selectedCategoryObject;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _costController = TextEditingController();
   final TextEditingController _salePriceController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
   final TextEditingController _unitController = TextEditingController();
-  final TextEditingController _idController =
-      TextEditingController(); // ใช้เก็บ Barcode
-
-  String? _selectedCategory;
-  final List<String> _categories = [
-    'เครื่องดื่ม',
-    'ขนมขบเคี้ยว',
-    'อาหารสด',
-    'อื่น ๆ',
-  ];
-
-  // Mapping หมวดหมู่เป็น ID ตาม Backend
-  int _getCategoryId(String? categoryName) {
-    switch (categoryName) {
-      case 'เครื่องดื่ม':
-        return 1;
-      case 'ขนมขบเคี้ยว':
-        return 2;
-      case 'อาหารสด':
-        return 3;
-      default:
-        return 4;
-    }
-  }
+  final TextEditingController _idController = TextEditingController();
 
   final List<String> _unitOptions = [
     'ชิ้น',
@@ -66,16 +49,29 @@ class _AddProductScreenState extends State<AddProductScreen> {
   ];
   Key _unitKey = UniqueKey();
 
-  // 🔥 ฟังก์ชันหลักสำหรับการส่งข้อมูลไปยัง Backend
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories(); // ✨ ดึงข้อมูลหมวดหมู่ทันทีที่เปิดหน้า
+  }
+
+  // ฟังก์ชันดึงหมวดหมู่จาก API
+  Future<void> _fetchCategories() async {
+    final list = await ApiProduct.getCategories();
+    setState(() {
+      _categoryList = list;
+    });
+  }
+
   Future<void> _handleSaveProduct() async {
-    // 1. Validation เบื้องต้น
     if (_nameController.text.isEmpty ||
-        _selectedCategory == null ||
+        _selectedCategoryObject == null ||
         _costController.text.isEmpty ||
-        _salePriceController.text.isEmpty) {
+        _salePriceController.text.isEmpty ||
+        _unitController.text.isEmpty) {
       Get.snackbar(
         "แจ้งเตือน",
-        "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน",
+        "กรุณากรอกข้อมูลให้ครบถ้วน",
         backgroundColor: Colors.orange,
         colorText: Colors.white,
       );
@@ -85,22 +81,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // 2. ดึง Shop ID จาก SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      int shopId = prefs.getInt('shopId') ?? 1; // Default เป็น 1 หากหาไม่เจอ
+      int shopId = prefs.getInt('shopId') ?? 0;
 
-      // 3. เตรียมข้อมูลสินค้า (หมายเหตุ: ในแอปจริงควรอัปโหลดรูปภาพผ่าน ApiServiceImage ก่อนเพื่อเอา URL)
-      String imgUrl =
-          "https://placeholder.com/product.jpg"; // แทนที่ด้วย URL จริงจากการอัปโหลด
+      if (shopId == 0) {
+        Get.snackbar(
+          "ผิดพลาด",
+          "ไม่พบข้อมูลร้านค้าของคุณ กรุณาล็อกอินใหม่",
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+        return;
+      }
 
       Product newProduct = Product(
         shopId: shopId,
-        categoryId: _getCategoryId(_selectedCategory),
+        categoryId: _selectedCategoryObject!.categoryId, // ✨ ใช้ ID จริงจาก DB
         name: _nameController.text.trim(),
         barcode: _idController.text.trim().isEmpty
             ? null
             : _idController.text.trim(),
-        imgProduct: imgUrl,
+        imgProduct: "https://placeholder.com/product.jpg",
         sellPrice: double.parse(_salePriceController.text),
         costPrice: double.parse(_costController.text),
         stock: int.parse(
@@ -110,7 +111,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
         status: true,
       );
 
-      // 4. เรียกใช้ API
       final result = await ApiProduct.createProduct(newProduct);
 
       if (result['success']) {
@@ -120,7 +120,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
-        _resetForm(); // ล้างข้อมูลหน้าจอ
+        _resetForm();
       } else {
         Get.snackbar(
           "ผิดพลาด",
@@ -132,7 +132,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "เกิดข้อผิดพลาดในการบันทึก: $e",
+        "เกิดข้อผิดพลาด: $e",
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );
@@ -149,57 +149,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _stockController.clear();
       _unitController.clear();
       _idController.clear();
-      _selectedCategory = null;
+      _selectedCategoryObject = null;
       _imageFile = null;
       _unitKey = UniqueKey();
     });
   }
 
-  void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
-  }
-
-  Future<File?> _pickImageFromSource(ImageSource source) async {
-    final pickedFile = await _picker.pickImage(
-      source: source,
-      imageQuality: 80,
-    );
-    return pickedFile != null ? File(pickedFile.path) : null;
-  }
-
-  void _showImageSourcePicker(BuildContext context) {
-    Get.dialog(
-      AlertDialog(
-        title: Text(
-          'เลือกรูปภาพ',
-          style: GoogleFonts.prompt(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text('เลือกจากคลังภาพ', style: GoogleFonts.prompt()),
-              onTap: () async {
-                Get.back();
-                final image = await _pickImageFromSource(ImageSource.gallery);
-                if (image != null) setState(() => _imageFile = image);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: Text('ถ่ายภาพ', style: GoogleFonts.prompt()),
-              onTap: () async {
-                Get.back();
-                final image = await _pickImageFromSource(ImageSource.camera);
-                if (image != null) setState(() => _imageFile = image);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
@@ -227,7 +183,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             const SizedBox(height: 20),
             _buildInputField(
               label: 'ชื่อสินค้า',
-              hintText: 'ชื่อสินค้า',
+              hintText: 'ระบุชื่อสินค้า',
               controller: _nameController,
             ),
             const SizedBox(height: 20),
@@ -294,63 +250,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildInputField({
-    required String label,
-    required String hintText,
-    required TextEditingController controller,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label.isNotEmpty) ...[
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8.0),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                offset: const Offset(0, 2),
-                blurRadius: 4,
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            decoration: InputDecoration(
-              hintText: hintText,
-              filled: true,
-              fillColor: const Color(0xFFF0F0E0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: Color(0xFF939393)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: Color(0xFF939393)),
-              ),
-              suffixIcon: suffixIcon,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildDropdownField({
     required String label,
     required String hintText,
@@ -371,14 +270,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
             border: Border.all(color: const Color(0xFF939393), width: 1.0),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: DropdownButton<CategoryModel>(
               isExpanded: true,
-              value: _selectedCategory,
+              value: _selectedCategoryObject,
               hint: Text(hintText),
-              items: _categories
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedCategory = v),
+              // ดึงรายการจาก _categoryList ที่ได้จาก API
+              items: _categoryList.map((CategoryModel cat) {
+                return DropdownMenuItem<CategoryModel>(
+                  value: cat,
+                  child: Text(cat.name),
+                );
+              }).toList(),
+              onChanged: (CategoryModel? newValue) =>
+                  setState(() => _selectedCategoryObject = newValue),
             ),
           ),
         ),
@@ -401,10 +305,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
               : _unitOptions.where((e) => e.contains(val.text)),
           onSelected: (s) => _unitController.text = s,
           fieldViewBuilder: (ctx, ctrl, node, onSub) {
-            ctrl.text = _unitController.text;
+            ctrl.addListener(() => _unitController.text = ctrl.text);
             return _buildInputField(
               label: '',
-              hintText: 'หน่วยนับ',
+              hintText: 'เช่น ชิ้น, ขวด',
               controller: ctrl,
             );
           },
@@ -413,39 +317,51 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildImagePicker() {
-    return Center(
-      child: GestureDetector(
-        onTap: () => _showImageSourcePicker(context),
-        child: DottedBorder(
-          borderType: BorderType.RRect,
-          radius: const Radius.circular(15.0),
-          dashPattern: const [6, 3],
-          color: const Color(0xFF939393),
-          strokeWidth: 2,
-          child: Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(15.0),
-              image: _imageFile != null
-                  ? DecorationImage(
-                      image: FileImage(_imageFile!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
+  Widget _buildInputField({
+    required String label,
+    required String hintText,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (label.isNotEmpty)
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        if (label.isNotEmpty) const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              hintText: hintText,
+              filled: true,
+              fillColor: const Color(0xFFF0F0E0),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: const BorderSide(color: Color(0xFF939393)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: const BorderSide(color: Color(0xFF939393)),
+              ),
             ),
-            child: _imageFile == null
-                ? const Icon(
-                    Icons.add_a_photo_outlined,
-                    size: 40,
-                    color: Colors.grey,
-                  )
-                : null,
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -519,13 +435,50 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildResetText() {
+  Widget _buildImagePicker() {
     return Center(
-      child: TextButton.icon(
-        onPressed: _resetForm,
-        icon: const Icon(Icons.refresh, size: 18, color: Colors.grey),
-        label: const Text('รีเซ็ตข้อมูล', style: TextStyle(color: Colors.grey)),
+      child: GestureDetector(
+        onTap: () async {
+          final img = await _picker.pickImage(source: ImageSource.gallery);
+          if (img != null) setState(() => _imageFile = File(img.path));
+        },
+        child: DottedBorder(
+          borderType: BorderType.RRect,
+          radius: const Radius.circular(15.0),
+          dashPattern: const [6, 3],
+          color: const Color(0xFF939393),
+          strokeWidth: 2,
+          child: Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(15.0),
+              image: _imageFile != null
+                  ? DecorationImage(
+                      image: FileImage(_imageFile!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: _imageFile == null
+                ? const Icon(
+                    Icons.add_a_photo_outlined,
+                    size: 40,
+                    color: Colors.grey,
+                  )
+                : null,
+          ),
+        ),
       ),
     );
   }
+
+  Widget _buildResetText() => Center(
+    child: TextButton.icon(
+      onPressed: _resetForm,
+      icon: const Icon(Icons.refresh, size: 18, color: Colors.grey),
+      label: const Text('รีเซ็ตข้อมูล', style: TextStyle(color: Colors.grey)),
+    ),
+  );
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:eazy_store/model/request/category_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
@@ -40,6 +41,28 @@ class ApiProduct {
       }
     } catch (e) {
       return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
+    }
+  }
+
+  static Future<List<CategoryModel>> getCategories() async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/categories');
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> body = jsonDecode(response.body);
+        return body.map((item) => CategoryModel.fromJson(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching categories: $e");
+      return [];
     }
   }
 }
