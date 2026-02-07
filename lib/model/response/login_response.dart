@@ -17,10 +17,7 @@ class LoginResponse {
 }
 
 class UserData {
-  // --------------------------------------------------------
-  // ❌ แก้จาก final uint ID;
-  // ✅ เป็น final int id;
-  // --------------------------------------------------------
+
   final int id;
   final String username;
   final String email;

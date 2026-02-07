@@ -23,7 +23,7 @@ class ApiService {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(request.toJson()), // แปลงข้อมูลเป็น JSON
+        body: jsonEncode(request.toJson()), 
       );
 
       print("Status Code: ${response.statusCode}");
