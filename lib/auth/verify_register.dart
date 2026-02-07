@@ -22,27 +22,26 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
   int _counter = 60;
   Timer? _timer;
   bool _isLoading = false;
-
   late String email, username;
 
-  // โทนสีฟ้าสมัยใหม่
+  // โทนสีฟ้าพรีเมียม
   final Color primaryColor = const Color(0xFF0288D1);
-  final Color bgColor = const Color(0xFFF5FAFF);
+  final Color bgColor = const Color(0xFFF8FBFF);
 
   @override
   void initState() {
     super.initState();
     email = Get.arguments['email'];
     username = Get.arguments['username'];
+    // เริ่มตัวนับเวลาทันทีเมื่อเปิดหน้า (เพราะรหัสถูกส่งมาจากหน้า Signup/Login แล้ว)
     _startTimer();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    for (var c in _controllers) {
-      c.dispose();
-    }
+    for (var c in _controllers) c.dispose();
+    for (var n in _nodes) n.dispose();
     super.dispose();
   }
 
@@ -65,22 +64,19 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
   // ฟังก์ชันส่งรหัสใหม่ (จะทำงานเมื่อกดปุ่ม Resend และ Timer เป็น 0)
   void _resendCode() async {
     setState(() => _isLoading = true);
-
-    // เรียกใช้ changeEmailVerify เพื่ออัปเดตอีเมลปัจจุบันใน DB และส่งรหัส
     final res = await ApiService.changeEmailVerify(
       ChangeEmailVerifyRequest(username: username, newEmail: email),
     );
-
     setState(() => _isLoading = false);
 
     if (res.error == null) {
-      _startTimer();
+      _startTimer(); // เริ่มนับถอยหลังใหม่หลังจากส่งรหัสสำเร็จ
       Get.snackbar(
         "สำเร็จ",
         "เราได้ส่งรหัสใหม่ไปยัง $email แล้ว",
         backgroundColor: Colors.white,
         colorText: primaryColor,
-        icon: const Icon(Icons.check_circle),
+        icon: const Icon(Icons.check_circle, color: Colors.green),
       );
     } else {
       Get.snackbar(
@@ -93,9 +89,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
   }
 
   void _verify() async {
-    // 1. เช็คว่ากำลังโหลดอยู่ไหม ถ้าโหลดอยู่ห้ามทำงานซ้ำ
     if (_isLoading) return;
-
     String otp = _controllers.map((e) => e.text).join();
     if (otp.length < 6) return;
 
@@ -104,38 +98,10 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
       VerifyRegistrationRequest(email: email, otp: otp),
     );
 
-    // สำคัญ: อย่าเพิ่ง setState _isLoading เป็น false ทันทีถ้าสำเร็จ
-    // เพื่อป้องกันการยิงซ้ำระหว่างกำลังเปลี่ยนหน้า
-
     if (res.error == null) {
-      Get.defaultDialog(
-        title: "สำเร็จ",
-        titleStyle: const TextStyle(
-          color: Color(0xFF0288D1),
-          fontWeight: FontWeight.bold,
-        ),
-        middleText: "ยืนยันตัวตนสำเร็จแล้ว!\nคุณสามารถเข้าสู่ระบบได้ทันที",
-        radius: 15,
-        barrierDismissible: false,
-        confirm: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0288D1),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () => Get.offAll(() => const LoginPage()),
-            child: const Text(
-              "ไปหน้าล็อกอิน",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ),
-      );
+      _showSuccessDialog();
     } else {
-      setState(() => _isLoading = false); // ถ้าผิดค่อยเปิดให้กดใหม่
+      setState(() => _isLoading = false);
       Get.snackbar(
         "รหัสไม่ถูกต้อง",
         res.error!,
@@ -146,31 +112,82 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     }
   }
 
-  // ปรับปรุง Popup แก้ไขอีเมลให้สวยงามขึ้น
+  void _showSuccessDialog() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        child: Padding(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle_outline_rounded,
+                size: 70,
+                color: Colors.green,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "ยืนยันสำเร็จ",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "บัญชีของคุณพร้อมใช้งานแล้ว\nกรุณาเข้าสู่ระบบเพื่อเริ่มใช้งาน",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () => Get.offAll(() => const LoginPage()),
+                  child: const Text(
+                    "ไปหน้าล็อกอิน",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _changeEmailDialog() {
     final newEmailController = TextEditingController(text: email);
     Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.edit_note_rounded,
+                Icons.mark_email_read_rounded,
                 size: 50,
                 color: Color(0xFF0288D1),
               ),
               const SizedBox(height: 16),
               const Text(
-                "แก้ไขอีเมลของคุณ",
+                "แก้ไขอีเมล",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
-                "ระบุอีเมลที่ถูกต้องเพื่อรับรหัส",
-                textAlign: TextAlign.center,
+                "เปลี่ยนอีเมลที่จะใช้รับรหัส OTP",
                 style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 20),
@@ -181,7 +198,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                   fillColor: Colors.grey[100],
                   prefixIcon: const Icon(Icons.email_outlined),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(15),
                     borderSide: BorderSide.none,
                   ),
                   hintText: "example@gmail.com",
@@ -193,9 +210,13 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Get.back(),
-                      child: const Text("ยกเลิก"),
+                      child: const Text(
+                        "ยกเลิก",
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
@@ -210,9 +231,10 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                             () => email = newEmailController.text.trim(),
                           );
                           Get.back();
+                          // ✨ ไม่สั่ง _startTimer ตรงนี้แล้ว ผู้ใช้ต้องกด "ส่งรหัสอีกครั้ง" เอง
                           Get.snackbar(
-                            "เปลี่ยนอีเมลแล้ว",
-                            "กรุณากด 'ส่งรหัสอีกครั้ง' เพื่อรับรหัสใหม่",
+                            "อัปเดตแล้ว",
+                            "เปลี่ยนอีเมลเป็น $email เรียบร้อย\nกรุณากด 'ส่งรหัสอีกครั้ง'",
                             backgroundColor: Colors.white,
                             colorText: Colors.black87,
                           );
@@ -251,17 +273,10 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
           child: Column(
             children: [
               const SizedBox(height: 20),
-              // รูปประกอบ Illustration
-              Container(
-                height: 150,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(
-                      'https://cdn-icons-png.flaticon.com/512/6681/6681204.png',
-                    ),
-                    fit: BoxFit.contain,
-                  ),
-                ),
+              const Icon(
+                Icons.mail_lock_rounded,
+                size: 90,
+                color: Color(0xFF0288D1),
               ),
               const SizedBox(height: 30),
               const Text(
@@ -290,14 +305,11 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                 ),
               ),
               const SizedBox(height: 40),
-              // OTP Input Boxes
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (i) => _otpBox(i)),
               ),
               const SizedBox(height: 40),
-
-              // ส่วนควบคุมการส่งรหัสและแก้ไข
               if (_isLoading)
                 const CircularProgressIndicator()
               else ...[
@@ -306,7 +318,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                   child: Text(
                     _counter == 0
                         ? "ส่งรหัสอีกครั้ง"
-                        : "ส่งรหัสอีกครั้งใน ($_counter)",
+                        : "ส่งอีกครั้งใน ($_counter)",
                     style: TextStyle(
                       color: _counter == 0 ? primaryColor : Colors.grey,
                       fontWeight: FontWeight.bold,
@@ -324,7 +336,6 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                   ),
                 ),
               ],
-
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
@@ -348,6 +359,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                   ),
                 ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -357,8 +369,8 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
 
   Widget _otpBox(int i) {
     return Container(
-      width: 48,
-      height: 60,
+      width: 45,
+      height: 58,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -368,7 +380,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -380,7 +392,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
-        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         decoration: const InputDecoration(
           counterText: "",
           border: InputBorder.none,

@@ -16,6 +16,7 @@ import 'package:eazy_store/model/response/login_response.dart';
 
 class ApiService {
   // ฟังก์ชัน Login
+  // ฟังก์ชัน Login ที่ปรับปรุงให้รองรับการดึง Email เมื่อยังไม่ได้ยืนยันตัวตน
   static Future<LoginResponse> login(LoginRequest request) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/auth/login');
 
@@ -23,22 +24,29 @@ class ApiService {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(request.toJson()), 
+        body: jsonEncode(request.toJson()),
       );
 
+      // แสดงข้อมูลเพื่อตรวจสอบใน Console
       print("Status Code: ${response.statusCode}");
       print("Body: ${response.body}");
 
       final Map<String, dynamic> responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 200) {
-        // กรณีสำเร็จ (200 OK)
+      // --- ส่วนที่ปรับปรุง ---
+      // เราจะใช้ factory ในการจัดการข้อมูลเป็นหลัก เพราะมันถูกออกแบบมาให้รับได้ทั้งผลสำเร็จและ error
+      if (response.statusCode == 200 ||
+          response.statusCode == 403 ||
+          response.statusCode == 401) {
+        // กรณีสำเร็จ (200) หรือ พลาดแบบมีข้อมูล (401, 403) ให้ factory เป็นตัว Map ข้อมูล
         return LoginResponse.fromJson(responseData);
       } else {
-        // กรณี Server ตอบ Error กลับมา (เช่น 400, 401, 500)
+        // กรณีอื่นๆ เช่น 500 (Server Error)
         return LoginResponse(
           message: "Error",
-          error: responseData['error'] ?? "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+          error:
+              responseData['error'] ??
+              "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุจากเซิร์ฟเวอร์",
         );
       }
     } catch (e) {
