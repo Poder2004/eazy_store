@@ -62,7 +62,7 @@ class MyShopController extends GetxController {
       // ลบออกจาก List ในหน้าจอทันที (ไม่ต้องโหลดใหม่ให้เสียเวลา)
       shops.removeWhere((item) => item.shopId == shopId);
       Get.snackbar(
-        "สำเร็จ", 
+        "สำเร็จ",
         "ลบร้านค้าเรียบร้อยแล้ว",
         backgroundColor: Colors.green,
         colorText: Colors.white,
@@ -70,7 +70,7 @@ class MyShopController extends GetxController {
       );
     } else {
       Get.snackbar(
-        "ผิดพลาด", 
+        "ผิดพลาด",
         "ไม่สามารถลบร้านค้าได้",
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -102,14 +102,16 @@ class MyShopPage extends StatelessWidget {
               right: 20,
               child: Row(
                 children: [
-                  Obx(() => Text(
-                        controller.userName.value,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      )),
+                  Obx(
+                    () => Text(
+                      controller.userName.value,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   const CircleAvatar(
                     radius: 20,
@@ -160,11 +162,11 @@ class MyShopPage extends StatelessWidget {
                           itemCount: controller.shops.length,
                           itemBuilder: (context, index) {
                             final shop = controller.shops[index];
-                            
+
                             // --- 5. แก้ไขตรงนี้: ใส่ Slidable ครอบ Card ---
                             return Slidable(
                               key: ValueKey(shop.shopId),
-                              
+
                               // Action Pane ด้านขวา (ปัดซ้าย)
                               endActionPane: ActionPane(
                                 motion: const ScrollMotion(),
@@ -178,7 +180,9 @@ class MyShopPage extends StatelessWidget {
                                     foregroundColor: Colors.white,
                                     icon: Icons.edit,
                                     label: 'แก้ไข',
-                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
+                                    borderRadius: const BorderRadius.horizontal(
+                                      left: Radius.circular(15),
+                                    ),
                                   ),
                                   // ปุ่มลบ
                                   SlidableAction(
@@ -188,18 +192,30 @@ class MyShopPage extends StatelessWidget {
                                         context: context,
                                         builder: (ctx) => AlertDialog(
                                           title: const Text("ยืนยันการลบ"),
-                                          content: Text("คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่?"),
+                                          content: Text(
+                                            "คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่?",
+                                          ),
                                           actions: [
                                             TextButton(
-                                              onPressed: () => Navigator.pop(ctx),
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx),
                                               child: const Text("ยกเลิก"),
                                             ),
                                             TextButton(
                                               onPressed: () {
-                                                Navigator.pop(ctx); // ปิด Dialog
-                                                controller.deleteShop(shop.shopId); // แจ้ง Controller ให้ลบ
+                                                Navigator.pop(
+                                                  ctx,
+                                                ); // ปิด Dialog
+                                                controller.deleteShop(
+                                                  shop.shopId,
+                                                ); // แจ้ง Controller ให้ลบ
                                               },
-                                              child: const Text("ลบ", style: TextStyle(color: Colors.red)),
+                                              child: const Text(
+                                                "ลบ",
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -209,7 +225,9 @@ class MyShopPage extends StatelessWidget {
                                     foregroundColor: Colors.white,
                                     icon: Icons.delete,
                                     label: 'ลบ',
-                                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(15)),
+                                    borderRadius: const BorderRadius.horizontal(
+                                      right: Radius.circular(15),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -219,7 +237,8 @@ class MyShopPage extends StatelessWidget {
                                 margin: const EdgeInsets.only(bottom: 15),
                                 elevation: 3,
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15)),
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.all(10),
                                   leading: Container(
@@ -236,18 +255,23 @@ class MyShopPage extends StatelessWidget {
                                           : null,
                                     ),
                                     child: shop.imgShop.isEmpty
-                                        ? const Icon(Icons.store,
-                                            color: Colors.grey)
+                                        ? const Icon(
+                                            Icons.store,
+                                            color: Colors.grey,
+                                          )
                                         : null,
                                   ),
                                   title: Text(
                                     shop.name,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   subtitle: Text(shop.phone),
-                                  trailing: const Icon(Icons.arrow_forward_ios,
-                                      size: 16),
+                                  trailing: const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 16,
+                                  ),
                                   onTap: () {
                                     // TODO: กดเข้าร้านค้า
                                   },
