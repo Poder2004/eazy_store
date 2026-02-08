@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_slidable/flutter_slidable.dart'; // 1. เพิ่ม import นี้
+import 'package:flutter_slidable/flutter_slidable.dart'; 
 
 import '../api/api_shop.dart';
 import '../model/response/shop_response.dart';
 import 'create_shop.dart';
-import '../shop/edit_shop.dart'; // 2. เพิ่ม import หน้าแก้ไข (สร้างไฟล์นี้หรือยังครับ?)
+import 'edit_shop.dart'; // ตรวจสอบ path ให้ถูกต้องนะครับ
+import '../homepage/home_page.dart';
 
 // ----------------------------------------------------------------------
 // 1. Controller: จัดการ Logic
@@ -41,25 +42,20 @@ class MyShopController extends GetxController {
   }
 
   void goToAddShop() async {
-    // ไปหน้าเพิ่ม แล้วรอกลับมา refresh
     var result = await Get.to(() => CreateShopPage());
-    if (result == true) fetchShops(); // ถ้าเพิ่มสำเร็จให้โหลดใหม่
+    if (result == true) fetchShops(); 
   }
 
-  // --- 3. เพิ่มฟังก์ชันไปหน้าแก้ไข ---
   void goToEditShop(ShopResponse shop) async {
-    // ส่งข้อมูลร้านเดิม (shop) ไปด้วย
     var result = await Get.to(() => EditShopScreen(shop: shop));
     if (result == true) {
-      fetchShops(); // ถ้ามีการแก้ข้อมูล กลับมาให้โหลดใหม่
+      fetchShops(); 
     }
   }
 
-  // --- 4. เพิ่มฟังก์ชันลบร้านค้า ---
   Future<void> deleteShop(int shopId) async {
     bool success = await _apiShop.deleteShop(shopId);
     if (success) {
-      // ลบออกจาก List ในหน้าจอทันที (ไม่ต้องโหลดใหม่ให้เสียเวลา)
       shops.removeWhere((item) => item.shopId == shopId);
       Get.snackbar(
         "สำเร็จ",
@@ -164,7 +160,6 @@ class MyShopPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // เพิ่มคำแนะนำเล็กๆ
                   const Center(
                     child: Text(
                       "ปัดซ้ายที่รายการเพื่อ แก้ไข หรือ ลบ",
@@ -173,19 +168,22 @@ class MyShopPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // --- List Content ---
+                  // --- List Content (แก้ไขตรงนี้ให้ถูกต้อง) ---
                   Expanded(
                     child: Obx(() {
+                      // 1. กำลังโหลด
                       if (controller.isLoading.value) {
                         return const Center(child: CircularProgressIndicator());
                       }
 
+                      // 2. มีข้อมูล -> แสดง List แบบ Modern
                       if (controller.shops.isNotEmpty) {
                         return ListView.builder(
                           itemCount: controller.shops.length,
                           itemBuilder: (context, index) {
                             final shop = controller.shops[index];
 
+<<<<<<< HEAD
                             // --- 5. แก้ไขตรงนี้: ใส่ Slidable ครอบ Card ---
                             return Slidable(
                               key: ValueKey(shop.shopId),
@@ -298,6 +296,111 @@ class MyShopPage extends StatelessWidget {
                                   onTap: () {
                                     // TODO: กดเข้าร้านค้า
                                   },
+=======
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 15),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(15), 
+                                child: Slidable(
+                                  key: ValueKey(shop.shopId),
+                                  
+                                  // Action Pane (ปุ่มปัดซ้าย)
+                                  endActionPane: ActionPane(
+                                    motion: const ScrollMotion(),
+                                    children: [
+                                      SlidableAction(
+                                        onPressed: (context) => controller.goToEditShop(shop),
+                                        backgroundColor: const Color(0xFF2196F3),
+                                        foregroundColor: Colors.white,
+                                        icon: Icons.edit_rounded,
+                                        label: 'แก้ไข',
+                                      ),
+                                      SlidableAction(
+                                        onPressed: (context) {
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text("ยืนยันการลบ"),
+                                              content: Text("คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่?"),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(ctx),
+                                                  child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(ctx);
+                                                    controller.deleteShop(shop.shopId);
+                                                  },
+                                                  child: const Text("ลบ", style: TextStyle(color: Colors.red)),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                        backgroundColor: const Color(0xFFFE4A49),
+                                        foregroundColor: Colors.white,
+                                        icon: Icons.delete_rounded,
+                                        label: 'ลบ',
+                                      ),
+                                    ],
+                                  ),
+
+                                  // เนื้อหา Card (สีขาว)
+                                  child: Container(
+                                    color: Colors.white, 
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                                      leading: Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[100],
+                                          border: Border.all(color: Colors.grey.shade300, width: 1),
+                                          borderRadius: BorderRadius.circular(12),
+                                          image: shop.imgShop.isNotEmpty
+                                              ? DecorationImage(
+                                                  image: NetworkImage(shop.imgShop),
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : null,
+                                        ),
+                                        child: shop.imgShop.isEmpty
+                                            ? Icon(Icons.store_rounded, color: Colors.grey[400], size: 30)
+                                            : null,
+                                      ),
+                                      title: Text(
+                                        shop.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 5),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              shop.phone,
+                                              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      trailing: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                                      ),
+                                     onTap: () => controller.selectShop(shop),
+                                    ),
+                                  ),
+>>>>>>> 58a01565d87ad40e854880ca7ef304eb226e6ce9
                                 ),
                               ),
                             );
@@ -305,6 +408,7 @@ class MyShopPage extends StatelessWidget {
                         );
                       }
 
+                      // 3. ไม่มีข้อมูล -> แสดง Empty State
                       return Center(
                         child: Text(
                           "คุณยังไม่มีร้านค้า",
