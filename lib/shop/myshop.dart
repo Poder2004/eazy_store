@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_slidable/flutter_slidable.dart'; 
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../api/api_shop.dart';
 import '../model/response/shop_response.dart';
@@ -43,13 +43,13 @@ class MyShopController extends GetxController {
 
   void goToAddShop() async {
     var result = await Get.to(() => CreateShopPage());
-    if (result == true) fetchShops(); 
+    if (result == true) fetchShops();
   }
 
   void goToEditShop(ShopResponse shop) async {
     var result = await Get.to(() => EditShopScreen(shop: shop));
     if (result == true) {
-      fetchShops(); 
+      fetchShops();
     }
   }
 
@@ -183,7 +183,6 @@ class MyShopPage extends StatelessWidget {
                           itemBuilder: (context, index) {
                             final shop = controller.shops[index];
 
-<<<<<<< HEAD
                             // --- 5. แก้ไขตรงนี้: ใส่ Slidable ครอบ Card ---
                             return Slidable(
                               key: ValueKey(shop.shopId),
@@ -293,114 +292,7 @@ class MyShopPage extends StatelessWidget {
                                     Icons.arrow_forward_ios,
                                     size: 16,
                                   ),
-                                  onTap: () {
-                                    // TODO: กดเข้าร้านค้า
-                                  },
-=======
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 15),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(15), 
-                                child: Slidable(
-                                  key: ValueKey(shop.shopId),
-                                  
-                                  // Action Pane (ปุ่มปัดซ้าย)
-                                  endActionPane: ActionPane(
-                                    motion: const ScrollMotion(),
-                                    children: [
-                                      SlidableAction(
-                                        onPressed: (context) => controller.goToEditShop(shop),
-                                        backgroundColor: const Color(0xFF2196F3),
-                                        foregroundColor: Colors.white,
-                                        icon: Icons.edit_rounded,
-                                        label: 'แก้ไข',
-                                      ),
-                                      SlidableAction(
-                                        onPressed: (context) {
-                                          showDialog(
-                                            context: context,
-                                            builder: (ctx) => AlertDialog(
-                                              title: const Text("ยืนยันการลบ"),
-                                              content: Text("คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่?"),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(ctx),
-                                                  child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.pop(ctx);
-                                                    controller.deleteShop(shop.shopId);
-                                                  },
-                                                  child: const Text("ลบ", style: TextStyle(color: Colors.red)),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                        backgroundColor: const Color(0xFFFE4A49),
-                                        foregroundColor: Colors.white,
-                                        icon: Icons.delete_rounded,
-                                        label: 'ลบ',
-                                      ),
-                                    ],
-                                  ),
-
-                                  // เนื้อหา Card (สีขาว)
-                                  child: Container(
-                                    color: Colors.white, 
-                                    child: ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                                      leading: Container(
-                                        width: 60,
-                                        height: 60,
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[100],
-                                          border: Border.all(color: Colors.grey.shade300, width: 1),
-                                          borderRadius: BorderRadius.circular(12),
-                                          image: shop.imgShop.isNotEmpty
-                                              ? DecorationImage(
-                                                  image: NetworkImage(shop.imgShop),
-                                                  fit: BoxFit.cover,
-                                                )
-                                              : null,
-                                        ),
-                                        child: shop.imgShop.isEmpty
-                                            ? Icon(Icons.store_rounded, color: Colors.grey[400], size: 30)
-                                            : null,
-                                      ),
-                                      title: Text(
-                                        shop.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      subtitle: Padding(
-                                        padding: const EdgeInsets.only(top: 5),
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.phone, size: 14, color: Colors.grey[600]),
-                                            const SizedBox(width: 5),
-                                            Text(
-                                              shop.phone,
-                                              style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      trailing: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-                                      ),
-                                     onTap: () => controller.selectShop(shop),
-                                    ),
-                                  ),
->>>>>>> 58a01565d87ad40e854880ca7ef304eb226e6ce9
+                                  onTap: () => controller.selectShop(shop),
                                 ),
                               ),
                             );
