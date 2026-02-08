@@ -1,255 +1,253 @@
+import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/model/request/product_model.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
-const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร
-const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
-const Color _kSearchFillColor = Color(0xFFEFEFEF); // สีพื้นหลังของ Search Bar
-const Color _kCardColor = Color(0xFFFFFFFF); // สีพื้นหลังของ Card รายการสินค้า
-const Color _kWarningColor = Color(0xFFFFCC00); // สีเหลืองสำหรับสัญลักษณ์เตือน
+// ----------------------------------------------------------------------
+// 1. Controller: จัดการ Logic (อยู่ภายในหน้าเดียวกัน)
+// ----------------------------------------------------------------------
+class StockController extends GetxController {
+  var isLoading = true.obs;
+  var products = <Product>[].obs; // ข้อมูลดิบจากฐานข้อมูล
+  var filteredProducts = <Product>[].obs; // ข้อมูลที่ใช้แสดงผล (รองรับการค้นหา)
+  var selectedIndex = 0.obs;
 
-// --- DATA MODEL (จำลอง) ---
-class Product {
-  final String name;
-  final int stock;
-  final String unit;
-  final String imageUrl; // URL หรือ Asset Path
+  @override
+  void onInit() {
+    super.onInit();
+    fetchStockData();
+  }
 
-  Product({
-    required this.name,
-    required this.stock,
-    required this.unit,
-    required this.imageUrl,
-  });
+  // 🚀 ฟังก์ชันดึงข้อมูลสต็อกและเรียงลำดับจากน้อยไปมาก
+  Future<void> fetchStockData() async {
+    isLoading.value = true;
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId != 0) {
+        List<Product> list = await ApiProduct.getProductsByShop(shopId);
+
+        // ✨ เรียงลำดับ: สินค้าที่สต็อกน้อยที่สุด (หรือหมด) จะอยู่บนสุด
+        list.sort((a, b) => a.stock.compareTo(b.stock));
+
+        products.assignAll(list);
+        filteredProducts.assignAll(list);
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "โหลดข้อมูลล้มเหลว: $e",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // 🔍 ฟังก์ชันค้นหาสินค้า (กรองจากรายชื่อที่มีอยู่)
+  void searchProduct(String query) {
+    if (query.isEmpty) {
+      filteredProducts.assignAll(products);
+    } else {
+      var result = products
+          .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+      filteredProducts.assignAll(result);
+    }
+  }
+
+  void changeTab(int index) {
+    selectedIndex.value = index;
+  }
 }
 
-// ข้อมูลจำลองสำหรับแสดงใน ListView
-final List<Product> dummyProducts = [
-  Product(name: 'ขนมปังปอนด์', stock: 0, unit: 'แถว', imageUrl: 'assets/image/bread.png'),
-  Product(name: 'โค้กกระป๋อง', stock: 3, unit: 'ป๋อง', imageUrl: 'assets/image/coke.png'),
-  Product(name: 'มาม่าหมูสับ', stock: 8, unit: 'ซอง', imageUrl: 'assets/image/mama.png'),
-  Product(name: 'สบู่นกแก้วสีชมพู', stock: 15, unit: 'ก้อน', imageUrl: 'assets/image/soap.png'),
-];
-// ----------------------------
-
-
-
-class CheckStockScreen extends StatefulWidget {
+// ----------------------------------------------------------------------
+// 2. The View: หน้าจอ UI
+// ----------------------------------------------------------------------
+class CheckStockScreen extends StatelessWidget {
   const CheckStockScreen({super.key});
 
   @override
-  State<CheckStockScreen> createState() => _CheckStockScreenState();
-}
-
-class _CheckStockScreenState extends State<CheckStockScreen> {
-  int _selectedIndex = 0;
-  final TextEditingController _searchController = TextEditingController();
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    print('Tab tapped: $index');
-  }
-
-  // 🔍 Widget สำหรับ Search Input Field และปุ่ม Sort
-  Widget _buildSearchBarAndSort() {
-    return Column(
-      children: [
-        // Search Bar
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: _kSearchFillColor,
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: Colors.grey.shade300, width: 1.0),
-          ),
-          child: TextField(
-            controller: _searchController,
-            style: const TextStyle(color: Colors.black87),
-            decoration: InputDecoration(
-              hintText: 'ค้นหาหรือสแกนบาร์โค้ด',
-              hintStyle: TextStyle(color: Colors.grey.shade500),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 10.0,
-                horizontal: 12.0,
-              ),
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-              suffixIcon: IconButton(
-                icon: Icon(Icons.qr_code_scanner_outlined, color: Colors.grey[700]),
-                onPressed: () {
-                  // Logic สำหรับการสแกนบาร์โค้ด
-                  print('Scanning barcode...');
-                },
-              ),
-              filled: true,
-              fillColor: Colors.transparent, 
-              border: InputBorder.none, 
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-            ),
-          ),
-        ),
-        
-        const SizedBox(height: 10),
-
-        // ปุ่ม เรียงจาก (Sort)
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: () {
-              // Logic สำหรับการเรียงลำดับ
-              print('Sorting options selected...');
-            },
-            icon: const Icon(Icons.sort, color: Colors.black87, size: 24),
-            label: const Text(
-              'เรียงจาก',
-              style: TextStyle(
-                color: Colors.black87,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 📦 Widget สำหรับ Card แสดงรายการสินค้าแต่ละชิ้น
-  Widget _buildProductCard(Product product) {
-    // กำหนดว่าควรแสดงไอคอนเตือนหรือไม่ (เช่น เหลือน้อยกว่า 5 ชิ้น)
-    final bool showWarning = product.stock <= 5;
-    
-    // หากสต็อกเป็น 0 ให้แสดงข้อความว่า "หมด"
-    final String stockText = product.stock == 0 
-      ? 'คงเหลือ 0'
-      : 'คงเหลือ ${product.stock}';
-
-    return Card(
-      color: _kCardColor,
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      margin: const EdgeInsets.only(bottom: 15),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // รูปภาพสินค้า
-            Container(
-              width: 60,
-              height: 60,
-              margin: const EdgeInsets.only(right: 15),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.0),
-                image: DecorationImage(
-                  image: AssetImage(product.imageUrl),
-                  fit: BoxFit.cover,
-                  // Fallback: ถ้าไม่มีรูป จะใช้ Placeholder สีเทา
-                  onError: (exception, stackTrace) {
-                    print('Error loading image for ${product.name}: $exception');
-                  },
-                ),
-              ),
-            ),
-            
-            // ข้อมูลสินค้า
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$stockText ${product.unit}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: product.stock == 0 ? Colors.red[700] : Colors.grey[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // สัญลักษณ์เตือน (Warning Icon)
-            if (showWarning)
-              Padding(
-                padding: const EdgeInsets.only(left: 10),
-                child: Icon(
-                  Icons.warning_amber_rounded,
-                  color: _kWarningColor,
-                  size: 30,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // ลงทะเบียน Controller ใช้งานในหน้านี้
+    final StockController controller = Get.put(StockController());
+
+    // กำหนดสีธีมพรีเมียม
+    const Color primaryColor = Color(0xFF6B8E23);
+    const Color warningColor = Color(0xFFFFCC00);
+    const Color backgroundColor = Color(0xFFF7F7F7);
+
     return Scaffold(
-      backgroundColor: _kBackgroundColor,
-      // AppBar สำหรับหัวข้อ "เช็คสต็อกสินค้า"
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
           'เช็คสต็อกสินค้า',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 24,
+            fontSize: 22,
             color: Colors.black87,
           ),
         ),
         centerTitle: true,
-        backgroundColor: _kBackgroundColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          // ปุ่มรีเฟรชข้อมูล
+          IconButton(
+            onPressed: controller.fetchStockData,
+            icon: const Icon(Icons.refresh, color: primaryColor),
+          ),
+        ],
       ),
-      
-      // Body ส่วนเนื้อหา: Search Bar และ รายการสินค้า
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           children: [
-            // Search Bar และ ปุ่มเรียงจาก
-            _buildSearchBarAndSort(),
-            
+            // --- ส่วน Search Bar ---
+            _buildSearchBar(controller),
             const SizedBox(height: 15),
 
-            // รายการสินค้า
+            // --- ส่วนรายการสินค้า ---
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.only(top: 5, bottom: 20),
-                itemCount: dummyProducts.length,
-                itemBuilder: (context, index) {
-                  return _buildProductCard(dummyProducts[index]);
-                },
-              ),
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: primaryColor),
+                  );
+                }
+
+                if (controller.filteredProducts.isEmpty) {
+                  return const Center(
+                    child: Text("ไม่พบข้อมูลสินค้าในร้านนี้"),
+                  );
+                }
+
+                return ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: controller.filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    return _buildProductCard(
+                      controller.filteredProducts[index],
+                      warningColor,
+                    );
+                  },
+                );
+              }),
             ),
           ],
         ),
       ),
+      // --- Bottom Navigation Bar ---
+      bottomNavigationBar: Obx(
+        () => BottomNavBar(
+          currentIndex: controller.selectedIndex.value,
+          onTap: controller.changeTab,
+        ),
+      ),
+    );
+  }
 
-      // Bottom Navigation Bar
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+  // 🔍 Widget สำหรับแถบค้นหา
+  Widget _buildSearchBar(StockController controller) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        onChanged: controller.searchProduct, // ค้นหาทันทีที่พิมพ์
+        decoration: const InputDecoration(
+          hintText: 'ค้นหาชื่อสินค้า...',
+          hintStyle: TextStyle(color: Colors.grey),
+          prefixIcon: Icon(Icons.search, color: Colors.grey),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 12.0),
+        ),
+      ),
+    );
+  }
+
+  // 📦 Widget สำหรับ Card รายการสินค้าแต่ละชิ้น
+  Widget _buildProductCard(Product product, Color warningColor) {
+    // เงื่อนไขแจ้งเตือนสินค้าใกล้หมด (สต็อก <= 10)
+    final bool isLowStock = product.stock <= 10;
+    final bool isOutOfStock = product.stock == 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 2,
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            // 1. รูปภาพสินค้าจาก URL ใน DB
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                product.imgProduct,
+                width: 65,
+                height: 65,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.image_not_supported,
+                  size: 40,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            const SizedBox(width: 15),
+
+            // 2. รายละเอียดสินค้า
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'คงเหลือ ${product.stock} ${product.unit}',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      // เปลี่ยนสีตามสถานะสต็อก
+                      color: isOutOfStock
+                          ? Colors.red
+                          : (isLowStock ? Colors.orange : Colors.grey[600]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 3. สัญลักษณ์แจ้งเตือน
+            if (isLowStock)
+              Icon(
+                Icons.warning_amber_rounded,
+                color: isOutOfStock ? Colors.red : warningColor,
+                size: 30,
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -1,13 +1,14 @@
 import 'package:dotted_border/dotted_border.dart';
 import 'package:eazy_store/api/api_product.dart';
-import '../model/request/category_model.dart';
-import '../model/request/product_model.dart';
+import 'package:eazy_store/api/api_service_image.dart';
+import 'package:eazy_store/homepage/home_page.dart';
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/model/request/category_model.dart';
+import 'package:eazy_store/model/request/product_model.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:convert'; // เพิ่มสำหรับ jsonEncode/Decode
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,17 +29,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _picker = ImagePicker();
   bool _isSaving = false;
 
-  // รายการหมวดหมู่จากฐานข้อมูล
   List<CategoryModel> _categoryList = [];
   CategoryModel? _selectedCategoryObject;
-
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _costController = TextEditingController();
-  final TextEditingController _salePriceController = TextEditingController();
-  final TextEditingController _stockController = TextEditingController();
-  final TextEditingController _unitController = TextEditingController();
-  final TextEditingController _idController = TextEditingController();
-
   final List<String> _unitOptions = [
     'ชิ้น',
     'กล่อง',
@@ -47,23 +39,115 @@ class _AddProductScreenState extends State<AddProductScreen> {
     'ซอง',
     'กิโลกรัม',
   ];
-  Key _unitKey = UniqueKey();
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _costController = TextEditingController();
+  final TextEditingController _salePriceController = TextEditingController();
+  final TextEditingController _stockController = TextEditingController();
+  final TextEditingController _unitController = TextEditingController();
+  final TextEditingController _idController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _fetchCategories(); // ✨ ดึงข้อมูลหมวดหมู่ทันทีที่เปิดหน้า
+    _fetchCategories();
   }
 
-  // ฟังก์ชันดึงหมวดหมู่จาก API
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _costController.dispose();
+    _salePriceController.dispose();
+    _stockController.dispose();
+    _unitController.dispose();
+    _idController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchCategories() async {
     final list = await ApiProduct.getCategories();
-    setState(() {
-      _categoryList = list;
-    });
+    if (mounted) {
+      setState(() {
+        _categoryList = list;
+      });
+    }
   }
 
+  void _showImagePickerOptions() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        ),
+        child: Wrap(
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const Text(
+              "เลือกรูปภาพสินค้า",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 50),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFE8F5E9),
+                child: Icon(Icons.photo_library, color: _kPrimaryColor),
+              ),
+              title: const Text('เลือกจากคลังภาพ'),
+              onTap: () {
+                Get.back();
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFE8F5E9),
+                child: Icon(Icons.camera_alt, color: _kPrimaryColor),
+              ),
+              title: const Text('ถ่ายภาพใหม่'),
+              onTap: () {
+                Get.back();
+                _pickImage(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final pickedFile = await _picker.pickImage(
+      source: source,
+      imageQuality: 80,
+    );
+    if (pickedFile != null) {
+      setState(() => _imageFile = File(pickedFile.path));
+    }
+  }
+
+  // 🔥 ฟังก์ชันบันทึกสินค้าที่ได้รับการแก้ไขเรื่องการอัปโหลดรูปภาพ
   Future<void> _handleSaveProduct() async {
+    // 1. ตรวจสอบข้อมูลเบื้องต้น
+    if (_imageFile == null) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "กรุณาเลือกรูปภาพสินค้า",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
     if (_nameController.text.isEmpty ||
         _selectedCategoryObject == null ||
         _costController.text.isEmpty ||
@@ -81,27 +165,45 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isSaving = true);
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int shopId = prefs.getInt('shopId') ?? 0;
+      // 🚀 ขั้นตอนที่ 1: อัปโหลดรูปภาพขึ้น Cloudinary
+      final uploadService = ImageUploadService();
+      String? uploadedImageUrl = await uploadService.uploadImage(_imageFile!);
 
-      if (shopId == 0) {
+      if (uploadedImageUrl == null) {
+        setState(() => _isSaving = false);
         Get.snackbar(
           "ผิดพลาด",
-          "ไม่พบข้อมูลร้านค้าของคุณ กรุณาล็อกอินใหม่",
+          "ไม่สามารถอัปโหลดรูปภาพได้",
           backgroundColor: Colors.redAccent,
           colorText: Colors.white,
         );
         return;
       }
 
+      // 🚀 ขั้นตอนที่ 2: ดึง shopId
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId == 0) {
+        setState(() => _isSaving = false);
+        Get.snackbar(
+          "ผิดพลาด",
+          "ไม่พบข้อมูลร้านค้า",
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // 🚀 ขั้นตอนที่ 3: สร้าง Product Object พร้อม URL จริงจาก Cloudinary
       Product newProduct = Product(
         shopId: shopId,
-        categoryId: _selectedCategoryObject!.categoryId, // ✨ ใช้ ID จริงจาก DB
+        categoryId: _selectedCategoryObject!.categoryId,
         name: _nameController.text.trim(),
         barcode: _idController.text.trim().isEmpty
             ? null
             : _idController.text.trim(),
-        imgProduct: "https://placeholder.com/product.jpg",
+        imgProduct: uploadedImageUrl, // ✨ ใช้ URL จริงที่ได้จากการอัปโหลด
         sellPrice: double.parse(_salePriceController.text),
         costPrice: double.parse(_costController.text),
         stock: int.parse(
@@ -111,16 +213,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
         status: true,
       );
 
+      // 🚀 ขั้นตอนที่ 4: บันทึกลง Backend
       final result = await ApiProduct.createProduct(newProduct);
 
       if (result['success']) {
-        Get.snackbar(
-          "สำเร็จ",
-          "บันทึกสินค้าเรียบร้อยแล้ว",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-        _resetForm();
+        _showSuccessPopup();
       } else {
         Get.snackbar(
           "ผิดพลาด",
@@ -141,6 +238,97 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
+  void _showSuccessPopup() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: _kPrimaryColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    size: 60,
+                    color: _kPrimaryColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "บันทึกสินค้าสำเร็จ!",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "สินค้าถูกเพิ่มเข้าสู่ระบบเรียบร้อยแล้ว\nคุณต้องการทำรายการใดต่อ?",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kPrimaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    Get.back();
+                    _resetForm();
+                  },
+                  child: const Text(
+                    "เพิ่มสินค้าต่อ",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: TextButton(
+                  onPressed: () {
+                    Get.back();
+                    Get.offAll(() => const HomePage());
+                  },
+                  child: Text(
+                    "กลับสู่หน้าหลัก",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
   void _resetForm() {
     setState(() {
       _nameController.clear();
@@ -151,22 +339,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _idController.clear();
       _selectedCategoryObject = null;
       _imageFile = null;
-      _unitKey = UniqueKey();
     });
   }
-
-  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'เพิ่มสินค้า',
-          style: TextStyle(
+          style: GoogleFonts.prompt(
             fontWeight: FontWeight.bold,
-            fontSize: 24,
+            fontSize: 22,
             color: Colors.black87,
           ),
         ),
@@ -180,7 +365,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildImagePicker(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 25),
             _buildInputField(
               label: 'ชื่อสินค้า',
               hintText: 'ระบุชื่อสินค้า',
@@ -220,12 +405,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   ),
                 ),
                 const SizedBox(width: 15),
-                Expanded(
-                  child: KeyedSubtree(
-                    key: _unitKey,
-                    child: _buildUnitAutocompleteField(),
-                  ),
-                ),
+                Expanded(child: _buildUnitHybridField()),
               ],
             ),
             const SizedBox(height: 20),
@@ -239,14 +419,83 @@ class _AddProductScreenState extends State<AddProductScreen> {
             _buildAddProductButton(),
             const SizedBox(height: 20),
             _buildResetText(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
           ],
         ),
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (i) => setState(() => _selectedIndex = i),
       ),
+    );
+  }
+
+  Widget _buildUnitHybridField() {
+    return _buildInputField(
+      label: 'หน่วยนับ',
+      hintText: 'เช่น ชิ้น, ขวด',
+      controller: _unitController,
+      suffixIcon: PopupMenuButton<String>(
+        icon: const Icon(
+          Icons.arrow_drop_down_circle_outlined,
+          color: _kPrimaryColor,
+        ),
+        onSelected: (val) => setState(() => _unitController.text = val),
+        itemBuilder: (ctx) => _unitOptions
+            .map((e) => PopupMenuItem(value: e, child: Text(e)))
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required String label,
+    required String hintText,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (label.isNotEmpty)
+          Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        if (label.isNotEmpty) const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              hintText: hintText,
+              filled: true,
+              fillColor: const Color(0xFFF0F0E0).withOpacity(0.5),
+              suffixIcon: suffixIcon,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: _kPrimaryColor, width: 1.5),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -263,101 +512,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF0F0E0),
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(color: const Color(0xFF939393), width: 1.0),
+            color: const Color(0xFFF0F0E0).withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<CategoryModel>(
               isExpanded: true,
               value: _selectedCategoryObject,
               hint: Text(hintText),
-              // ดึงรายการจาก _categoryList ที่ได้จาก API
-              items: _categoryList.map((CategoryModel cat) {
-                return DropdownMenuItem<CategoryModel>(
-                  value: cat,
-                  child: Text(cat.name),
-                );
-              }).toList(),
-              onChanged: (CategoryModel? newValue) =>
+              items: _categoryList
+                  .map(
+                    (cat) =>
+                        DropdownMenuItem(value: cat, child: Text(cat.name)),
+                  )
+                  .toList(),
+              onChanged: (newValue) =>
                   setState(() => _selectedCategoryObject = newValue),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUnitAutocompleteField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'หน่วยนับสินค้า',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Autocomplete<String>(
-          optionsBuilder: (val) => val.text.isEmpty
-              ? _unitOptions
-              : _unitOptions.where((e) => e.contains(val.text)),
-          onSelected: (s) => _unitController.text = s,
-          fieldViewBuilder: (ctx, ctrl, node, onSub) {
-            ctrl.addListener(() => _unitController.text = ctrl.text);
-            return _buildInputField(
-              label: '',
-              hintText: 'เช่น ชิ้น, ขวด',
-              controller: ctrl,
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInputField({
-    required String label,
-    required String hintText,
-    required TextEditingController controller,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label.isNotEmpty)
-          Text(
-            label,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        if (label.isNotEmpty) const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8.0),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                offset: const Offset(0, 2),
-                blurRadius: 4,
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              hintText: hintText,
-              filled: true,
-              fillColor: const Color(0xFFF0F0E0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: Color(0xFF939393)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: Color(0xFF939393)),
-              ),
             ),
           ),
         ),
@@ -379,25 +552,75 @@ class _AddProductScreenState extends State<AddProductScreen> {
             Expanded(
               child: _buildInputField(
                 label: '',
-                hintText: 'สแกนหรือพิมพ์เลขบาร์โค้ด',
+                hintText: 'สแกนหรือพิมพ์บาร์โค้ด',
                 controller: _idController,
                 keyboardType: TextInputType.number,
               ),
             ),
-            const SizedBox(width: 10),
-            IconButton.filled(
-              onPressed: () => Get.to(() => const ScanBarcodePage()),
-              icon: const Icon(Icons.qr_code_scanner),
-              style: IconButton.styleFrom(
-                backgroundColor: _kPrimaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            const SizedBox(width: 12),
+            InkWell(
+              onTap: () => Get.to(() => const ScanBarcodePage()),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: const Icon(Icons.qr_code_scanner, color: Colors.white),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildImagePicker() {
+    return Center(
+      child: GestureDetector(
+        onTap: _showImagePickerOptions,
+        child: DottedBorder(
+          borderType: BorderType.RRect,
+          radius: const Radius.circular(20),
+          dashPattern: const [6, 4],
+          color: Colors.grey[400]!,
+          strokeWidth: 2,
+          child: Container(
+            width: 160,
+            height: 160,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              image: _imageFile != null
+                  ? DecorationImage(
+                      image: FileImage(_imageFile!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: _imageFile == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.add_a_photo_outlined,
+                        size: 44,
+                        color: _kPrimaryColor,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        "เพิ่มรูปสินค้า",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  )
+                : null,
+          ),
+        ),
+      ),
     );
   }
 
@@ -410,8 +633,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: _kPrimaryColor,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(16),
           ),
+          elevation: 0,
         ),
         icon: _isSaving
             ? const SizedBox(
@@ -424,7 +648,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               )
             : const Icon(Icons.add, color: Colors.white),
         label: Text(
-          _isSaving ? 'กำลังบันทึก...' : 'เพิ่มสินค้า',
+          _isSaving ? 'กำลังประมวลผล...' : 'เพิ่มสินค้าลงระบบ',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -435,50 +659,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
     );
   }
 
-  Widget _buildImagePicker() {
-    return Center(
-      child: GestureDetector(
-        onTap: () async {
-          final img = await _picker.pickImage(source: ImageSource.gallery);
-          if (img != null) setState(() => _imageFile = File(img.path));
-        },
-        child: DottedBorder(
-          borderType: BorderType.RRect,
-          radius: const Radius.circular(15.0),
-          dashPattern: const [6, 3],
-          color: const Color(0xFF939393),
-          strokeWidth: 2,
-          child: Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(15.0),
-              image: _imageFile != null
-                  ? DecorationImage(
-                      image: FileImage(_imageFile!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: _imageFile == null
-                ? const Icon(
-                    Icons.add_a_photo_outlined,
-                    size: 40,
-                    color: Colors.grey,
-                  )
-                : null,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildResetText() => Center(
     child: TextButton.icon(
       onPressed: _resetForm,
       icon: const Icon(Icons.refresh, size: 18, color: Colors.grey),
-      label: const Text('รีเซ็ตข้อมูล', style: TextStyle(color: Colors.grey)),
+      label: const Text(
+        'ล้างข้อมูลทั้งหมด',
+        style: TextStyle(color: Colors.grey),
+      ),
     ),
   );
 }

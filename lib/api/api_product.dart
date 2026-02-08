@@ -65,4 +65,33 @@ class ApiProduct {
       return [];
     }
   }
+
+  static Future<List<Product>> getProductsByShop(int shopId) async {
+    // ส่ง shop_id ไปเป็น Query String
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products?shop_id=$shopId');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> body = jsonDecode(response.body);
+        // Map ข้อมูล JSON กลับเป็น List ของ Object Product
+        return body.map((item) => Product.fromJson(item)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print("Error fetching products: $e");
+      return [];
+    }
+  }
 }
