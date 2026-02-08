@@ -65,34 +65,40 @@ class ApiShop {
   }
 
   // ฟังก์ชันลบร้านค้า
- Future<bool> deleteShop(int shopId) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/deleteShop/$shopId');
-
+Future<bool> deleteShop(int shopId) async {
     try {
-      // --- เพิ่มส่วนนี้เข้ามาเหมือน createShop ---
+      // 1. ดึง Token จากเครื่อง (ต้องรอ await)
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-      // -------------------------------------
+      String? token = prefs.getString('token'); // **ต้องใช้ key เดียวกับตอน Login**
+
+      // ถ้าไม่มี Token ให้ return false เลย (เพราะยังไงก็ยิงไม่ผ่าน)
+      if (token == null) {
+        print("Error: ไม่พบ Token ในเครื่อง");
+        return false;
+      }
+
+      final url = Uri.parse("${AppConfig.baseUrl}/api/deleteShop/$shopId"); // เช็ค URL ให้ตรงกับ Backend
 
       final response = await http.delete(
         url,
         headers: {
           "Content-Type": "application/json",
-          if (token != null) "Authorization": "Bearer $token", // ใช้ token ที่เพิ่งดึงมา
+          "Authorization": "Bearer $token", // <--- **สำคัญมาก! ต้องบรรทัดนี้**
         },
       );
 
       if (response.statusCode == 200) {
         return true;
       } else {
-        print('ลบไม่สำเร็จ: ${response.body}');
+        print("ลบไม่สำเร็จ: ${response.body}");
         return false;
       }
     } catch (e) {
-      print("Exception Delete: $e");
+      print("Error Delete Shop: $e");
       return false;
     }
   }
+
 
   // ฟังก์ชันแก้ไขร้านค้า
  Future<bool> updateShop(int shopId, Map<String, dynamic> data) async {
