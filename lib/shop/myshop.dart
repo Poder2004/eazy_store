@@ -78,6 +78,29 @@ class MyShopController extends GetxController {
       );
     }
   }
+
+  // ✨ ฟังก์ชันสำคัญ: บันทึกร้านค้าที่เลือกและนำทางไปหน้าหลัก
+  void selectShop(ShopResponse shop) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // 1. บันทึก shopId ลงเครื่อง เพื่อเอาไปใช้ในหน้าเพิ่มสินค้า
+    await prefs.setInt('shopId', shop.shopId);
+    await prefs.setString('shopName', shop.name);
+
+    // 2. แสดงแจ้งเตือนเล็กน้อย
+    Get.snackbar(
+      "ยินดีต้อนรับ",
+      "กำลังเข้าสู่ร้าน ${shop.name}",
+      backgroundColor: const Color(0xFF00C853),
+      colorText: Colors.white,
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 1),
+    );
+
+    // 3. นำทางไปหน้าถัดไป (เช่น หน้าที่มี Bottom Navigation Bar)
+    Get.offAll(() => const HomePage());
+    print("เลือกใช้งานร้าน: ${shop.name} (ID: ${shop.shopId})");
+  }
 }
 
 // ----------------------------------------------------------------------
