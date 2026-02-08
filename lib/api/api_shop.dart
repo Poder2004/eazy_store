@@ -63,4 +63,65 @@ class ApiShop {
       return [];
     }
   }
+
+  // ฟังก์ชันลบร้านค้า
+ Future<bool> deleteShop(int shopId) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/deleteShop/$shopId');
+
+    try {
+      // --- เพิ่มส่วนนี้เข้ามาเหมือน createShop ---
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+      // -------------------------------------
+
+      final response = await http.delete(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          if (token != null) "Authorization": "Bearer $token", // ใช้ token ที่เพิ่งดึงมา
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print('ลบไม่สำเร็จ: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print("Exception Delete: $e");
+      return false;
+    }
+  }
+
+  // ฟังก์ชันแก้ไขร้านค้า
+ Future<bool> updateShop(int shopId, Map<String, dynamic> data) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/updateShop/$shopId');
+
+    try {
+      // --- เพิ่มส่วนนี้เข้ามาเหมือน createShop ---
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+      // -------------------------------------
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          if (token != null) "Authorization": "Bearer $token", // ใช้ token ที่เพิ่งดึงมา
+        },
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print('แก้ไขไม่สำเร็จ: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print("Exception Update: $e");
+      return false;
+    }
+  }
 }
