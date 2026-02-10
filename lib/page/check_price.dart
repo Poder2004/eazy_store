@@ -1,193 +1,264 @@
+import 'package:eazy_store/api/api_product.dart';
+
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/model/request/product_model.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
-const Color _kPrimaryColor = Color(0xFF929292);
-const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
-const Color _kSearchFillColor = Color(0xFFF4F5F7); 
+// ----------------------------------------------------------------------
+// 1. Controller: จัดการ Logic การดึงข้อมูลและค้นหา
+// ----------------------------------------------------------------------
+class PriceController extends GetxController {
+  var isLoading = true.obs;
+  var products = <Product>[].obs;
+  var filteredProducts = <Product>[].obs;
+  var selectedIndex = 2.obs; // หน้าเช็คราคาเป็น Index 2
 
+  @override
+  void onInit() {
+    super.onInit();
+    fetchPriceData();
+  }
 
+  // 🚀 ดึงข้อมูลสินค้าทั้งหมดจาก Shop เดียวกันกับหน้าเช็คสต็อก
+  Future<void> fetchPriceData() async {
+    isLoading.value = true;
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
 
-class CheckPriceScreen extends StatefulWidget {
+      if (shopId != 0) {
+        List<Product> list = await ApiProduct.getProductsByShop(shopId);
+        // เรียงตามชื่อสินค้าเพื่อให้หาเจอง่ายขึ้น
+        list.sort((a, b) => a.name.compareTo(b.name));
+
+        products.assignAll(list);
+        filteredProducts.assignAll(list);
+      }
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "โหลดข้อมูลราคาล้มเหลว: $e",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // 🔍 ค้นหาสินค้า
+  void searchProduct(String query) {
+    if (query.isEmpty) {
+      filteredProducts.assignAll(products);
+    } else {
+      var result = products
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(query.toLowerCase()) ||
+                (p.barcode != null && p.barcode!.contains(query)),
+          )
+          .toList();
+      filteredProducts.assignAll(result);
+    }
+  }
+
+  void changeTab(int index) {
+    selectedIndex.value = index;
+  }
+}
+
+// ----------------------------------------------------------------------
+// 2. View: หน้าจอแสดงราคาสินค้า
+// ----------------------------------------------------------------------
+class CheckPriceScreen extends StatelessWidget {
   const CheckPriceScreen({super.key});
 
   @override
-  State<CheckPriceScreen> createState() => _CheckPriceScreenState();
-}
-
-class _CheckPriceScreenState extends State<CheckPriceScreen> {
-  // State สำหรับจัดการ Bottom Navigation Bar
-  int _selectedIndex = 2; 
-
-  // Controller สำหรับ Search Field
-  final TextEditingController _searchController = TextEditingController();
-
-  // Function สำหรับเปลี่ยน Tab ใน Bottom Navigation Bar
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // ในแอปจริง คุณจะเพิ่ม Logic สำหรับเปลี่ยนหน้าจอที่นี่
-    print('Tab tapped: $index');
-  }
-
-  // 🔍 Widget สำหรับ Search Input Field
-  Widget _buildSearchInput() {
-    return Container(
-      decoration: BoxDecoration(
-        color: _kSearchFillColor,
-        borderRadius: BorderRadius.circular(10.0),
-        border: Border.all(color: const Color.fromARGB(255, 196, 196, 195), width: 1.5),
-      ),
-      child: TextField(
-        controller: _searchController,
-        style: const TextStyle(color: Colors.black87),
-        decoration: InputDecoration(
-          hintText: 'ค้นหาหรือสแกนบาร์โค้ด',
-          hintStyle: const TextStyle(color: Colors.grey),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 10.0,
-            horizontal: 12.0,
-          ),
-          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          suffixIcon: IconButton(
-            icon: Icon(Icons.qr_code_scanner_outlined, color: Colors.grey[700]),
-            onPressed: () {
-              // Logic สำหรับการสแกนบาร์โค้ด
-              print('Scanning barcode...');
-            },
-          ),
-          filled: true,
-          fillColor: Colors.transparent, // ใช้สีจาก Container แทน
-          border: InputBorder.none, // ลบ border ของ TextField ออก
-          enabledBorder: InputBorder.none,
-          focusedBorder: OutlineInputBorder(
-             borderRadius: BorderRadius.circular(10.0),
-             borderSide: const BorderSide(color: _kPrimaryColor, width: 2.0),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // 🏷️ Widget สำหรับแสดงผลลัพธ์ราคาสินค้า
-  Widget _buildProductResultCard({
-    required String name,
-    required double price,
-    String? imageUrl, // Path to the image asset or network image
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-      margin: const EdgeInsets.only(top: 20.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // ชื่อสินค้าและราคา
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                '${price.toStringAsFixed(0)} บาท', // แสดงราคาเป็นจำนวนเต็ม
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900, // Very Bold
-                  color: _kPrimaryColor,
-                ),
-              ),
-            ],
-          ),
-
-          // รูปสินค้า (จำลอง)
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F0),
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            child: imageUrl != null
-                ? Image.asset(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                  )
-                : const Center(
-                    child: Icon(
-                      Icons.image_outlined,
-                      size: 30,
-                      color: Colors.grey,
-                    ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final PriceController controller = Get.put(PriceController());
+
+    const Color primaryColor = Color(0xFF6B8E23); // ใช้เขียวมะกอกให้เข้าธีมแอป
+    const Color backgroundColor = Color(0xFFF7F7F7);
+
     return Scaffold(
-      backgroundColor: _kBackgroundColor,
-      // AppBar
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text(
           'เช็คราคาสินค้า',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 26,
+            fontSize: 24,
             color: Colors.black87,
           ),
         ),
-        centerTitle: true, // ชิดซ้ายตามรูป
-        backgroundColor: _kBackgroundColor,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        toolbarHeight: 60.0,
+        actions: [
+          IconButton(
+            onPressed: controller.fetchPriceData,
+            icon: const Icon(Icons.refresh, color: primaryColor),
+          ),
+        ],
       ),
-      // Body ส่วนเนื้อหา
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //  Search Bar
-            _buildSearchInput(),
-            
-            //  ผลลัพธ์ราคาสินค้า (จำลองข้อมูลจากภาพที่คุณให้มา)
-            _buildProductResultCard(
-              name: 'สบู่นกแก้วสีชมพู',
-              price: 15.00,
-              imageUrl: 'assets/image/soap_image.png', 
-            ),
+            // --- 🔍 ส่วนช่องค้นหา ---
+            _buildSearchBar(controller),
+            const SizedBox(height: 15),
 
-  
+            // --- 🏷️ รายการสินค้าพร้อมราคา ---
+            Expanded(
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: primaryColor),
+                  );
+                }
+
+                if (controller.filteredProducts.isEmpty) {
+                  return const Center(child: Text("ไม่พบข้อมูลสินค้า"));
+                }
+
+                return ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: controller.filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    return _buildPriceCard(
+                      controller.filteredProducts[index],
+                      primaryColor,
+                    );
+                  },
+                );
+              }),
+            ),
           ],
         ),
       ),
-      // Bottom Navigation Bar
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+      bottomNavigationBar: Obx(
+        () => BottomNavBar(
+          currentIndex: controller.selectedIndex.value,
+          onTap: controller.changeTab,
+        ),
+      ),
+    );
+  }
+
+  // 🔍 Widget ค้นหา
+  Widget _buildSearchBar(PriceController controller) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        onChanged: controller.searchProduct,
+        decoration: const InputDecoration(
+          hintText: 'ค้นหาชื่อสินค้าหรือสแกนบาร์โค้ด...',
+          hintStyle: TextStyle(color: Colors.grey),
+          prefixIcon: Icon(Icons.search, color: Colors.grey),
+          suffixIcon: Icon(Icons.qr_code_scanner_outlined, color: Colors.grey),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 12.0),
+        ),
+      ),
+    );
+  }
+
+  // 📦 Widget Card แสดงราคา (ปรับปรุงให้ราคาตัวใหญ่ชัดเจน)
+  Widget _buildPriceCard(Product product, Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // 1. รูปสินค้า (Network Image)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              product.imgProduct,
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: Colors.grey[200],
+                width: 70,
+                height: 70,
+                child: const Icon(Icons.image_outlined, color: Colors.grey),
+              ),
+            ),
+          ),
+          const SizedBox(width: 15),
+
+          // 2. ชื่อสินค้า
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  "รหัส: ${product.productCode ?? '-'}",
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+
+          // 3. ราคาสินค้า (ตัวหนาและใหญ่)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${product.sellPrice.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: primaryColor,
+                ),
+              ),
+              const Text(
+                'บาท',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
