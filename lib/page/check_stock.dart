@@ -1,17 +1,18 @@
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/page/product_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ----------------------------------------------------------------------
-// 1. Controller: จัดการ Logic (อยู่ภายในหน้าเดียวกัน)
+// 1. Controller: จัดการ Logic
 // ----------------------------------------------------------------------
 class StockController extends GetxController {
   var isLoading = true.obs;
-  var products = <Product>[].obs; // ข้อมูลดิบจากฐานข้อมูล
-  var filteredProducts = <Product>[].obs; // ข้อมูลที่ใช้แสดงผล (รองรับการค้นหา)
+  var products = <Product>[].obs;
+  var filteredProducts = <Product>[].obs;
   var selectedIndex = 0.obs;
 
   @override
@@ -20,7 +21,6 @@ class StockController extends GetxController {
     fetchStockData();
   }
 
-  // 🚀 ฟังก์ชันดึงข้อมูลสต็อกและเรียงลำดับจากน้อยไปมาก
   Future<void> fetchStockData() async {
     isLoading.value = true;
     try {
@@ -29,10 +29,7 @@ class StockController extends GetxController {
 
       if (shopId != 0) {
         List<Product> list = await ApiProduct.getProductsByShop(shopId);
-
-        // ✨ เรียงลำดับ: สินค้าที่สต็อกน้อยที่สุด (หรือหมด) จะอยู่บนสุด
-        list.sort((a, b) => a.stock.compareTo(b.stock));
-
+        list.sort((a, b) => a.stock.compareTo(b.stock)); // เรียงน้อยไปมาก
         products.assignAll(list);
         filteredProducts.assignAll(list);
       }
@@ -48,7 +45,6 @@ class StockController extends GetxController {
     }
   }
 
-  // 🔍 ฟังก์ชันค้นหาสินค้า (กรองจากรายชื่อที่มีอยู่)
   void searchProduct(String query) {
     if (query.isEmpty) {
       filteredProducts.assignAll(products);
@@ -60,9 +56,7 @@ class StockController extends GetxController {
     }
   }
 
-  void changeTab(int index) {
-    selectedIndex.value = index;
-  }
+  void changeTab(int index) => selectedIndex.value = index;
 }
 
 // ----------------------------------------------------------------------
@@ -73,16 +67,12 @@ class CheckStockScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ลงทะเบียน Controller ใช้งานในหน้านี้
     final StockController controller = Get.put(StockController());
-
-    // กำหนดสีธีมพรีเมียม
     const Color primaryColor = Color(0xFF6B8E23);
     const Color warningColor = Color(0xFFFFCC00);
-    const Color backgroundColor = Color(0xFFF7F7F7);
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: const Color(0xFFF7F7F7),
       appBar: AppBar(
         title: const Text(
           'เช็คสต็อกสินค้า',
@@ -96,7 +86,6 @@ class CheckStockScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          // ปุ่มรีเฟรชข้อมูล
           IconButton(
             onPressed: controller.fetchStockData,
             icon: const Icon(Icons.refresh, color: primaryColor),
@@ -107,11 +96,8 @@ class CheckStockScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           children: [
-            // --- ส่วน Search Bar ---
             _buildSearchBar(controller),
             const SizedBox(height: 15),
-
-            // --- ส่วนรายการสินค้า ---
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
@@ -119,7 +105,6 @@ class CheckStockScreen extends StatelessWidget {
                     child: CircularProgressIndicator(color: primaryColor),
                   );
                 }
-
                 if (controller.filteredProducts.isEmpty) {
                   return const Center(
                     child: Text("ไม่พบข้อมูลสินค้าในร้านนี้"),
@@ -130,9 +115,20 @@ class CheckStockScreen extends StatelessWidget {
                   physics: const BouncingScrollPhysics(),
                   itemCount: controller.filteredProducts.length,
                   itemBuilder: (context, index) {
-                    return _buildProductCard(
-                      controller.filteredProducts[index],
-                      warningColor,
+                    final product = controller.filteredProducts[index];
+
+                    // ✨ แก้ไขจุดนี้: ห่อด้วย InkWell เพื่อให้กดไปหน้า Detail
+                    return InkWell(
+                      onTap: () {
+                        Get.to(
+                          () => ProductDetailScreen(),
+                          arguments: product, // ส่ง Object สินค้าไปทั้งก้อน
+                          transition:
+                              Transition.rightToLeft, // สไลด์หน้าจอแบบนุ่มนวล
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(15),
+                      child: _buildProductCard(product, warningColor),
                     );
                   },
                 );
@@ -141,7 +137,6 @@ class CheckStockScreen extends StatelessWidget {
           ],
         ),
       ),
-      // --- Bottom Navigation Bar ---
       bottomNavigationBar: Obx(
         () => BottomNavBar(
           currentIndex: controller.selectedIndex.value,
@@ -151,7 +146,6 @@ class CheckStockScreen extends StatelessWidget {
     );
   }
 
-  // 🔍 Widget สำหรับแถบค้นหา
   Widget _buildSearchBar(StockController controller) {
     return Container(
       height: 50,
@@ -167,10 +161,9 @@ class CheckStockScreen extends StatelessWidget {
         ],
       ),
       child: TextField(
-        onChanged: controller.searchProduct, // ค้นหาทันทีที่พิมพ์
+        onChanged: controller.searchProduct,
         decoration: const InputDecoration(
           hintText: 'ค้นหาชื่อสินค้า...',
-          hintStyle: TextStyle(color: Colors.grey),
           prefixIcon: Icon(Icons.search, color: Colors.grey),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(vertical: 12.0),
@@ -179,9 +172,7 @@ class CheckStockScreen extends StatelessWidget {
     );
   }
 
-  // 📦 Widget สำหรับ Card รายการสินค้าแต่ละชิ้น
   Widget _buildProductCard(Product product, Color warningColor) {
-    // เงื่อนไขแจ้งเตือนสินค้าใกล้หมด (สต็อก <= 10)
     final bool isLowStock = product.stock <= 10;
     final bool isOutOfStock = product.stock == 0;
 
@@ -189,12 +180,10 @@ class CheckStockScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       elevation: 2,
-      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            // 1. รูปภาพสินค้าจาก URL ใน DB
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
@@ -210,8 +199,6 @@ class CheckStockScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 15),
-
-            // 2. รายละเอียดสินค้า
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,7 +216,6 @@ class CheckStockScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      // เปลี่ยนสีตามสถานะสต็อก
                       color: isOutOfStock
                           ? Colors.red
                           : (isLowStock ? Colors.orange : Colors.grey[600]),
@@ -238,8 +224,6 @@ class CheckStockScreen extends StatelessWidget {
                 ],
               ),
             ),
-
-            // 3. สัญลักษณ์แจ้งเตือน
             if (isLowStock)
               Icon(
                 Icons.warning_amber_rounded,
