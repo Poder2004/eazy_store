@@ -9,7 +9,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:get/get_navigation/get_navigation.dart';
 
 // กำหนดสีหลักที่ใช้ในแอปพลิเคชัน (ใช้สีเดียวกับ InventoryHomePage)
-const Color primaryColor = Color(0xFFC0392B); 
+const Color primaryColor = Color(0xFFC0392B);
 const Color surfaceLight = Color(0xFFFFFFFF);
 const Color surfaceDark = Color(0xFF1F2937);
 
@@ -27,7 +27,11 @@ class BottomNavBar extends StatelessWidget {
 
   // Widget สำหรับปุ่มเมนูทั่วไป
   Widget _buildNavItem(
-      IconData icon, String label, int index, bool isDarkMode) {
+    IconData icon,
+    String label,
+    int index,
+    bool isDarkMode,
+  ) {
     final bool isActive = currentIndex == index;
     final Color activeColor = isDarkMode ? primaryColor : primaryColor;
     final Color inactiveColor = Colors.grey.shade400;
@@ -80,9 +84,14 @@ class BottomNavBar extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade800,
+                  color: isDarkMode
+                      ? Colors.grey.shade600
+                      : Colors.grey.shade800,
                   shape: BoxShape.circle,
-                  border: Border.all(color: isDarkMode ? surfaceDark : surfaceLight, width: 4),
+                  border: Border.all(
+                    color: isDarkMode ? surfaceDark : surfaceLight,
+                    width: 4,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -90,7 +99,11 @@ class BottomNavBar extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 24),
+                child: const Icon(
+                  Icons.qr_code_scanner,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -134,7 +147,7 @@ class BottomNavBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: surfaceColor,
         // เพิ่มมุมโค้งด้านบน
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)), 
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -143,9 +156,18 @@ class BottomNavBar extends StatelessWidget {
             spreadRadius: 1,
           ),
         ],
-        border: Border(top: BorderSide(color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100)),
+        border: Border(
+          top: BorderSide(
+            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
+          ),
+        ),
       ),
-      padding: const EdgeInsets.only(top: 12.0, bottom: 24.0, left: 16.0, right: 16.0),
+      padding: const EdgeInsets.only(
+        top: 12.0,
+        bottom: 24.0,
+        left: 16.0,
+        right: 16.0,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -153,7 +175,12 @@ class BottomNavBar extends StatelessWidget {
           _buildNavItem(Icons.receipt_long, 'บัญชี', 1, isDarkMode),
           _buildScanButton(isDarkMode), // ปุ่มสแกนตรงกลาง
           _buildNavItem(Icons.person, 'คนค้างชำระ', 3, isDarkMode),
-          _buildNavItem(Icons.settings, 'ตั้งค่า', 4, isDarkMode),
+          _buildNavItem(
+            Icons.account_circle_outlined,
+            'โปรไฟล์',
+            4,
+            isDarkMode,
+          ),
         ],
       ),
     );
