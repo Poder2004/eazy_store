@@ -94,4 +94,39 @@ class ApiProduct {
       return [];
     }
   }
+
+  // ----------------------------------------------------------------------
+  // แก้ไขข้อมูลสินค้า (Update Product) [NEW]
+  // ----------------------------------------------------------------------
+  static Future<Product?> updateProduct(
+    int productId,
+    Map<String, dynamic> updateData,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json", // ส่งเป็น JSON
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(updateData), // ส่งข้อมูลรวมถึง URL รูปภาพไปในนี้
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        return Product.fromJson(jsonResponse['data']);
+      } else {
+        print("Update failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error updating product: $e");
+      return null;
+    }
+  }
 }

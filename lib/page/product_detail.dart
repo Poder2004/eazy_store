@@ -1,4 +1,6 @@
 import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/page/edit_product_screen.dart';
+// ⚠️ อย่าลืม Import หน้าแก้ไขสินค้าที่คุณสร้างไว้
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -13,13 +15,20 @@ class ProductDetailController extends GetxController {
   void onInit() {
     super.onInit();
     // รับค่า Product มาจาก arguments
-    product = (Get.arguments as Product).obs;
+    if (Get.arguments != null && Get.arguments is Product) {
+      product = (Get.arguments as Product).obs;
+    } else {
+      // กรณีไม่มีข้อมูลส่งมา ให้เด้งกลับเพื่อป้องกัน Error
+      Get.back();
+      Get.snackbar("Error", "ไม่พบข้อมูลสินค้า");
+    }
   }
 
   // ฟังก์ชันลบสินค้า (จำลอง)
   Future<void> deleteProduct() async {
-    // TODO: เรียก API ลบสินค้า
-    Get.back(); // กลับหน้าก่อนหน้า
+    // TODO: เรียก API ลบสินค้าจริงๆ
+    Get.back(); // ปิด Dialog ยืนยัน
+    Get.back(); // กลับไปหน้ารายการสินค้า
     Get.snackbar(
       "สำเร็จ",
       "ลบสินค้าเรียบร้อยแล้ว",
@@ -29,15 +38,13 @@ class ProductDetailController extends GetxController {
   }
 
   // ฟังก์ชันเปิด-ปิดสถานะสินค้า
-  void toggleStatus(bool value) {
-    // ในอนาคตต้องยิง API อัปเดต status ตรงนี้
-    Product updated = product.value;
-    // สร้าง object ใหม่ที่เปลี่ยนแค่ status (ถ้า model รองรับ copyWith จะดีมาก)
-    // ตรงนี้ขออัปเดตแบบ Direct ไปก่อน
-    product.update((val) {
-      // หมายเหตุ: ในฐานข้อมูลจริงต้องยิง API อัปเดตด้วย
-    });
-  }
+  // void toggleStatus(bool value) {
+  //   // ในอนาคตต้องยิง API อัปเดต status ตรงนี้
+  //   product.update((val) {
+  //     val?.status = value; // ตัวอย่างการอัปเดตค่าใน Rx
+  //     // หมายเหตุ: ในฐานข้อมูลจริงต้องยิง API อัปเดตด้วย
+  //   });
+  // }
 }
 
 // ----------------------------------------------------------------------
@@ -80,16 +87,19 @@ class ProductDetailScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(
                       20.0,
                     ), // ✨ เว้นช่องไฟรอบรูป ไม่ให้ชิดขอบเกินไป
-                    child: Image.network(
-                      controller.product.value.imgProduct,
-                      // ✨ เปลี่ยนจาก cover เป็น contain เพื่อให้เห็น "ครบทุกส่วน" ของสินค้า
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.image_not_supported,
-                          size: 100,
-                          color: Colors.grey,
+                    child: Obx(
+                      () => Image.network(
+                        // ✨ ใช้ Obx เผื่อรูปเปลี่ยน
+                        controller.product.value.imgProduct,
+                        // ✨ เปลี่ยนจาก cover เป็น contain เพื่อให้เห็น "ครบทุกส่วน" ของสินค้า
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 100,
+                            color: Colors.grey,
+                          ),
                         ),
                       ),
                     ),
@@ -97,64 +107,66 @@ class ProductDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            // ...
           ),
 
           // --- ส่วนเนื้อหารายละเอียด ---
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ชื่อสินค้าและรหัส
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          controller.product.value.name,
-                          style: const TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
+              child: Obx(
+                () => Column(
+                  // ✨ ครอบ Obx เพื่อให้อัปเดตข้อมูลอัตโนมัติเมื่อกลับจากหน้าแก้ไข
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ชื่อสินค้าและรหัส
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            controller.product.value.name,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      _statusBadge(controller.product.value.status),
-                    ],
-                  ),
-                  Text(
-                    "รหัสสินค้า: ${controller.product.value.productCode}",
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const Divider(height: 40),
+                        _statusBadge(controller.product.value.status),
+                      ],
+                    ),
+                    Text(
+                      "รหัสสินค้า: ${controller.product.value.productCode ?? '-'}",
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                    const Divider(height: 40),
 
-                  // ข้อมูลราคาและสต็อก (แสดงเป็น Grid ย่อยๆ)
-                  _buildInfoGrid(controller.product.value, primaryColor),
+                    // ข้อมูลราคาและสต็อก (แสดงเป็น Grid ย่อยๆ)
+                    _buildInfoGrid(controller.product.value, primaryColor),
 
-                  const SizedBox(height: 30),
+                    const SizedBox(height: 30),
 
-                  // ข้อมูลเชิงลึกอื่นๆ
-                  _buildDetailRow(
-                    Icons.barcode_reader,
-                    "บาร์โค้ด",
-                    controller.product.value.barcode ?? "ไม่มีข้อมูล",
-                  ),
+                    // ข้อมูลเชิงลึกอื่นๆ
+                    _buildDetailRow(
+                      Icons.barcode_reader,
+                      "บาร์โค้ด",
+                      controller.product.value.barcode ?? "ไม่มีข้อมูล",
+                    ),
 
-                  _buildDetailRow(
-                    Icons.category_outlined,
-                    "หมวดหมู่",
-                    // ✨ เรียกใช้ชื่อหมวดหมู่ ถ้าไม่มีให้แสดง 'ทั่วไป'
-                    controller.product.value.category?.name ?? "ทั่วไป",
-                  ),
-                  _buildDetailRow(
-                    Icons.scale_outlined,
-                    "หน่วยนับ",
-                    controller.product.value.unit,
-                  ),
+                    _buildDetailRow(
+                      Icons.category_outlined,
+                      "หมวดหมู่",
+                      // ✨ เรียกใช้ชื่อหมวดหมู่ ถ้าไม่มีให้แสดง 'ทั่วไป'
+                      controller.product.value.category?.name ?? "ทั่วไป",
+                    ),
+                    _buildDetailRow(
+                      Icons.scale_outlined,
+                      "หน่วยนับ",
+                      controller.product.value.unit,
+                    ),
 
-                  const SizedBox(height: 100), // เว้นที่ให้ปุ่มด้านล่าง
-                ],
+                    const SizedBox(height: 100), // เว้นที่ให้ปุ่มด้านล่าง
+                  ],
+                ),
               ),
             ),
           ),
@@ -264,16 +276,24 @@ class ProductDetailScreen extends StatelessWidget {
             icon: const Icon(Icons.delete_outline, color: Colors.red, size: 30),
           ),
           const SizedBox(width: 10),
+
           // ปุ่มแก้ไข
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () {
-                // TODO: นำทางไปหน้า EditProduct
-                Get.snackbar(
-                  "แจ้งเตือน",
-                  "ระบบแก้ไขข้อมูลกำลังตามมาเร็วๆ นี้",
-                  backgroundColor: Colors.orange,
+              onPressed: () async {
+                // 1. นำทางไปหน้าแก้ไข และ "รอ" (await) ผลลัพธ์ที่ส่งกลับมา
+                var result = await Get.to(
+                  () => const EditProductScreen(),
+                  arguments: controller.product.value,
+                  transition: Transition.rightToLeft, // Animation สไลด์มา
                 );
+
+                // 2. ถ้ามีข้อมูลส่งกลับมา (แปลว่าแก้ไขสำเร็จ)
+                if (result != null && result is Product) {
+                  // ✅ อัปเดตค่า product ใน Controller ทันที
+                  // หน้าจอจะเปลี่ยนเลขราคา/ชื่อสินค้า อัตโนมัติ เพราะเราใช้ Obx อยู่
+                  controller.product.value = result;
+                }
               },
               icon: const Icon(Icons.edit, color: Colors.white),
               label: const Text(
