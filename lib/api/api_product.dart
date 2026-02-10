@@ -44,6 +44,7 @@ class ApiProduct {
     }
   }
 
+  //หมวดสินค้า
   static Future<List<CategoryModel>> getCategories() async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/categories');
     try {
@@ -92,6 +93,74 @@ class ApiProduct {
     } catch (e) {
       print("Error fetching products: $e");
       return [];
+    }
+  }
+
+  // ค้นหาสินค้า (Search) ตาม Barcode หรือ Product Code
+
+  static Future<Product?> searchProduct(String keyword) async {
+    // ส่ง keyword ไปค้นหา (Backend Go ที่เราทำไว้รองรับ barcode, code, name)
+    // ใช้ query parameter ?barcode=$keyword หรือส่งไปลองค้นทุกฟิลด์ก็ได้
+    // ในที่นี้สมมติส่งเป็น barcode
+    final url = Uri.parse(
+      '${AppConfig.baseUrl}/api/product/search?barcode=$keyword',
+    );
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Product.fromJson(data); // <--- เรียกใช้ Model ที่คุณเพิ่งเขียน
+      } else {
+        print("Product not found: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error searching product: $e");
+      return null;
+    }
+  }
+
+  // อัปเดตสต็อก (Update Stock)
+  static Future<bool> updateStock(int productId, int amountToAdd) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/product/stock');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "product_id": productId,
+          "stock":
+              amountToAdd, // ส่งจำนวนที่ต้องการเพิ่มไป (Backend จะไป + เอง)
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print("Update failed: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Error updating stock: $e");
+      return false;
     }
   }
 }
