@@ -2,6 +2,7 @@ import 'package:eazy_store/api/api_product.dart';
 
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/page/product_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -128,9 +129,24 @@ class CheckPriceScreen extends StatelessWidget {
                   physics: const BouncingScrollPhysics(),
                   itemCount: controller.filteredProducts.length,
                   itemBuilder: (context, index) {
-                    return _buildPriceCard(
-                      controller.filteredProducts[index],
-                      primaryColor,
+                    // 1. ดึงข้อมูลสินค้าตัวที่ถูกเลือกออกมาไว้ในตัวแปร
+                    final product = controller.filteredProducts[index];
+
+                    // 2. ใช้ InkWell ห่อเพื่อให้กดได้และมี Effect
+                    return InkWell(
+                      onTap: () {
+                        // 3. ใช้ Get.to เพื่อนำทางไปหน้ารายละเอียด และส่ง product ไปเป็น arguments
+                        Get.to(
+                          () => const ProductDetailScreen(),
+                          arguments: product,
+                          transition: Transition
+                              .rightToLeft, // เพิ่ม Animation ให้ดูพรีเมียม
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(
+                        15,
+                      ), // ให้ขอบ Effect มนเท่ากับ Card
+                      child: _buildPriceCard(product, primaryColor),
                     );
                   },
                 );
