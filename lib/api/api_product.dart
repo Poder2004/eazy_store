@@ -44,6 +44,7 @@ class ApiProduct {
     }
   }
 
+  //หมวดสินค้า
   static Future<List<CategoryModel>> getCategories() async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/categories');
     try {
@@ -95,9 +96,72 @@ class ApiProduct {
     }
   }
 
-  // ----------------------------------------------------------------------
-  // แก้ไขข้อมูลสินค้า (Update Product) [NEW]
-  // ----------------------------------------------------------------------
+  // ค้นหาสินค้า (Search) ตาม Barcode หรือ Product Code
+
+  static Future<Product?> searchProduct(String keyword) async {
+    final url = Uri.parse(
+      '${AppConfig.baseUrl}/api/product/search?keyword=$keyword',
+    );
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return Product.fromJson(data); // <--- เรียกใช้ Model ที่คุณเพิ่งเขียน
+      } else {
+        print("Product not found: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error searching product: $e");
+      return null;
+    }
+  }
+
+  // อัปเดตสต็อก (Update Stock)
+  static Future<bool> updateStock(int productId, int amountToAdd) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/product/stock');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "product_id": productId,
+          "stock":
+              amountToAdd, // ส่งจำนวนที่ต้องการเพิ่มไป (Backend จะไป + เอง)
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print("Update failed: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Error updating stock: $e");
+      return false;
+    }
+  }
+
+  // ✅ ใช้ฟังก์ชันนี้แทน (ส่ง JSON Update ปกติ)
   static Future<Product?> updateProduct(
     int productId,
     Map<String, dynamic> updateData,
