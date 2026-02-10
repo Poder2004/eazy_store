@@ -1,43 +1,30 @@
-// 1. เพิ่ม Class สำหรับเก็บข้อมูลหมวดหมู่
-class Category {
-  final int categoryId;
-  final String name;
-
-  Category({required this.categoryId, required this.name});
-
-  factory Category.fromJson(Map<String, dynamic> json) {
-    return Category(
-      categoryId: json['category_id'] ?? 0,
-      name: json['name'] ?? '',
-    );
-  }
-}
+// ✅ 1. Import ไฟล์ CategoryModel ที่คุณมีอยู่แล้วเข้ามา
+import 'package:eazy_store/model/request/category_model.dart';
 
 class Product {
   final int? productId;
   final int shopId;
   final int categoryId;
-  final Category? category; // ✨ เพิ่มฟิลด์นี้เพื่อรับ Object หมวดหมู่
   final String? productCode;
   final String name;
   final String? barcode;
   final String imgProduct;
   final double sellPrice;
   final double costPrice;
-  // ลบ final ออกจาก stock เพื่อให้เราอัปเดตค่าใน UI ได้ทันทีโดยไม่ต้องสร้าง object ใหม่ (Optional)
-  // แต่ถ้าอยาก keep concept Immutable ก็ใช้ final เหมือนเดิมได้ครับ
-  int stock; 
+  int stock;
   final String unit;
   final bool status;
 
-  // ✅ เพิ่ม field นี้สำหรับรับชื่อหมวดหมู่มาแสดงผล
+  // ✅ 2. ใช้ Type เป็น CategoryModel (จากไฟล์ที่ Import มา)
+  final CategoryModel? category; 
+  
+  // ✅ 3. ตัวแปรนี้สำคัญ เอาไว้โชว์ใน Text Field
   final String? categoryName; 
 
   Product({
     this.productId,
     required this.shopId,
     required this.categoryId,
-    this.category, // ✨ เพิ่มใน constructor
     this.productCode,
     required this.name,
     this.barcode,
@@ -47,56 +34,20 @@ class Product {
     required this.stock,
     required this.unit,
     this.status = true,
-    this.categoryName, // ✅ เพิ่มใน Constructor
+    this.category,     // รับ Object
+    this.categoryName, // รับ String ชื่อ
   });
 
-<<<<<<< HEAD
-  // แปลงจาก Object เป็น JSON เพื่อส่งไป Backend (ไม่ส่ง categoryName ไป เพราะ Backend ไม่ได้รับ)
-=======
-  // แปลงจาก JSON กลับเป็น Object
   factory Product.fromJson(Map<String, dynamic> json) {
+    // ✅ 4. ดึงข้อมูล Category ออกมาพักไว้ก่อน
+    CategoryModel? catObj;
+    if (json['category'] != null) {
+      catObj = CategoryModel.fromJson(json['category']);
+    }
+
     return Product(
       productId: json['product_id'],
-      shopId: json['shop_id'],
-      categoryId: json['category_id'],
-      // ✨ จัดการแปลงข้อมูล Category ที่ส่งมาซ้อนใน JSON
-      category: json['category'] != null
-          ? Category.fromJson(json['category'])
-          : null,
-      productCode: json['product_code'],
-      name: json['name'],
-      barcode: json['barcode'],
-      imgProduct: json['img_product'],
-      sellPrice: (json['sell_price'] as num).toDouble(),
-      costPrice: (json['cost_price'] as num).toDouble(),
-      stock: json['stock'],
-      unit: json['unit'],
-      status: json['status'] ?? true,
-    );
-  }
-
->>>>>>> 02fbbcb2d1cca6840449e41f2e24ebab001e090e
-  Map<String, dynamic> toJson() {
-    return {
-      "shop_id": shopId,
-      "category_id": categoryId,
-      "name": name,
-      "barcode": barcode,
-      "img_product": imgProduct,
-      "sell_price": sellPrice,
-      "cost_price": costPrice,
-      "stock": stock,
-      "unit": unit,
-      "status": status,
-    };
-  }
-<<<<<<< HEAD
-
-  // แปลงจาก JSON กลับเป็น Object
-  factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-      productId: json['product_id'],
-      shopId: json['shop_id'] ?? 0, // ใส่ default value กัน crash
+      shopId: json['shop_id'] ?? 0,
       categoryId: json['category_id'] ?? 0,
       productCode: json['product_code'],
       name: json['name'] ?? '',
@@ -111,12 +62,28 @@ class Product {
       unit: json['unit'] ?? '',
       status: json['status'] ?? true,
 
-      // ✅ ดึงชื่อหมวดหมู่จาก Nested Object ที่ Go ส่งมา
-      // ถ้ามี object 'category' ให้เอา field 'name' มาใส่
-      categoryName: json['category'] != null ? json['category']['name'] : null,
+      // ✅ 5. ยัด Object Category เข้าไป (เผื่อใช้ทีหลัง)
+      category: catObj, 
+
+      // ✅ 6. หัวใจสำคัญ! ดึงชื่อจาก Object มาใส่ตัวแปร categoryName
+      // ถ้ามี object category ให้เอา .name มาใส่, ถ้าไม่มีให้เป็น null
+      categoryName: catObj?.name, 
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "shop_id": shopId,
+      "category_id": categoryId,
+      "name": name,
+      "barcode": barcode,
+      "img_product": imgProduct,
+      "sell_price": sellPrice,
+      "cost_price": costPrice,
+      "stock": stock,
+      "unit": unit,
+      "status": status,
+      // หมายเหตุ: เราไม่ส่ง category object กลับไป เพราะ backend มักใช้แค่ category_id ในการ save
+    };
+  }
 }
-=======
-}
->>>>>>> 02fbbcb2d1cca6840449e41f2e24ebab001e090e

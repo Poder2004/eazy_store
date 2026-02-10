@@ -99,11 +99,8 @@ class ApiProduct {
   // ค้นหาสินค้า (Search) ตาม Barcode หรือ Product Code
 
   static Future<Product?> searchProduct(String keyword) async {
-    // ส่ง keyword ไปค้นหา (Backend Go ที่เราทำไว้รองรับ barcode, code, name)
-    // ใช้ query parameter ?barcode=$keyword หรือส่งไปลองค้นทุกฟิลด์ก็ได้
-    // ในที่นี้สมมติส่งเป็น barcode
     final url = Uri.parse(
-      '${AppConfig.baseUrl}/api/product/search?barcode=$keyword',
+      '${AppConfig.baseUrl}/api/product/search?keyword=$keyword',
     );
 
     try {
