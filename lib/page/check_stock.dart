@@ -2,18 +2,23 @@ import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/request/product_model.dart';
 import 'package:eazy_store/page/product_detail.dart';
+import 'package:eazy_store/sale_producct/scan_barcode.dart';
+// ⚠️ อย่าลืม Import หน้าสแกนของคุณ
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ----------------------------------------------------------------------
-// 1. Controller: จัดการ Logic
+// 1. Controller
 // ----------------------------------------------------------------------
 class StockController extends GetxController {
   var isLoading = true.obs;
   var products = <Product>[].obs;
   var filteredProducts = <Product>[].obs;
   var selectedIndex = 0.obs;
+
+  // เพิ่ม Controller สำหรับช่องค้นหา เพื่อให้เราสั่งใส่ข้อความได้
+  final TextEditingController searchCtrl = TextEditingController();
 
   @override
   void onInit() {
@@ -22,6 +27,7 @@ class StockController extends GetxController {
   }
 
   Future<void> fetchStockData() async {
+    // ... (โค้ดเดิมของคุณ) ...
     isLoading.value = true;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -29,7 +35,7 @@ class StockController extends GetxController {
 
       if (shopId != 0) {
         List<Product> list = await ApiProduct.getProductsByShop(shopId);
-        list.sort((a, b) => a.stock.compareTo(b.stock)); // เรียงน้อยไปมาก
+        list.sort((a, b) => a.stock.compareTo(b.stock));
         products.assignAll(list);
         filteredProducts.assignAll(list);
       }
@@ -50,17 +56,40 @@ class StockController extends GetxController {
       filteredProducts.assignAll(products);
     } else {
       var result = products
-          .where((p) => p.name.toLowerCase().contains(query.toLowerCase()))
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(query.toLowerCase()) ||
+                (p.barcode != null && p.barcode!.contains(query)),
+          ) // เพิ่มค้นหาด้วยบาร์โค้ด
           .toList();
       filteredProducts.assignAll(result);
     }
   }
 
+  // ✨ ฟังก์ชันเปิดกล้องสแกน
+  Future<void> openScanner() async {
+    // ไปหน้าสแกนและรอรับค่ากลับ (result)
+    var result = await Get.to(() => const ScanBarcodePage());
+
+    if (result != null && result is String) {
+      // 1. ใส่ค่าลงในช่องค้นหา
+      searchCtrl.text = result;
+      // 2. สั่งค้นหาทันที
+      searchProduct(result);
+    }
+  }
+
   void changeTab(int index) => selectedIndex.value = index;
+
+  @override
+  void onClose() {
+    searchCtrl.dispose();
+    super.onClose();
+  }
 }
 
 // ----------------------------------------------------------------------
-// 2. The View: หน้าจอ UI
+// 2. The View
 // ----------------------------------------------------------------------
 class CheckStockScreen extends StatelessWidget {
   const CheckStockScreen({super.key});
@@ -96,7 +125,10 @@ class CheckStockScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           children: [
-            _buildSearchBar(controller),
+            _buildSearchBar(
+              controller,
+              primaryColor,
+            ), // ส่ง primaryColor ไปด้วย
             const SizedBox(height: 15),
             Expanded(
               child: Obx(() {
@@ -116,15 +148,12 @@ class CheckStockScreen extends StatelessWidget {
                   itemCount: controller.filteredProducts.length,
                   itemBuilder: (context, index) {
                     final product = controller.filteredProducts[index];
-
-                    // ✨ แก้ไขจุดนี้: ห่อด้วย InkWell เพื่อให้กดไปหน้า Detail
                     return InkWell(
                       onTap: () {
                         Get.to(
                           () => ProductDetailScreen(),
-                          arguments: product, // ส่ง Object สินค้าไปทั้งก้อน
-                          transition:
-                              Transition.rightToLeft, // สไลด์หน้าจอแบบนุ่มนวล
+                          arguments: product,
+                          transition: Transition.rightToLeft,
                         );
                       },
                       borderRadius: BorderRadius.circular(15),
@@ -146,7 +175,8 @@ class CheckStockScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchBar(StockController controller) {
+  // ✨ ปรับปรุงช่องค้นหาให้มีปุ่มสแกน
+  Widget _buildSearchBar(StockController controller, Color primaryColor) {
     return Container(
       height: 50,
       decoration: BoxDecoration(
@@ -161,18 +191,25 @@ class CheckStockScreen extends StatelessWidget {
         ],
       ),
       child: TextField(
+        controller: controller.searchCtrl, // ผูก Controller
         onChanged: controller.searchProduct,
-        decoration: const InputDecoration(
-          hintText: 'ค้นหาชื่อสินค้า...',
-          prefixIcon: Icon(Icons.search, color: Colors.grey),
+        decoration: InputDecoration(
+          hintText: 'ค้นหาชื่อสินค้า หรือ บาร์โค้ด...',
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          // ✨ เพิ่มปุ่มสแกนด้านขวา
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: Colors.black87),
+            onPressed: controller.openScanner, // เรียกฟังก์ชันเปิดกล้อง
+          ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 12.0),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12.0),
         ),
       ),
     );
   }
 
   Widget _buildProductCard(Product product, Color warningColor) {
+    // ... (ส่วนนี้เหมือนเดิมเป๊ะๆ ไม่ต้องแก้) ...
     final bool isLowStock = product.stock <= 10;
     final bool isOutOfStock = product.stock == 0;
 

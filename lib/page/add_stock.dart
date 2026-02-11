@@ -1,12 +1,17 @@
+import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
-import '../api/api_product.dart'; // ตรวจสอบ path ให้ถูกต้อง
-import '../model/request/product_model.dart'; // ตรวจสอบ path ให้ถูกต้อง
+import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
-const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร
-const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
-const Color _kInputFillColor = Color(0xFFF0F0E0); // สีพื้นหลังของ Input
+// 🎨 Theme Colors
+const Color _kPrimaryColor = Color(0xFF6B8E23);
+const Color _kBackgroundColor = Color(0xFFF7F7F7);
+const Color _kInputFillColor = Color(0xFFF0F0E0);
+const Color _kReadOnlyColor = Color(0xFFEEEEEE); // สีพื้นหลังช่องที่แก้ไขไม่ได้
 
 class AddStockScreen extends StatefulWidget {
   const AddStockScreen({super.key});
@@ -16,13 +21,11 @@ class AddStockScreen extends StatefulWidget {
 }
 
 class _AddStockScreenState extends State<AddStockScreen> {
-  // State สำหรับจัดการ Bottom Navigation Bar
-  int _selectedIndex = 0;
-
-  // เก็บ Object สินค้าที่ค้นเจอไว้ตรงนี้
+  int _selectedIndex = 1; // สมมติว่าเมนู Stock อยู่ลำดับที่ 1
   Product? _foundProduct;
+  bool _isSearching = false;
 
-  // Controllers สำหรับ TextField
+  // Controllers
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _costController = TextEditingController();
@@ -32,13 +35,13 @@ class _AddStockScreenState extends State<AddStockScreen> {
   final TextEditingController _unitController = TextEditingController();
   final TextEditingController _categoryController = TextEditingController();
 
-  // ตัวแปรสำหรับแสดงผลยอดรวม Real-time (Optional)
+  // ตัวแปรคำนวณยอดรวม Real-time
   int _calculatedTotal = 0;
 
   @override
   void initState() {
     super.initState();
-    // เพิ่ม Listener เพื่อคำนวณยอดรวมทันทีที่พิมพ์ (Optional UX improvement)
+    // 🧮 ฟังชั่นคำนวณยอดรวมทันทีที่พิมพ์ตัวเลข
     _addAmountController.addListener(() {
       if (_foundProduct != null) {
         int current = int.tryParse(_currentStockController.text) ?? 0;
@@ -50,249 +53,81 @@ class _AddStockScreenState extends State<AddStockScreen> {
     });
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _nameController.dispose();
+    _costController.dispose();
+    _salePriceController.dispose();
+    _currentStockController.dispose();
+    _addAmountController.dispose();
+    _unitController.dispose();
+    _categoryController.dispose();
+    super.dispose();
   }
 
-  // ----------------------------------------------------------------
-  // ฟังก์ชัน: ค้นหาสินค้า
-  // ----------------------------------------------------------------
+  // 🔍 ฟังก์ชันค้นหาสินค้า (รองรับทั้งชื่อและบาร์โค้ด)
   Future<void> _handleSearch() async {
     String keyword = _searchController.text.trim();
     if (keyword.isEmpty) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (c) => const Center(child: CircularProgressIndicator()),
-    );
+    setState(() => _isSearching = true);
 
-    Product? product = await ApiProduct.searchProduct(keyword);
+    try {
+      // 1. ดึงสินค้าทั้งหมดในร้าน (หรือจะทำ API Search แยกก็ได้)
+      // ในที่นี้สมมติว่าใช้ getProductsByShop แล้ววนหาในเครื่องเพื่อความไว
+      // (ถ้าของเยอะแนะนำทำ API /search?q=... ที่ Backend)
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
 
-    if (mounted) Navigator.pop(context);
+      List<Product> allProducts = await ApiProduct.getProductsByShop(shopId);
 
-    if (product != null) {
-      setState(() {
-        _foundProduct = product;
-        _nameController.text = product.name;
-        _costController.text = (product.costPrice).toString();
-        _salePriceController.text = (product.sellPrice).toString();
-        _currentStockController.text = (product.stock).toString();
-        _unitController.text = product.unit;
-        _categoryController.text = product.categoryName ?? 'ไม่ระบุ';
-
-        _addAmountController.clear();
-        _calculatedTotal = product.stock; // เริ่มต้นยอดรวมเท่ากับของเดิม
-      });
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ไม่พบสินค้ารหัสนี้'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  // ----------------------------------------------------------------
-  // ✨ ฟังก์ชันใหม่ 1: ตรวจสอบและแสดง Pop-up ยืนยัน
-  // ----------------------------------------------------------------
-  void _handleSaveCheck() {
-    // 1. Validation เบื้องต้น
-    if (_foundProduct == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('กรุณาค้นหาสินค้าก่อน'),
-          backgroundColor: Colors.orange,
-        ),
+      // ค้นหาจาก Barcode หรือ Name
+      var match = allProducts.firstWhereOrNull(
+        (p) => (p.barcode == keyword) || (p.name.contains(keyword)),
       );
-      return;
-    }
 
-    if (_addAmountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('กรุณาระบุจำนวนที่เพิ่ม'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    int amountToAdd = int.tryParse(_addAmountController.text) ?? 0;
-    if (amountToAdd <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('จำนวนต้องมากกว่า 0'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // 2. คำนวณตัวเลขเพื่อโชว์ใน Dialog
-    int currentStock = int.tryParse(_currentStockController.text) ?? 0;
-    int newTotal = currentStock + amountToAdd;
-
-    // 3. แสดง Dialog ยืนยัน
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('ยืนยันการเพิ่มสต็อก'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('สินค้า: ${_nameController.text}'),
-              const Divider(),
-              Text('คงเหลือเดิม: $currentStock'),
-              Text(
-                'จำนวนที่เพิ่ม: +$amountToAdd',
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Divider(),
-              Text(
-                'ยอดคงเหลือสุทธิ: $newTotal ${_unitController.text}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'ข้อมูลถูกต้องใช่หรือไม่?',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-          actions: [
-            // ปุ่มยกเลิก -> ปิด Dialog กลับไปแก้ไข
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop(); // ปิด Dialog
-              },
-              icon: const Icon(Icons.edit, size: 18, color: Colors.white),
-              label: const Text(
-                'แก้ไข',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[700], // สีพื้นหลังส้ม
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                elevation: 2, // เงาปุ่มเล็กน้อย
-              ),
-            ),
-            // ปุ่มยืนยัน -> ปิด Dialog แล้วเรียก API
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _executeSaveToApi(amountToAdd);
-              },
-              icon: const Icon(
-                Icons.check_circle_outline,
-                color: Colors.white,
-                size: 20,
-              ),
-              label: const Text(
-                'ยืนยัน',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kPrimaryColor,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                elevation: 2,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ----------------------------------------------------------------
-  // ✨ ฟังก์ชันใหม่ 2: ยิง API บันทึกจริง (ทำงานหลังกดยืนยัน)
-  // ----------------------------------------------------------------
-  Future<void> _executeSaveToApi(int amountToAdd) async {
-    // Show Loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (c) => const Center(child: CircularProgressIndicator()),
-    );
-
-    // เรียก API
-    bool success = await ApiProduct.updateStock(
-      _foundProduct!.productId!,
-      amountToAdd,
-    );
-
-    // Hide Loading
-    if (mounted) Navigator.pop(context);
-
-    if (success) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('เพิ่มสต็อกสำเร็จ!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // อัปเดตหน้าจอทันที
+      if (match != null) {
         setState(() {
-          int currentStock = int.tryParse(_currentStockController.text) ?? 0;
-          int newTotal = currentStock + amountToAdd;
+          _foundProduct = match;
+          _nameController.text = match.name;
+          _costController.text = match.costPrice.toStringAsFixed(2);
+          _salePriceController.text = match.sellPrice.toStringAsFixed(2);
+          _currentStockController.text = match.stock.toString();
+          _unitController.text = match.unit;
+          _categoryController.text = match.category?.name ?? 'ทั่วไป';
 
-          _currentStockController.text = newTotal.toString();
           _addAmountController.clear();
-          _foundProduct!.stock = newTotal;
-          _calculatedTotal = newTotal; // Reset ยอดคำนวณ
+          _calculatedTotal = match.stock;
         });
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('บันทึกไม่สำเร็จ กรุณาลองใหม่'),
-            backgroundColor: Colors.red,
-          ),
+        Get.snackbar(
+          "สำเร็จ",
+          "พบสินค้า: ${match.name}",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
+        );
+      } else {
+        _handleClear();
+        Get.snackbar(
+          "ไม่พบข้อมูล",
+          "ไม่มีสินค้ารหัส/ชื่อนี้ในระบบ",
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.TOP,
         );
       }
+    } catch (e) {
+      print(e);
+    } finally {
+      setState(() => _isSearching = false);
     }
   }
 
-  // ฟังก์ชันสำหรับปุ่มยกเลิก/เคลียร์หน้าจอ
-  void _handleCancel() {
+  // 🧹 ล้างหน้าจอ
+  void _handleClear() {
     setState(() {
       _foundProduct = null;
-      _searchController.clear();
       _nameController.clear();
       _costController.clear();
       _salePriceController.clear();
@@ -304,189 +139,167 @@ class _AddStockScreenState extends State<AddStockScreen> {
     });
   }
 
-  Widget _buildInputField({
-    required String label,
-    required TextEditingController controller,
-    bool readOnly = false,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    final borderStyle = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8.0),
-      borderSide: const BorderSide(color: Color(0xFFE0E0C0), width: 1.5),
-    );
+  // 🛡️ ตรวจสอบก่อนบันทึก (Popup)
+  void _handleSaveCheck() {
+    if (_foundProduct == null) return;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          readOnly: readOnly,
-          keyboardType: keyboardType,
-          style: TextStyle(
-            color: readOnly ? Colors.grey[700] : Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-          decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(
-              vertical: 10.0,
-              horizontal: 12.0,
-            ),
-            filled: true,
-            fillColor: _kInputFillColor,
-            border: borderStyle,
-            enabledBorder: borderStyle,
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8.0),
-              borderSide: const BorderSide(color: _kPrimaryColor, width: 2.0),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+    int amount = int.tryParse(_addAmountController.text) ?? 0;
+    if (amount <= 0) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "กรุณาระบุจำนวนที่ต้องการเพิ่ม",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
 
-  Widget _buildBarcodeInputField() {
-    const Color kInputBorderColor = Color(0xFFE0E0C0);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "รหัสสินค้า",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: _kInputFillColor,
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: kInputBorderColor, width: 1.5),
-          ),
-          child: TextField(
-            controller: _searchController,
-            keyboardType: TextInputType.text,
-            onSubmitted: (value) => _handleSearch(),
-            style: const TextStyle(color: Colors.black87),
-            decoration: InputDecoration(
-              hintText: 'กรอกหรือสแกนรหัสสินค้า',
-              hintStyle: const TextStyle(color: Colors.grey),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 10.0,
-                horizontal: 12.0,
+    // แสดง Popup สวยๆ
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.playlist_add_check_circle,
+                size: 60,
+                color: _kPrimaryColor,
               ),
-              border: InputBorder.none,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  Icons.qr_code_scanner_outlined,
-                  color: Colors.grey[700],
-                ),
-                onPressed: () {
-                  print("Open Camera Scanner");
-                },
+              const SizedBox(height: 15),
+              const Text(
+                "ยืนยันเพิ่มสต็อก",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              prefixIcon: IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: _handleSearch,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+              const Divider(height: 30),
 
-  Widget _buildProductImage() {
-    return Center(
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F0),
-          borderRadius: BorderRadius.circular(15.0),
-          border: Border.all(color: const Color(0xFFE0E0C0), width: 2.0),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(13.0),
-          child:
-              _foundProduct?.imgProduct != null &&
-                  _foundProduct!.imgProduct!.isNotEmpty
-              ? Image.network(
-                  _foundProduct!.imgProduct!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.image_not_supported,
-                    size: 50,
-                    color: Colors.grey,
+              _buildConfirmRow("สินค้า", _nameController.text),
+              _buildConfirmRow(
+                "คงเหลือเดิม",
+                "${_currentStockController.text} ${_unitController.text}",
+              ),
+              _buildConfirmRow(
+                "เพิ่มจำนวน",
+                "+$amount ${_unitController.text}",
+                valueColor: Colors.green,
+              ),
+              const Divider(),
+              _buildConfirmRow(
+                "รวมสุทธิ",
+                "$_calculatedTotal ${_unitController.text}",
+                isBold: true,
+              ),
+
+              const SizedBox(height: 30),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        "แก้ไข",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
                   ),
-                )
-              : const Icon(Icons.image, size: 50, color: Colors.grey),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        _executeSave(amount);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kPrimaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        "ยืนยัน",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Widget _buildConfirmRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    bool isBold = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? Colors.black87,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: 16,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // 🖼️ Widget ปุ่มบันทึก (แก้ไขให้ไปเรียก _handleSaveCheck)
-  Widget _buildSaveButton() {
-    return SizedBox(
-      height: 55,
-      child: ElevatedButton(
-        onPressed:
-            _handleSaveCheck, // ✨ เปลี่ยนจาก _handleSave เป็น _handleSaveCheck
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF7B68EE),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          elevation: 5,
-        ),
-        child: const Text(
-          'บันทึก',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
+  // 💾 บันทึกจริง (API)
+  Future<void> _executeSave(int amount) async {
+    // Show Loading
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
     );
-  }
 
-  Widget _buildCancelButton() {
-    return SizedBox(
-      height: 55,
-      child: ElevatedButton(
-        onPressed: _handleCancel,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFE0E0E0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          elevation: 5,
-        ),
-        child: const Text(
-          'ยกเลิก',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF808080),
-          ),
-        ),
-      ),
+    bool success = await ApiProduct.updateStock(
+      _foundProduct!.productId!,
+      amount,
     );
+
+    Get.back(); // Hide Loading
+
+    if (success) {
+      Get.snackbar(
+        "สำเร็จ",
+        "เพิ่มสต็อกเรียบร้อยแล้ว",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+      _handleClear(); // ล้างหน้าจอเตรียมทำรายการต่อไป
+      _searchController.clear();
+    } else {
+      Get.snackbar(
+        "ผิดพลาด",
+        "บันทึกไม่สำเร็จ กรุณาลองใหม่",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   @override
@@ -494,128 +307,304 @@ class _AddStockScreenState extends State<AddStockScreen> {
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'เพิ่มสต็อกสินค้า',
-          style: TextStyle(
+        title: Text(
+          'รับสินค้าเข้า',
+          style: GoogleFonts.prompt(
             fontWeight: FontWeight.bold,
-            fontSize: 24,
+            fontSize: 22,
             color: Colors.black87,
           ),
         ),
         centerTitle: true,
         backgroundColor: _kBackgroundColor,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        actions: [
+          IconButton(
+            onPressed: _handleClear,
+            icon: const Icon(
+              Icons.cleaning_services_outlined,
+              color: Colors.grey,
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+        padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildBarcodeInputField(),
-            const SizedBox(height: 15),
+            // 🔎 ช่องค้นหา + ปุ่มสแกน
+            _buildSearchSection(),
+
+            const SizedBox(height: 20),
+
+            // 📦 แสดงรายละเอียดสินค้า (ถ้าเจอ)
             if (_foundProduct != null) ...[
-              _buildProductImage(),
-              const SizedBox(height: 25),
-              _buildInputField(
-                label: 'ชื่อสินค้า',
-                controller: _nameController,
-                readOnly: true,
-              ),
+              _buildProductCard(),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInputField(
-                      label: 'ราคาต้นทุน',
-                      controller: _costController,
-                      readOnly: true,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: _buildInputField(
-                      label: 'ราคาขาย',
-                      controller: _salePriceController,
-                      readOnly: true,
-                    ),
-                  ),
-                ],
+              _buildStockInputSection(),
+              const SizedBox(height: 30),
+              _buildActionButtons(),
+            ] else if (_isSearching) ...[
+              const Padding(
+                padding: EdgeInsets.only(top: 50),
+                child: CircularProgressIndicator(color: _kPrimaryColor),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInputField(
-                      label: 'คงเหลือเดิม',
-                      controller: _currentStockController,
-                      readOnly: true,
+            ] else ...[
+              // Placeholder ตอนยังไม่ค้นหา
+              Padding(
+                padding: const EdgeInsets.only(top: 50),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 80,
+                      color: Colors.grey[300],
                     ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInputField(
-                          label: 'เพิ่มจำนวน',
-                          controller: _addAmountController,
-                          keyboardType: TextInputType.number,
-                        ),
-                        // ✨ แสดงยอดรวมแบบ Real-time ใต้ช่องกรอก
-                        if (_addAmountController.text.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              "รวมเป็น: $_calculatedTotal ${_unitController.text}",
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: _kPrimaryColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
+                    const SizedBox(height: 10),
+                    Text(
+                      "ค้นหาสินค้าเพื่อเพิ่มสต็อก",
+                      style: TextStyle(color: Colors.grey[400], fontSize: 16),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildInputField(
-                      label: 'หน่วยนับ',
-                      controller: _unitController,
-                      readOnly: true,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: _buildInputField(
-                      label: 'หมวดหมู่',
-                      controller: _categoryController,
-                      readOnly: true,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40),
-              Row(
-                children: [
-                  Expanded(child: _buildSaveButton()),
-                  const SizedBox(width: 15),
-                  Expanded(child: _buildCancelButton()),
-                ],
-              ),
-              const SizedBox(height: 20),
             ],
           ],
         ),
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+        onTap: (i) => setState(() => _selectedIndex = i),
+      ),
+    );
+  }
+
+  // --- Widgets ---
+
+  Widget _buildSearchSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'ชื่อสินค้า หรือ รหัสบาร์โค้ด',
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: _kPrimaryColor),
+            onPressed: () async {
+              // 📷 เปิดกล้องสแกน
+              var result = await Get.to(() => const ScanBarcodePage());
+              if (result != null && result is String) {
+                _searchController.text = result;
+                _handleSearch(); // ค้นหาทันทีเมื่อสแกนเสร็จ
+              }
+            },
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 15),
+        ),
+        onSubmitted: (_) => _handleSearch(),
+      ),
+    );
+  }
+
+  Widget _buildProductCard() {
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 40), // เว้นที่ให้รูป
+          padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                _nameController.text,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                "รหัส: ${_foundProduct?.productCode ?? '-'}",
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const Divider(height: 30),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInfoItem("หมวดหมู่", _categoryController.text),
+                  ),
+                  Expanded(
+                    child: _buildInfoItem(
+                      "ราคาขาย",
+                      "฿${_salePriceController.text}",
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInfoItem("ต้นทุน", "฿${_costController.text}"),
+                  ),
+                  Expanded(
+                    child: _buildInfoItem(
+                      "คงเหลือ",
+                      "${_currentStockController.text} ${_unitController.text}",
+                      isHighlight: true,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        // รูปภาพลอยด้านบน
+        Container(
+          height: 80,
+          width: 80,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+            ],
+            image: DecorationImage(
+              image: NetworkImage(_foundProduct?.imgProduct ?? ''),
+              fit: BoxFit.cover,
+              onError: (e, s) {},
+            ),
+          ),
+          child:
+              _foundProduct?.imgProduct == null ||
+                  _foundProduct!.imgProduct.isEmpty
+              ? const Icon(Icons.image_not_supported, color: Colors.grey)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoItem(
+    String label,
+    String value, {
+    bool isHighlight = false,
+  }) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: isHighlight ? _kPrimaryColor : Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStockInputSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _kPrimaryColor.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.add_circle_outline, color: _kPrimaryColor),
+              const SizedBox(width: 10),
+              const Text(
+                "เพิ่มจำนวนสต็อก",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          TextField(
+            controller: _addAmountController,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: _kPrimaryColor,
+            ),
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(
+              hintText: '0',
+              hintStyle: TextStyle(color: Colors.grey[300]),
+              filled: true,
+              fillColor: _kInputFillColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(15),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 20),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              "ยอดรวมใหม่: $_calculatedTotal ${_unitController.text}",
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton.icon(
+        onPressed: _handleSaveCheck,
+        icon: const Icon(Icons.save, color: Colors.white),
+        label: const Text(
+          "บันทึกสต็อก",
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _kPrimaryColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          elevation: 5,
+        ),
       ),
     );
   }

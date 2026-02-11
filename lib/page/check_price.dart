@@ -1,8 +1,8 @@
 import 'package:eazy_store/api/api_product.dart';
-
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/request/product_model.dart';
 import 'package:eazy_store/page/product_detail.dart';
+import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,13 +16,22 @@ class PriceController extends GetxController {
   var filteredProducts = <Product>[].obs;
   var selectedIndex = 2.obs; // หน้าเช็คราคาเป็น Index 2
 
+  // เพิ่ม Controller สำหรับช่องค้นหา
+  final TextEditingController searchCtrl = TextEditingController();
+
   @override
   void onInit() {
     super.onInit();
     fetchPriceData();
   }
 
-  // 🚀 ดึงข้อมูลสินค้าทั้งหมดจาก Shop เดียวกันกับหน้าเช็คสต็อก
+  @override
+  void onClose() {
+    searchCtrl.dispose();
+    super.onClose();
+  }
+
+  // 🚀 ดึงข้อมูลสินค้า
   Future<void> fetchPriceData() async {
     isLoading.value = true;
     try {
@@ -65,6 +74,15 @@ class PriceController extends GetxController {
     }
   }
 
+  // 📷 ฟังก์ชันเปิดกล้อง
+  Future<void> openScanner() async {
+    var result = await Get.to(() => const ScanBarcodePage());
+    if (result != null && result is String) {
+      searchCtrl.text = result; // ใส่ค่าในช่องค้นหา
+      searchProduct(result); // สั่งค้นหาทันที
+    }
+  }
+
   void changeTab(int index) {
     selectedIndex.value = index;
   }
@@ -80,7 +98,7 @@ class CheckPriceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final PriceController controller = Get.put(PriceController());
 
-    const Color primaryColor = Color(0xFF6B8E23); // ใช้เขียวมะกอกให้เข้าธีมแอป
+    const Color primaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก
     const Color backgroundColor = Color(0xFFF7F7F7);
 
     return Scaffold(
@@ -108,8 +126,8 @@ class CheckPriceScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           children: [
-            // --- 🔍 ส่วนช่องค้นหา ---
-            _buildSearchBar(controller),
+            // --- 🔍 ส่วนช่องค้นหา + ปุ่มสแกน ---
+            _buildSearchBar(controller, primaryColor),
             const SizedBox(height: 15),
 
             // --- 🏷️ รายการสินค้าพร้อมราคา ---
@@ -129,23 +147,17 @@ class CheckPriceScreen extends StatelessWidget {
                   physics: const BouncingScrollPhysics(),
                   itemCount: controller.filteredProducts.length,
                   itemBuilder: (context, index) {
-                    // 1. ดึงข้อมูลสินค้าตัวที่ถูกเลือกออกมาไว้ในตัวแปร
                     final product = controller.filteredProducts[index];
 
-                    // 2. ใช้ InkWell ห่อเพื่อให้กดได้และมี Effect
                     return InkWell(
                       onTap: () {
-                        // 3. ใช้ Get.to เพื่อนำทางไปหน้ารายละเอียด และส่ง product ไปเป็น arguments
                         Get.to(
                           () => const ProductDetailScreen(),
                           arguments: product,
-                          transition: Transition
-                              .rightToLeft, // เพิ่ม Animation ให้ดูพรีเมียม
+                          transition: Transition.rightToLeft, // Animation สวยๆ
                         );
                       },
-                      borderRadius: BorderRadius.circular(
-                        15,
-                      ), // ให้ขอบ Effect มนเท่ากับ Card
+                      borderRadius: BorderRadius.circular(15),
                       child: _buildPriceCard(product, primaryColor),
                     );
                   },
@@ -164,8 +176,8 @@ class CheckPriceScreen extends StatelessWidget {
     );
   }
 
-  // 🔍 Widget ค้นหา
-  Widget _buildSearchBar(PriceController controller) {
+  // 🔍 Widget ค้นหา (เพิ่มปุ่มสแกน)
+  Widget _buildSearchBar(PriceController controller, Color primaryColor) {
     return Container(
       height: 50,
       decoration: BoxDecoration(
@@ -180,20 +192,25 @@ class CheckPriceScreen extends StatelessWidget {
         ],
       ),
       child: TextField(
+        controller: controller.searchCtrl, // ผูก Controller
         onChanged: controller.searchProduct,
-        decoration: const InputDecoration(
-          hintText: 'ค้นหาชื่อสินค้าหรือสแกนบาร์โค้ด...',
-          hintStyle: TextStyle(color: Colors.grey),
-          prefixIcon: Icon(Icons.search, color: Colors.grey),
-          suffixIcon: Icon(Icons.qr_code_scanner_outlined, color: Colors.grey),
+        decoration: InputDecoration(
+          hintText: 'ค้นหาชื่อสินค้า หรือ สแกนบาร์โค้ด...',
+          hintStyle: const TextStyle(color: Colors.grey),
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          // ✨ เพิ่มปุ่มสแกน
+          suffixIcon: IconButton(
+            icon: Icon(Icons.qr_code_scanner_outlined, color: primaryColor),
+            onPressed: controller.openScanner,
+          ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 12.0),
+          contentPadding: const EdgeInsets.symmetric(vertical: 12.0),
         ),
       ),
     );
   }
 
-  // 📦 Widget Card แสดงราคา (ปรับปรุงให้ราคาตัวใหญ่ชัดเจน)
+  // 📦 Widget Card แสดงราคา (เน้นราคาตัวใหญ่)
   Widget _buildPriceCard(Product product, Color primaryColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -211,7 +228,7 @@ class CheckPriceScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 1. รูปสินค้า (Network Image)
+          // 1. รูปสินค้า
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.network(
@@ -229,7 +246,7 @@ class CheckPriceScreen extends StatelessWidget {
           ),
           const SizedBox(width: 15),
 
-          // 2. ชื่อสินค้า
+          // 2. ชื่อและรหัส
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,6 +261,7 @@ class CheckPriceScreen extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
                 Text(
                   "รหัส: ${product.productCode ?? '-'}",
                   style: const TextStyle(fontSize: 13, color: Colors.grey),
@@ -252,12 +270,12 @@ class CheckPriceScreen extends StatelessWidget {
             ),
           ),
 
-          // 3. ราคาสินค้า (ตัวหนาและใหญ่)
+          // 3. ราคา (Highlight)
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${product.sellPrice.toStringAsFixed(0)}',
+                '${product.sellPrice.toStringAsFixed(0)}', // แสดงราคาจำนวนเต็ม (หรือ .2f ถ้าต้องการทศนิยม)
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
@@ -267,7 +285,7 @@ class CheckPriceScreen extends StatelessWidget {
               const Text(
                 'บาท',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
                 ),
