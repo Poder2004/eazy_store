@@ -193,4 +193,29 @@ class ApiProduct {
       return null;
     }
   }
+
+  static Future<List<dynamic>> getNullBarcodeProducts(int shopId) async {
+     final url =  Uri.parse('${AppConfig.baseUrl}/api/getNullBarcode?shop_id=$shopId');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception("Failed to load products: ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Error connecting to API: $e");
+    }
+  }
 }

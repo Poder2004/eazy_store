@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:eazy_store/api/api_product.dart';
 
 // ----------------------------------------------------------------------
 // 1. Model: โครงสร้างข้อมูลสินค้า
@@ -9,8 +10,8 @@ class ProductItem {
   final String name;
   final double price;
   final String category;
-  final IconData icon; // ใช้ Icon แทนรูปภาพจริงไปก่อนเพื่อให้รันได้เลย
-  RxBool isSelected; // ใช้ RxBool เพื่อให้ปุ่ม Radio อัปเดตตัวเองได้
+  final IconData icon;
+  RxBool isSelected;
 
   ProductItem({
     required this.id,
@@ -23,84 +24,104 @@ class ProductItem {
 }
 
 // ----------------------------------------------------------------------
-// 2. Controller: จัดการ Logic รายการสินค้า
+// 2. Controller: จัดการ Logic รายการสินค้าและหมวดหมู่
 // ----------------------------------------------------------------------
 class ManualListController extends GetxController {
-  // Mock Data: จำลองข้อมูลสินค้าตามรูป
-  final List<ProductItem> allProducts = [
-    ProductItem(
-      id: '1',
-      name: 'น้ำแข็ง',
-      price: 10,
-      category: 'อื่นๆ',
-      icon: Icons.ac_unit,
-    ),
-    ProductItem(
-      id: '2',
-      name: 'ไม้กวาด',
-      price: 40,
-      category: 'ของใช้',
-      icon: Icons.cleaning_services,
-    ),
-    ProductItem(
-      id: '3',
-      name: 'ขนมถุง',
-      price: 20,
-      category: 'ขนมขบเคี้ยว',
-      icon: Icons.cookie,
-      selected: true,
-    ), // ตัวอย่างเลือกไว้
-    ProductItem(
-      id: '4',
-      name: 'ปุ๋ยยูเรีย 1 กิโล',
-      price: 33,
-      category: 'การเกษตร',
-      icon: Icons.grass,
-      selected: true,
-    ),
-    ProductItem(
-      id: '5',
-      name: 'ถ่านจุดไฟ',
-      price: 20,
-      category: 'เชื้อเพลิง',
-      icon: Icons.whatshot,
-      selected: true,
-    ),
-  ];
-
-  // ตัวแปรสำหรับค้นหาและกรอง
+  var isLoading = true.obs;
+  
+  // ข้อมูลสินค้า
+  var allProducts = <ProductItem>[].obs;
+  var filteredProducts = <ProductItem>[].obs;
+  
+  // ข้อมูลหมวดหมู่
+  var categories = <String>["หมวดหมู่"].obs; 
+  
   var searchQuery = "".obs;
   var selectedCategory = "หมวดหมู่".obs;
 
-  // รายการหมวดหมู่
-  final List<String> categories = [
-    "หมวดหมู่",
-    "เครื่องดื่ม",
-    "ขนมขบเคี้ยว",
-    "อาหารสด",
-    "อื่นๆ",
-  ];
-
-  // ฟังก์ชันสลับการเลือก (Toggle Radio)
-  void toggleSelection(ProductItem product) {
-    product.isSelected.value = !product.isSelected.value;
-    update(); // อัปเดต UI (เผื่อใช้ GetBuilder)
+  @override
+  void onInit() {
+    super.onInit();
+    fetchInitialData(); // ดึงข้อมูลทั้ง 2 อย่างพร้อมกัน
+    
+    // ตั้ง Worker ตรวจจับการค้นหาหรือเปลี่ยนหมวดหมู่
+    debounce(searchQuery, (_) => filterProducts(), time: 300.milliseconds);
+    ever(selectedCategory, (_) => filterProducts());
   }
 
-  // ฟังก์ชันกดปุ่ม "ไปคิดเงิน"
+  // ดึงข้อมูลเริ่มต้น
+  Future<void> fetchInitialData() async {
+    try {
+      isLoading(true);
+      
+      // ดึงข้อมูลพร้อมกันแบบ Parallel
+      await Future.wait([
+        fetchCategories(),
+        fetchProducts(),
+      ]);
+
+    } catch (e) {
+      Get.snackbar("Error", "ไม่สามารถโหลดข้อมูลได้: $e", snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  // 1. ดึงหมวดหมู่จาก API
+  Future<void> fetchCategories() async {
+    try {
+      final categoryData = await ApiProduct.getCategories(); // ใช้ฟังก์ชันที่คุณมี
+      if (categoryData.isNotEmpty) {
+        // ล้างข้อมูลเก่า (คงเหลือคำว่า "หมวดหมู่") และเพิ่มชื่อจาก API
+        categories.value = ["หมวดหมู่"];
+        categories.addAll(categoryData.map((c) => c.name.toString()).toList());
+      }
+    } catch (e) {
+      print("Error fetching categories: $e");
+    }
+  }
+
+  // 2. ดึงสินค้าที่ไม่มีบาร์โค้ด
+  Future<void> fetchProducts() async {
+    try {
+      final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(1); // shop_id = 1
+      
+      var products = data.map((item) => ProductItem(
+        id: item['product_id'].toString(),
+        name: item['name'] ?? "ไม่มีชื่อสินค้า",
+        price: double.parse(item['price']?.toString() ?? "0"),
+        category: item['category_name'] ?? "อื่นๆ",
+        icon: Icons.inventory_2,
+      )).toList();
+
+      allProducts.assignAll(products);
+      filterProducts();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // การกรองข้อมูล
+  void filterProducts() {
+    var results = allProducts.where((product) {
+      final matchesSearch = product.name.toLowerCase().contains(searchQuery.value.toLowerCase());
+      final matchesCategory = selectedCategory.value == "หมวดหมู่" || product.category == selectedCategory.value;
+      return matchesSearch && matchesCategory;
+    }).toList();
+    
+    filteredProducts.assignAll(results);
+  }
+
+  void toggleSelection(ProductItem product) {
+    product.isSelected.value = !product.isSelected.value;
+  }
+
   void goToCheckout() {
-    // กรองเอาเฉพาะตัวที่เลือก
     final selectedItems = allProducts.where((p) => p.isSelected.value).toList();
     if (selectedItems.isEmpty) {
-      Get.snackbar(
-        "แจ้งเตือน",
-        "กรุณาเลือกสินค้าอย่างน้อย 1 ชิ้น",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
+      Get.snackbar("แจ้งเตือน", "กรุณาเลือกสินค้าอย่างน้อย 1 ชิ้น", backgroundColor: Colors.orange, colorText: Colors.white);
     } else {
       print("ไปคิดเงิน: ${selectedItems.length} รายการ");
-      // Get.to(() => CheckoutPage(items: selectedItems)); // ใส่หน้าคิดเงินตรงนี้
     }
   }
 }
@@ -114,12 +135,10 @@ class ManualListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ManualListController controller = Get.put(ManualListController());
-    final Color primaryGreen = const Color(0xFF00C853); // สีเขียวปุ่ม
-    final Color activeBlue = const Color(0xFF2979FF); // สีฟ้าปุ่ม Radio
+    final Color activeBlue = const Color(0xFF2979FF);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // --- AppBar ---
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -128,37 +147,22 @@ class ManualListPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.grey),
           onPressed: () => Get.back(),
         ),
-        title: const Text(
-          "สมุดสินค้าไม่มีบาร์โค้ด",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
+        title: const Text("สมุดสินค้าไม่มีบาร์โค้ด", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20)),
       ),
-
       body: Column(
         children: [
           // --- Search Bar ---
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(10),
-              ),
+              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
               child: TextField(
                 onChanged: (val) => controller.searchQuery.value = val,
                 decoration: const InputDecoration(
                   hintText: "ค้นหาชื่อสินค้า",
-                  hintStyle: TextStyle(color: Colors.grey),
                   prefixIcon: Icon(Icons.search, color: Colors.grey),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 15,
-                    vertical: 15,
-                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                 ),
               ),
             ),
@@ -170,42 +174,22 @@ class ManualListPage extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 0,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Obx(
-                  () => DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: controller.selectedCategory.value,
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Colors.black,
-                      ),
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          controller.selectedCategory.value = newValue;
-                        }
-                      },
-                      items: controller.categories
-                          .map<DropdownMenuItem<String>>((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          })
-                          .toList(),
-                    ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
+                child: Obx(() => DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: controller.selectedCategory.value,
+                    icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black),
+                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) controller.selectedCategory.value = newValue;
+                    },
+                    // สร้างรายการ Dropdown จาก categories ที่โหลดมาจาก API
+                    items: controller.categories.map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(value: value, child: Text(value));
+                    }).toList(),
                   ),
-                ),
+                )),
               ),
             ),
           ),
@@ -214,14 +198,22 @@ class ManualListPage extends StatelessWidget {
 
           // --- Product List ---
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: controller.allProducts.length,
-              itemBuilder: (context, index) {
-                final product = controller.allProducts[index];
-                return _buildProductCard(product, activeBlue, controller);
-              },
-            ),
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (controller.filteredProducts.isEmpty) {
+                return const Center(child: Text("ไม่พบรายการสินค้า"));
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: controller.filteredProducts.length,
+                itemBuilder: (context, index) {
+                  final product = controller.filteredProducts[index];
+                  return _buildProductCard(product, activeBlue, controller);
+                },
+              );
+            }),
           ),
 
           // --- Checkout Button ---
@@ -233,24 +225,12 @@ class ManualListPage extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: controller.goToCheckout,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853), // สีเขียวสว่าง
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  backgroundColor: const Color(0xFF00C853),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   elevation: 2,
                 ),
-                icon: const Icon(
-                  Icons.shopping_cart_outlined,
-                  color: Colors.white,
-                ),
-                label: const Text(
-                  "ไปคิดเงิน",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+                label: const Text("ไปคิดเงิน", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
           ),
@@ -259,12 +239,7 @@ class ManualListPage extends StatelessWidget {
     );
   }
 
-  // Widget การ์ดสินค้าแต่ละรายการ
-  Widget _buildProductCard(
-    ProductItem product,
-    Color activeColor,
-    ManualListController controller,
-  ) {
+  Widget _buildProductCard(ProductItem product, Color activeColor, ManualListController controller) {
     return GestureDetector(
       onTap: () => controller.toggleSelection(product),
       child: Container(
@@ -274,78 +249,35 @@ class ManualListPage extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, 3))],
         ),
         child: Row(
           children: [
-            // 1. รูปสินค้า (ใช้ Icon แทนไปก่อน)
             Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(10),
-              ),
+              width: 60, height: 60,
+              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
               child: Icon(product.icon, size: 30, color: Colors.grey[600]),
             ),
-
             const SizedBox(width: 15),
-
-            // 2. ชื่อและราคา
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  Text(product.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
                   const SizedBox(height: 5),
-                  Text(
-                    "${product.price.toInt()} บาท", // ตัดทศนิยมออกตามรูป
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
-                    ),
-                  ),
+                  Text("${product.price.toInt()} บาท", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[700])),
                 ],
               ),
             ),
-
-            // 3. ปุ่ม Radio (วงกลม)
-            Obx(
-              () => Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: product.isSelected.value
-                      ? activeColor
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: product.isSelected.value
-                        ? activeColor
-                        : Colors.grey.shade300,
-                    width: 2,
-                  ),
-                ),
-                child: product.isSelected.value
-                    ? const Icon(Icons.check, size: 16, color: Colors.white)
-                    : null,
+            Obx(() => Container(
+              width: 24, height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: product.isSelected.value ? activeColor : Colors.transparent,
+                border: Border.all(color: product.isSelected.value ? activeColor : Colors.grey.shade300, width: 2),
               ),
-            ),
+              child: product.isSelected.value ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+            )),
           ],
         ),
       ),
