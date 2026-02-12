@@ -1,4 +1,3 @@
-// ✅ 1. Import ไฟล์ CategoryModel ที่คุณมีอยู่แล้วเข้ามา
 import 'package:eazy_store/model/request/category_model.dart';
 
 class Product {
@@ -16,10 +15,10 @@ class Product {
   final bool status;
 
   // ✅ 2. ใช้ Type เป็น CategoryModel (จากไฟล์ที่ Import มา)
-  final CategoryModel? category; 
-  
+  final CategoryModel? category;
+
   // ✅ 3. ตัวแปรนี้สำคัญ เอาไว้โชว์ใน Text Field
-  final String? categoryName; 
+  final String? categoryName;
 
   Product({
     this.productId,
@@ -34,7 +33,7 @@ class Product {
     required this.stock,
     required this.unit,
     this.status = true,
-    this.category,     // รับ Object
+    this.category, // รับ Object
     this.categoryName, // รับ String ชื่อ
   });
 
@@ -53,21 +52,21 @@ class Product {
       name: json['name'] ?? '',
       barcode: json['barcode'],
       imgProduct: json['img_product'] ?? '',
-      
+
       // แปลงตัวเลขให้ปลอดภัย
       sellPrice: (json['sell_price'] as num?)?.toDouble() ?? 0.0,
       costPrice: (json['cost_price'] as num?)?.toDouble() ?? 0.0,
-      
+
       stock: json['stock'] ?? 0,
       unit: json['unit'] ?? '',
       status: json['status'] ?? true,
 
       // ✅ 5. ยัด Object Category เข้าไป (เผื่อใช้ทีหลัง)
-      category: catObj, 
+      category: catObj,
 
       // ✅ 6. หัวใจสำคัญ! ดึงชื่อจาก Object มาใส่ตัวแปร categoryName
       // ถ้ามี object category ให้เอา .name มาใส่, ถ้าไม่มีให้เป็น null
-      categoryName: catObj?.name, 
+      categoryName: catObj?.name,
     );
   }
 
