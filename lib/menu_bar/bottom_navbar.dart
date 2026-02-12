@@ -1,14 +1,12 @@
-// File: lib/menu_bar/bottom_navbar.dart (ปรับปรุงโครงสร้างจากโค้ดเดิมของคุณ)
-
 import 'package:eazy_store/homepage/home_page.dart';
 import 'package:eazy_store/page/debt_ledger.dart';
 import 'package:eazy_store/page/sales_account.dart';
+import 'package:eazy_store/sale_producct/checkout_page.dart'; // ✅ เพิ่ม Import CheckoutPage
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_navigation/get_navigation.dart';
+import 'package:get/get.dart';
 
-// กำหนดสีหลักที่ใช้ในแอปพลิเคชัน (ใช้สีเดียวกับ InventoryHomePage)
+// กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
 const Color primaryColor = Color(0xFFC0392B);
 const Color surfaceLight = Color(0xFFFFFFFF);
 const Color surfaceDark = Color(0xFF1F2937);
@@ -73,9 +71,26 @@ class BottomNavBar extends StatelessWidget {
       child: Transform.translate(
         offset: const Offset(0, -20), // ยกปุ่มขึ้น
         child: GestureDetector(
-          onTap: () {
-            onTap(index);
-            _navigateToPage(index);
+          onTap: () async {
+            // ✅ เปลี่ยนเป็น async เพื่อรอรับค่า
+            // 1. เรียกหน้าสแกน และ "รอ" (await) ผลลัพธ์
+            var barcode = await Get.to(() => const ScanBarcodePage());
+
+            // 2. ถ้าสแกนเจอ (barcode ไม่เป็น null)
+            if (barcode != null && barcode is String) {
+              // 3. ไปหน้า CheckoutPage และส่ง barcode ไปด้วยผ่าน arguments
+              Get.to(
+                () => const CheckoutPage(),
+                arguments: {'barcode': barcode}, // 📦 ฝากบาร์โค้ดไป
+              );
+              // อัปเดต index ของ Navbar ให้เป็นหน้า Checkout (ถ้า CheckoutPage เป็น index 2)
+              onTap(index);
+            } else {
+              // กรณีไม่ได้สแกน หรือกดกลับเฉยๆ อาจจะเลือกให้ไปหน้า Checkout เปล่าๆ หรืออยู่ที่เดิม
+              // ในที่นี้ถ้ากดปุ่มสแกนตรงกลางแต่ไม่ได้สแกนอะไร อาจจะอยากให้ไปหน้า Checkout เปล่าๆ ก็ได้
+              // Get.to(() => const CheckoutPage());
+              // onTap(index);
+            }
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -121,15 +136,15 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  // Logic สำหรับการนำทาง (นำมาจากโค้ดเดิมของคุณ)
+  // Logic สำหรับการนำทาง
   void _navigateToPage(int index) {
     if (index == 0) {
       Get.to(() => const HomePage());
     } else if (index == 1) {
       Get.to(() => const SalesAccountScreen());
-    } else if (index == 2) {
-      Get.to(() => const ScanBarcodePage());
-    } else if (index == 3) {
+    }
+    // index == 2 จัดการใน onTap ของ _buildScanButton แล้ว
+    else if (index == 3) {
       Get.to(() => const DebtLedgerScreen());
     } else if (index == 4) {
       // Get.to(() => const SettingsPage());
