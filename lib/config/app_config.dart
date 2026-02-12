@@ -13,6 +13,5 @@ class AppConfig {
     }
     return 'http://192.168.6.1:8080';
   }
-
   // static const String baseUrl = "https://eazystoreapi.onrender.com";
 }
