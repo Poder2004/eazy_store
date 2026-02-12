@@ -180,11 +180,8 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
             // ปุ่ม Actions
             Column(
               children: [
-                // ปุ่ม เพิ่มยอด
-                SizedBox(
-                  height: 35,
                 
-                ),
+              
                 const SizedBox(height: 8),
                 // ปุ่ม ชำระเงิน
                 SizedBox(
