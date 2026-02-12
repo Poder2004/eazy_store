@@ -183,28 +183,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                 // ปุ่ม เพิ่มยอด
                 SizedBox(
                   height: 35,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      print('Adding debt for ${debt.name}');
-                      // Logic for adding debt amount
-                    },
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      side: BorderSide(color: Colors.grey.shade400, width: 1),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      backgroundColor: Colors.white,
-                    ),
-                    child: const Text(
-                      'เพิ่มยอด',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
+                
                 ),
                 const SizedBox(height: 8),
                 // ปุ่ม ชำระเงิน
