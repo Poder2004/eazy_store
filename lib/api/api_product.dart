@@ -194,8 +194,16 @@ class ApiProduct {
     }
   }
 
-  static Future<List<dynamic>> getNullBarcodeProducts(int shopId) async {
-     final url =  Uri.parse('${AppConfig.baseUrl}/api/getNullBarcode?shop_id=$shopId');
+ static Future<List<dynamic>> getNullBarcodeProducts(int shopId, {int? categoryId}) async {
+    // สร้าง URL พื้นฐานที่มี shop_id
+    String urlString = '${AppConfig.baseUrl}/api/getNullBarcode?shop_id=$shopId';
+    
+    // ถ้ามีการส่ง categoryId มา (และไม่ใช่ค่าว่าง/0) ให้ต่อท้าย URL
+    if (categoryId != null && categoryId != 0) {
+      urlString += '&category_id=$categoryId';
+    }
+
+    final url = Uri.parse(urlString);
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
