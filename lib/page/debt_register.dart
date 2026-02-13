@@ -1,17 +1,21 @@
+import 'package:eazy_store/api/api_service_image.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
-// **Imports ที่เพิ่มเข้ามาสำหรับการโหลดไฟล์**
+import 'package:get/get.dart'; // ใช้ Get สำหรับ Snackbar
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert';
 import 'dart:async';
+import '../model/request/debtor_request.dart';
+import '../api/api_debtor.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- THEME & CONSTANTS ---
-const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร
-const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
-const Color _kFieldFillColor = Color(0xFFFAFFEF); // สีอ่อนสำหรับช่องกรอกข้อมูล
-const Color _kBorderColor = Color(0xFFE0E0E0); // สีขอบอ่อน
+const Color _kPrimaryColor = Color(0xFF6B8E23);
+const Color _kBackgroundColor = Color(0xFFF7F7F7);
+const Color _kFieldFillColor = Color(0xFFFAFFEF);
+const Color _kBorderColor = Color(0xFFE0E0E0);
 
-// 📌 1. เปลี่ยนเป็น StatefulWidget เพื่อจัดการสถานะการโหลดข้อมูลและ Dropdown
 class DebtRegisterScreen extends StatefulWidget {
   const DebtRegisterScreen({super.key});
 
@@ -20,50 +24,26 @@ class DebtRegisterScreen extends StatefulWidget {
 }
 
 class _DebtRegisterScreenState extends State<DebtRegisterScreen> {
+  File? _imageFile; // ตัวแปรเก็บรูปที่เลือก
+  final ImagePicker _picker = ImagePicker();
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressDetailController = TextEditingController();
+  final TextEditingController _creditLimitController = TextEditingController();
+
   // สถานะสำหรับ Dropdown
   String? _selectedProvince;
   String? _selectedDistrict;
   String? _selectedSubdistrict;
 
-  // สถานะสำหรับข้อมูลที่อยู่ทั้งหมดที่โหลดมา
-  // Map<ชื่อจังหวัด, ข้อมูลจังหวัดทั้งหมด (รวมอำเภอ, ตำบล)>
   Map<String, dynamic>? _fullAddressData;
-
-  // รายการสำหรับ Dropdown อำเภอ/ตำบล ที่ถูกกรองแล้ว (เก็บเป็นชื่อเท่านั้น)
   List<String> _districts = [];
   List<String> _subdistricts = [];
-
-  // 📌 2. Logic การโหลดไฟล์ JSON
-  Future<Map<String, dynamic>> _loadAddressData() async {
-    try {
-      // ตรวจสอบ Asset Path ให้ตรงกับที่คุณตั้งใน pubspec.yaml
-      const assetPath =
-          'assets/data_address/province_with_district_and_sub_district.json';
-      final String response = await rootBundle.loadString(assetPath);
-
-      final List<dynamic> rawData = jsonDecode(response);
-
-      final Map<String, dynamic> structuredData = {};
-      // จัดโครงสร้างข้อมูล: ใช้ชื่อจังหวัด (name_th) เป็น Key หลัก
-      for (var province in rawData) {
-        String provinceName =
-            province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
-        structuredData[provinceName] = province;
-      }
-
-      return structuredData;
-    } catch (e) {
-      print(
-        "🚨 Error loading address data. Did you forget to add the file to assets in pubspec.yaml? Error: $e",
-      );
-      return {};
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    // โหลดข้อมูลเมื่อ Widget ถูกสร้าง
     _loadAddressData().then((data) {
       setState(() {
         _fullAddressData = data;
@@ -71,232 +51,209 @@ class _DebtRegisterScreenState extends State<DebtRegisterScreen> {
     });
   }
 
-  // 📌 3. Logic การจัดการการเปลี่ยนแปลง (Cascading Logic)
-
-  void _resetDistrictAndSubdistrict() {
-    setState(() {
-      _selectedDistrict = null;
-      _selectedSubdistrict = null;
-      _districts = [];
-      _subdistricts = [];
-    });
+  @override
+  void dispose() {
+    // ล้าง Memory เมื่อปิดหน้าจอ
+    _nameController.dispose();
+    _phoneController.dispose();
+    _addressDetailController.dispose();
+    _creditLimitController.dispose();
+    super.dispose();
   }
 
-  void _resetSubdistrict() {
-    setState(() {
-      _selectedSubdistrict = null;
-      _subdistricts = [];
-    });
+  // 📌 2. Logic การโหลดข้อมูลที่อยู่
+  Future<Map<String, dynamic>> _loadAddressData() async {
+    try {
+      const assetPath = 'assets/data_address/province_with_district_and_sub_district.json';
+      final String response = await rootBundle.loadString(assetPath);
+      final List<dynamic> rawData = jsonDecode(response);
+
+      final Map<String, dynamic> structuredData = {};
+      for (var province in rawData) {
+        String provinceName = province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
+        structuredData[provinceName] = province;
+      }
+      return structuredData;
+    } catch (e) {
+      debugPrint("🚨 Error loading address data: $e");
+      return {};
+    }
   }
 
-  void _onProvinceChanged(String? newValue) {
-    if (newValue == null || _fullAddressData == null) {
-      _resetDistrictAndSubdistrict();
-      return;
+  // 📌 3. Logic การส่งข้อมูลไป API
+ Future<void> _submitDebtorData() async {
+  // 1. Check validation เบื้องต้น
+  if (_nameController.text.isEmpty || _phoneController.text.isEmpty) {
+    Get.snackbar("แจ้งเตือน", "กรุณากรอกชื่อและเบอร์โทรศัพท์",
+        backgroundColor: Colors.orange, colorText: Colors.white);
+    return;
+  }
+
+  // 2. แสดง Loading ทันทีเพื่อกันผู้ใช้กดซ้ำ
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(
+      child: CircularProgressIndicator(color: _kPrimaryColor),
+    ),
+  );
+
+  try {
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int shopId = prefs.getInt('shopId') ?? 0; // ต้องมั่นใจว่าตอน Login ได้เก็บค่านี้ไว้
+
+    if (shopId == 0) {
+       Get.snackbar("ผิดพลาด", "ไม่พบข้อมูลร้านค้า กรุณาล็อกอินใหม่", 
+           backgroundColor: Colors.red, colorText: Colors.white);
+       return;
     }
 
-    _resetDistrictAndSubdistrict();
+    String imageUrl = ""; // ตัวแปรสำหรับเก็บ URL จาก Cloudinary
+
+    // 3. เริ่มขั้นตอนอัปโหลดรูปภาพ (ถ้ามีการเลือกรูปไว้)
+    if (_imageFile != null) {
+      final uploadService = ImageUploadService();
+      // อัปโหลดและรอรับ URL
+      String? uploadedUrl = await uploadService.uploadImage(_imageFile!);
+      
+      if (uploadedUrl != null) {
+        imageUrl = uploadedUrl;
+      } else {
+        // ถ้าอัปโหลดรูปไม่สำเร็จ ให้หยุดและแจ้งเตือน
+        Navigator.pop(context); // ปิด loading
+        Get.snackbar("ผิดพลาด", "ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่",
+            backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+    }
+
+    // 4. รวมที่อยู่เป็น String
+    String fullAddress = "${_addressDetailController.text} "
+        "ต.${_selectedSubdistrict ?? '-'} "
+        "อ.${_selectedDistrict ?? '-'} "
+        "จ.${_selectedProvince ?? '-'}";
+
+    // 5. สร้าง Request Model โดยใส่ imageUrl ที่ได้มาจริง
+    DebtorRequest newDebtor = DebtorRequest(
+      shopId: shopId,
+      name: _nameController.text,
+      phone: _phoneController.text,
+      address: fullAddress,
+      imgDebtor: imageUrl, // ใส่ URL ที่ได้จาก Cloudinary
+      creditLimit: double.tryParse(_creditLimitController.text) ?? 0.0,
+      currentDebt: 0.0,
+    );
+
+    // 6. เรียกใช้ API ของเราเพื่อบันทึกลงฐานข้อมูล Go
+    var result = await ApiDebtor.createDebtor(newDebtor);
+
+    Navigator.pop(context); // ปิด Loading เมื่อ API ทำงานเสร็จ
+
+    if (result['success']) {
+      Get.snackbar("สำเร็จ", result['message'],
+          backgroundColor: Colors.green, colorText: Colors.white);
+      
+      // หน่วงเวลาเล็กน้อยก่อนปิดหน้าจอ เพื่อให้ User เห็น Snackbar
+      Future.delayed(const Duration(seconds: 1), () {
+        Navigator.pop(context); 
+      });
+    } else {
+      Get.snackbar("ผิดพลาด", result['message'],
+          backgroundColor: Colors.red, colorText: Colors.white);
+    }
+
+  } catch (e) {
+    Navigator.pop(context); // ปิด Loading ถ้าเกิด Error ที่คาดไม่ถึง
+    Get.snackbar("Error", "เกิดข้อผิดพลาด: $e",
+        backgroundColor: Colors.red, colorText: Colors.white);
+  }
+}
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        maxWidth: 1080,
+        maxHeight: 1080,
+        imageQuality: 80, // ลดขนาดไฟล์เพื่อประหยัดพื้นที่ Database
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking image: $e");
+    }
+  }
+
+  // --- Cascading Logic สำหรับที่อยู่ ---
+  void _onProvinceChanged(String? newValue) {
+    if (newValue == null) return;
     setState(() {
       _selectedProvince = newValue;
-
-      // กรองและดึงรายการอำเภอจากจังหวัดที่เลือก
+      _selectedDistrict = null;
+      _selectedSubdistrict = null;
+      _subdistricts = [];
       final provinceData = _fullAddressData![newValue];
-      final List<dynamic>? rawDistricts =
-          provinceData?['districts'] as List<dynamic>?;
-
-      if (rawDistricts != null) {
-        _districts = rawDistricts
-            .map((district) => district['name_th'] as String? ?? 'ไม่ระบุอำเภอ')
-            .toList();
-      }
+      final List<dynamic>? rawDistricts = provinceData?['districts'] as List<dynamic>?;
+      _districts = rawDistricts?.map((d) => d['name_th'] as String).toList() ?? [];
     });
   }
 
   void _onDistrictChanged(String? newValue) {
-    if (newValue == null ||
-        _selectedProvince == null ||
-        _fullAddressData == null) {
-      _resetSubdistrict();
-      return;
-    }
-
-    _resetSubdistrict();
+    if (newValue == null) return;
     setState(() {
       _selectedDistrict = newValue;
-
+      _selectedSubdistrict = null;
       final provinceData = _fullAddressData![_selectedProvince!];
-      final List<dynamic>? rawDistricts =
-          provinceData?['districts'] as List<dynamic>?;
-
-      if (rawDistricts != null) {
-        // ค้นหาอำเภอที่ตรงกับที่เลือก
-        final selectedDistrictData = rawDistricts.firstWhere(
-          (d) => d['name_th'] == newValue,
-          orElse: () => null,
-        );
-
-        // ดึงรายการตำบลจากอำเภอนั้น
-        final List<dynamic>? rawSubdistricts =
-            selectedDistrictData?['sub_districts'] as List<dynamic>?;
-
-        if (rawSubdistricts != null) {
-          _subdistricts = rawSubdistricts
-              .map((sub) => sub['name_th'] as String? ?? 'ไม่ระบุตำบล')
-              .toList();
-        }
-      }
+      final List<dynamic> rawDistricts = provinceData?['districts'];
+      final selectedDistrictData = rawDistricts.firstWhere((d) => d['name_th'] == newValue);
+      final List<dynamic>? rawSubs = selectedDistrictData['sub_districts'] as List<dynamic>?;
+      _subdistricts = rawSubs?.map((s) => s['name_th'] as String).toList() ?? [];
     });
   }
 
-  // 4. Widget สำหรับช่องกรอกข้อมูล
-  Widget _buildInputField({
-    required String label,
-    required String hint,
-    TextInputType keyboardType = TextInputType.text,
-    bool isAddress = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!isAddress)
-          Padding(
-            padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF333333),
-              ),
-            ),
-          ),
-        Container(
-          height: 50,
-          margin: EdgeInsets.only(top: isAddress ? 10.0 : 0),
-          decoration: BoxDecoration(
-            color: _kFieldFillColor,
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: _kBorderColor, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 0,
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: TextField(
-            keyboardType: keyboardType,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.grey),
-              border: InputBorder.none,
-            ),
-            style: const TextStyle(fontSize: 16, color: Colors.black87),
-          ),
+  void _showImageSourceSheet() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-      ],
-    );
-  }
-
-  // 📌 5. Widget สำหรับ Dropdown ที่อยู่แบบ Cascading (ย้ายมาใน State Class)
-  Widget _buildAddressDropdown<T>({
-    required String hint,
-    required T? selectedValue,
-    required List<T> items,
-    required void Function(T?) onChanged,
-    bool disabled = false,
-  }) {
-    return Container(
-      height: 50,
-      margin: const EdgeInsets.only(top: 10.0),
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(
-        color: disabled ? _kFieldFillColor.withOpacity(0.6) : _kFieldFillColor,
-        borderRadius: BorderRadius.circular(10.0),
-        border: Border.all(color: _kBorderColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 0,
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          isExpanded: true,
-          hint: Text(
-            hint,
-            style: TextStyle(
-              color: disabled ? Colors.grey.shade400 : Colors.grey,
-            ),
-          ),
-          value: selectedValue,
-          icon: Icon(
-            Icons.keyboard_arrow_down,
-            color: disabled ? Colors.grey.shade400 : Colors.grey,
-          ),
-          onChanged: disabled ? null : onChanged,
-          items: items.map((T value) {
-            return DropdownMenuItem<T>(
-              value: value,
-              child: Text(
-                value.toString(),
-                style: const TextStyle(color: Colors.black87),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  // 📌 6. Widget สำหรับช่องอัปโหลดรูปภาพ (ย้ายมาใน State Class)
-  Widget _buildProfileImageUploader() {
-    return Center(
-      child: GestureDetector(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('จำลอง: กำลังเปิดกล้อง/คลังรูปภาพ...'),
-            ),
-          );
-        },
-        child: Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: _kFieldFillColor,
-            border: Border.all(
-              color: _kPrimaryColor.withOpacity(0.5),
-              style: BorderStyle.solid,
-              width: 2,
-            ),
-            borderRadius: BorderRadius.circular(10.0),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.camera_alt_outlined,
-                color: _kPrimaryColor.withOpacity(0.7),
-                size: 30,
-              ),
-              const SizedBox(height: 5),
-              Text(
-                'แตะเพื่อเพิ่ม\nรูปคนค้างชำระ',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _kPrimaryColor.withOpacity(0.7),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("เลือกรูปภาพลูกหนี้", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildPickerButton(
+                  icon: Icons.camera_alt_rounded,
+                  label: "ถ่ายภาพ",
+                  color: Colors.blueAccent,
+                  onTap: () {
+                    Get.back();
+                    _pickImage(ImageSource.camera);
+                  },
                 ),
-              ),
-            ],
-          ),
+                _buildPickerButton(
+                  icon: Icons.photo_library_rounded,
+                  label: "คลังรูปภาพ",
+                  color: Colors.purpleAccent,
+                  onTap: () {
+                    Get.back();
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );
@@ -304,20 +261,12 @@ class _DebtRegisterScreenState extends State<DebtRegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // รายการจังหวัดทั้งหมด (Keys ของ Map ข้อมูลที่จัดโครงสร้างแล้ว)
     final List<String> provinces = _fullAddressData?.keys.toList() ?? [];
 
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'สมัครบัญชีลูกหนี้',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: Color(0xFF333333),
-          ),
-        ),
+        title: const Text('สมัครบัญชีลูกหนี้', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
         centerTitle: true,
         backgroundColor: _kBackgroundColor,
         elevation: 0,
@@ -328,112 +277,156 @@ class _DebtRegisterScreenState extends State<DebtRegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. ช่องอัปโหลดรูปภาพ
             _buildProfileImageUploader(),
             const SizedBox(height: 30),
 
-            // 2. ชื่อคนค้างชำระ
-            _buildInputField(label: 'ชื่อคนค้างชำระ', hint: 'นาย ก'),
+            _buildInputField(label: 'ชื่อคนค้างชำระ', hint: 'ชื่อคนค้างชำระ', controller: _nameController),
+            _buildInputField(label: 'เบอร์โทรศัพท์', hint: 'เบอร์โทรศัพท์', controller: _phoneController, keyboardType: TextInputType.phone),
 
-            // 3. เบอร์โทรศัพท์
-            _buildInputField(
-              label: 'เบอร์โทรศัพท์',
-              hint: '098-555-5446',
-              keyboardType: TextInputType.phone,
+            const Padding(
+              padding: EdgeInsets.only(top: 15.0),
+              child: Text('ที่อยู่', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
 
-            // 4. ที่อยู่ (Dropdowns และ Text Field)
-            const Text(
-              'ที่อยู่',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF333333),
-                height: 2.0,
-              ),
-            ),
-
-            // ➡️ ใช้ Conditional Rendering เพื่อแสดง Loading หรือ Dropdown
             if (_fullAddressData == null)
-              const Center(
-                heightFactor: 5,
-                child: CircularProgressIndicator(color: _kPrimaryColor),
-              )
+              const LinearProgressIndicator(color: _kPrimaryColor)
             else ...[
-              // Dropdown จังหวัด
-              _buildAddressDropdown<String>(
-                hint: 'จังหวัด',
-                selectedValue: _selectedProvince,
-                items: provinces,
-                onChanged: _onProvinceChanged,
-                disabled: provinces.isEmpty,
-              ),
-
-              // Dropdown อำเภอ (ปรากฏเมื่อเลือกจังหวัดแล้ว)
-              _buildAddressDropdown<String>(
-                hint: 'อำเภอ',
-                selectedValue: _selectedDistrict,
-                items: _districts,
-                onChanged: _onDistrictChanged,
-                disabled: _selectedProvince == null || _districts.isEmpty,
-              ),
-
-              // Dropdown ตำบล (ปรากฏเมื่อเลือกอำเภอแล้ว)
-              _buildAddressDropdown<String>(
-                hint: 'ตำบล',
-                selectedValue: _selectedSubdistrict,
-                items: _subdistricts,
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedSubdistrict = newValue;
-                  });
-                },
-                disabled: _selectedDistrict == null || _subdistricts.isEmpty,
-              ),
+              _buildAddressDropdown(hint: 'จังหวัด', selectedValue: _selectedProvince, items: provinces, onChanged: _onProvinceChanged),
+              _buildAddressDropdown(hint: 'อำเภอ', selectedValue: _selectedDistrict, items: _districts, onChanged: _onDistrictChanged, disabled: _selectedProvince == null),
+              _buildAddressDropdown(hint: 'ตำบล', selectedValue: _selectedSubdistrict, items: _subdistricts, onChanged: (v) => setState(() => _selectedSubdistrict = v), disabled: _selectedDistrict == null),
             ],
 
-            // ช่อง บ้านเลขที่
-            _buildInputField(hint: 'บ้านเลขที่', label: '', isAddress: true),
+            _buildInputField(hint: 'บ้านเลขที่/ซอย/ถนน', label: '', isAddress: true, controller: _addressDetailController),
 
-            // 5. วงเงินค้างชำระ
-            _buildInputField(
-              label: 'วงเงินค้างชำระ',
-              hint: '2000',
-              keyboardType: TextInputType.number,
-            ),
+            _buildInputField(label: 'วงเงินค้างชำระ', hint: 'วงเงินค้างชำระ', controller: _creditLimitController, keyboardType: TextInputType.number),
+            
             const SizedBox(height: 40),
 
-            // 6. ปุ่ม "เพิ่ม"
             ElevatedButton(
-              onPressed: () {
-                // จำลองการบันทึก
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('บันทึกบัญชีลูกหนี้เรียบร้อย!'),
-                    backgroundColor: _kPrimaryColor,
-                  ),
-                );
-              },
+              onPressed: _submitDebtorData, // เรียกใช้ฟังก์ชันส่งข้อมูล
               style: ElevatedButton.styleFrom(
                 backgroundColor: _kPrimaryColor,
                 padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15.0),
-                ),
-                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
               ),
-              child: const Text(
-                'เพิ่ม',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+              child: const Text('เพิ่ม', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
             ),
             const SizedBox(height: 30),
           ],
         ),
+      ),
+    );
+  }
+
+  // --- Reusable Widgets ---
+
+  Widget _buildInputField({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+    bool isAddress = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isAddress)
+          Padding(
+            padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
+            child: Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF333333))),
+          ),
+        Container(
+          height: 50,
+          margin: EdgeInsets.only(top: isAddress ? 10.0 : 0),
+          decoration: BoxDecoration(
+            color: _kFieldFillColor,
+            borderRadius: BorderRadius.circular(10.0),
+            border: Border.all(color: _kBorderColor),
+          ),
+          child: TextField(
+            controller: controller, // เชื่อมต่อ Controller
+            keyboardType: keyboardType,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+              hintText: hint,
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddressDropdown({
+    required String hint,
+    required String? selectedValue,
+    required List<String> items,
+    required void Function(String?) onChanged,
+    bool disabled = false,
+  }) {
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.only(top: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      decoration: BoxDecoration(
+        color: disabled ? Colors.grey.shade200 : _kFieldFillColor,
+        borderRadius: BorderRadius.circular(10.0),
+        border: Border.all(color: _kBorderColor),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: Text(hint, style: TextStyle(color: disabled ? Colors.grey : Colors.grey.shade600)),
+          value: selectedValue,
+          onChanged: disabled ? null : onChanged,
+          items: items.map((val) => DropdownMenuItem(value: val, child: Text(val))).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileImageUploader() {
+    return Center(
+      child: GestureDetector(
+        onTap: _showImageSourceSheet, // กดแล้วเด้งเมนูเลือก
+        child: Container(
+          width: 130,
+          height: 130,
+          decoration: BoxDecoration(
+            color: _kFieldFillColor,
+            border: Border.all(color: _kPrimaryColor.withOpacity(0.5), width: 2),
+            borderRadius: BorderRadius.circular(15.0),
+            image: _imageFile != null
+                ? DecorationImage(image: FileImage(_imageFile!), fit: BoxFit.cover)
+                : null,
+          ),
+          child: _imageFile == null
+              ? const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.camera_alt_outlined, color: _kPrimaryColor, size: 40),
+                    Text('เพิ่มรูปภาพ', style: TextStyle(fontSize: 14, color: _kPrimaryColor)),
+                  ],
+                )
+              : null, // ถ้ามีรูปแล้วจะไม่แสดง Icon
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPickerButton({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: color.withOpacity(0.1),
+            child: Icon(icon, color: color, size: 30),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(color: Colors.grey.shade700)),
+        ],
       ),
     );
   }
