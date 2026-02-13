@@ -40,4 +40,57 @@ class ApiDebtor {
       return {"success": false, "message": "เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว: $e"};
     }
   }
+
+  // --- เพิ่มฟังก์ชันค้นหาลูกหนี้ ---
+ static Future<List<DebtorResponse>> searchDebtor(String keyword) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+      int? shopId = prefs.getInt('shopId'); // ดึง shopId จากเครื่อง
+
+      // Backend เช็คว่า shopID == "" จะ error ดังนั้นต้องเช็คตรงนี้ก่อน
+      if (token == null || shopId == null) {
+        // ถ้าไม่มี shopId ไม่ควรยิง request ไป เพราะ backend จะด่าว่า 400 Bad Request
+        print("Error: Token or ShopID is missing");
+        return []; 
+      }
+
+      // สร้าง URL พร้อม Query Parameters
+      final uri = Uri.parse('${AppConfig.baseUrl}/api/debtor/search');
+      
+      // ✅ ต้องใช้ key ว่า 'keyword' และ 'shop_id' ให้ตรงกับ c.Query() ใน Go
+      final url = uri.replace(queryParameters: {
+        'keyword': keyword,         // ตรงกับ c.Query("keyword")
+        'shop_id': shopId.toString(), // ตรงกับ c.Query("shop_id")
+      });
+
+      print("Calling API: $url"); // Log ดู URL ที่ยิงออกไป
+
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // กรณีเจอข้อมูล
+        List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => DebtorResponse.fromJson(json)).toList();
+        
+      } else if (response.statusCode == 404) {
+        // กรณี Backend ตอบว่า "ไม่พบข้อมูลลูกหนี้"
+        return [];
+        
+      } else {
+        // กรณี Error อื่นๆ เช่น 400 (ลืมส่ง shop_id) หรือ 500
+        print("API Error: ${response.statusCode} - ${response.body}");
+        return [];
+      }
+    } catch (e) {
+      print("Exception in searchDebtor: $e");
+      return [];
+    }
+  }
 }
