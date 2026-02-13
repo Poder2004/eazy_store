@@ -306,11 +306,9 @@ class CheckoutController extends GetxController {
 
   void goToDebtPaymentPage() {
     Get.to(() => const DebtPage());
-
   }
 
   void confirmPayment() {
-    
     Get.back();
     Get.snackbar(
       "สำเร็จ",
@@ -583,7 +581,7 @@ class CheckoutPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "@${item.price.toInt()}",
+                  "ต่อหน่วย ${item.price.toInt()}",
                   style: TextStyle(fontSize: 14, color: Colors.grey[400]),
                 ),
               ],
@@ -688,7 +686,6 @@ class CheckoutPage extends StatelessWidget {
                   "ค้างชำระ",
                   const Color(0xFF03A9F4),
                   controller.goToDebtPaymentPage,
-
                 ),
               ),
             ],
