@@ -98,9 +98,10 @@ class ApiProduct {
 
   // ค้นหาสินค้า (Search) ตาม Barcode หรือ Product Code
 
-  static Future<Product?> searchProduct(String keyword) async {
+  static Future<Product?> searchProduct(String keyword, int shopId) async {
+    // รับ shopId
     final url = Uri.parse(
-      '${AppConfig.baseUrl}/api/product/search?keyword=$keyword',
+      '${AppConfig.baseUrl}/api/product/search?keyword=$keyword&shop_id=$shopId',
     );
 
     try {
@@ -194,10 +195,14 @@ class ApiProduct {
     }
   }
 
- static Future<List<dynamic>> getNullBarcodeProducts(int shopId, {int? categoryId}) async {
+  static Future<List<dynamic>> getNullBarcodeProducts(
+    int shopId, {
+    int? categoryId,
+  }) async {
     // สร้าง URL พื้นฐานที่มี shop_id
-    String urlString = '${AppConfig.baseUrl}/api/getNullBarcode?shop_id=$shopId';
-    
+    String urlString =
+        '${AppConfig.baseUrl}/api/getNullBarcode?shop_id=$shopId';
+
     // ถ้ามีการส่ง categoryId มา (และไม่ใช่ค่าว่าง/0) ให้ต่อท้าย URL
     if (categoryId != null && categoryId != 0) {
       urlString += '&category_id=$categoryId';
