@@ -5,47 +5,78 @@ import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 // ----------------------------------------------------------------------
-// 1. Controller: จัดการ Logic การสแกน (ฉบับอัปเดตเพื่อส่งค่ากลับ)
+// 1. Controller: จัดการ Logic การสแกน (แก้ไขแล้ว ✅)
 // ----------------------------------------------------------------------
-class ScanBarcodeController extends GetxController {
-  // บังคับใช้กล้องหลัง (CameraFacing.back)
-  final MobileScannerController cameraController = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates, // ลดการสแกนรัวๆ
-    facing: CameraFacing.back, // บังคับกล้องหลัง
-    torchEnabled: false, // เริ่มต้นปิดแฟลช
-  );
+class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
+  // ⚠️ เปลี่ยนเป็น late เพื่อกำหนดค่าใน onInit
+  late MobileScannerController cameraController;
 
-  // สถานะแฟลช
   var isFlashOn = false.obs;
-
-  // ✅ เพิ่มตัวแปรนี้: เพื่อเช็คว่าสแกนไปแล้วหรือยัง (ป้องกันการส่งค่าซ้ำซ้อน)
   var isScanned = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // ✅ 1. เริ่มดักจับสถานะแอป (เช่น ตอนพับจอ)
+    WidgetsBinding.instance.addObserver(this);
+
+    // ✅ 2. สร้าง Controller ตรงนี้เพื่อให้มั่นใจว่าใหม่เสมอเมื่อเข้าหน้า
+    cameraController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+      returnImage: false, // เพิ่ม: ไม่ต้องประมวลผลรูปภาพ ช่วยลดภาระเครื่อง
+    );
+  }
+
+  @override
+  void onClose() {
+    // ✅ 3. ลบตัวดักจับสถานะเมื่อหน้านี้ถูกปิด
+    WidgetsBinding.instance.removeObserver(this);
+
+    // ✅ 4. สำคัญมาก: สั่ง STOP ก่อน Dispose เพื่อแก้บัค BufferQueue
+    cameraController.stop();
+    cameraController.dispose();
+    super.onClose();
+  }
+
+  // ✅ 5. ฟังก์ชันจัดการเมื่อ user พับจอ หรือสลับแอป
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!cameraController.value.isInitialized) return;
+
+    switch (state) {
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        return;
+      case AppLifecycleState.resumed:
+        // กลับมาหน้าแอป -> สั่งเริ่มกล้องใหม่ (ป้องกันจอดำ)
+        cameraController.start();
+        break;
+      case AppLifecycleState.inactive:
+        // พับจอ/สลับแอป -> หยุดกล้องชั่วคราว
+        cameraController.stop();
+        break;
+    }
+  }
 
   void toggleFlash() {
     cameraController.toggleTorch();
     isFlashOn.value = !isFlashOn.value;
   }
 
-  // ฟังก์ชันเมื่อสแกนติด
   void onDetect(BarcodeCapture capture) {
-    // ✅ 1. ถ้าสแกนไปแล้ว ให้หยุดทำงานทันที (ป้องกันหน้าเด้งรัวๆ)
     if (isScanned.value) return;
 
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
       if (barcode.rawValue != null) {
-        // ✅ 2. ล็อกสถานะว่าสแกนแล้ว
         isScanned.value = true;
-
         print('สแกนเจอแล้ว: ${barcode.rawValue}');
 
-        // (Optional) แจ้งเตือนเล็กน้อยก่อนปิดหน้า (ถ้าต้องการ)
-        // HapticFeedback.mediumImpact(); // สั่น (ต้อง import services)
-
-        // ✅ 3. ส่งค่าบาร์โค้ดกลับไปหน้า CheckStockScreen
+        // ส่งค่ากลับ
         Get.back(result: barcode.rawValue);
-
-        // หยุดการทำงาน loop ทันที
         break;
       }
     }
@@ -53,30 +84,27 @@ class ScanBarcodeController extends GetxController {
 
   void onCapturePressed() {
     print("กดปุ่มถ่ายภาพ (Manual Capture)");
-    // Logic เดิมของคุณ (ถ้ายังใช้อยู่)
-    Get.to(CheckoutPage());
+    // ✅ หยุดกล้องก่อนไปหน้าอื่น
     cameraController.stop();
+    Get.to(() => CheckoutPage());
   }
 
   void goToListPage() {
-    Get.to(ManualListPage());
-  }
-
-  @override
-  void onClose() {
-    cameraController.dispose(); // คืนค่ากล้องเมื่อปิดหน้า
-    super.onClose();
+    // ✅ หยุดกล้องก่อนไปหน้าอื่น
+    cameraController.stop();
+    Get.to(() => ManualListPage());
   }
 }
 
 // ----------------------------------------------------------------------
-// 2. The View: หน้าจอ UI (เหมือนเดิม ไม่ต้องแก้)
+// 2. The View: หน้าจอ UI (เหมือนเดิม)
 // ----------------------------------------------------------------------
 class ScanBarcodePage extends StatelessWidget {
   const ScanBarcodePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // ใช้ Get.put เพื่อสร้าง Controller (มันจะถูกทำลายเมื่อออกจากหน้านี้)
     final ScanBarcodeController controller = Get.put(ScanBarcodeController());
 
     return Scaffold(
@@ -214,7 +242,7 @@ class ScanBarcodePage extends StatelessWidget {
             ),
           ),
 
-          // --- 6. Bottom UI (คงเดิมไว้ตามโค้ดคุณ) ---
+          // --- 6. Bottom UI ---
           Positioned(
             bottom: 0,
             left: 0,
@@ -257,10 +285,7 @@ class ScanBarcodePage extends StatelessWidget {
                             color: Colors.white.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(
-                            Icons.book,
-                            color: Colors.white,
-                          ), // แก้ Image เป็น Icon ชั่วคราวเพื่อให้โค้ดรันได้เลย
+                          child: const Icon(Icons.book, color: Colors.white),
                         ),
                       ),
                     ],
