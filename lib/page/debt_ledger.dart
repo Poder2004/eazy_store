@@ -1,41 +1,22 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ★ 1. import shared_preferences
+
+// --- Imports ไฟล์ของคุณ ---
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/debt_payment.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_navigation/get_navigation.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
 
-// กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
-const Color _kPrimaryColor = Color(0xFF6B8E23); // สีเขียวมะกอก/ทหาร
-const Color _kBackgroundColor = Color(0xFFF7F7F7); // สีพื้นหลังอ่อน
-const Color _kSearchFillColor = Color(0xFFEFEFEF); // สีพื้นหลังของ Search Bar
-const Color _kCardColor = Color(0xFFFFFFFF); // สีพื้นหลังของ Card รายการสินค้า
-const Color _kPayButtonColor = Color(0xFF8BC34A); // สีเขียวสว่างสำหรับปุ่มชำระเงิน
+// --- Imports API และ Model ---
+import '../api/api_debtor.dart';
+import '../model/response/debtor_response.dart';
 
-// --- DATA MODEL (จำลอง) ---
-class DebtEntry {
-  final String name;
-  final double amount;
-  final String lastTransactionDate;
-
-  DebtEntry({
-    required this.name,
-    required this.amount,
-    required this.lastTransactionDate,
-  });
-}
-
-// ข้อมูลจำลองสำหรับแสดงใน ListView
-final List<DebtEntry> dummyDebts = [
-  DebtEntry(name: 'ป้าดา', amount: 45.00, lastTransactionDate: '9 เมษายน 2568'),
-  DebtEntry(name: 'กานต์', amount: 205.50, lastTransactionDate: '9 เมษายน 2568'),
-  DebtEntry(name: 'พิมพ์', amount: 90.00, lastTransactionDate: '8 เมษายน 2568'),
-  DebtEntry(name: 'ธนาคาร', amount: 520.75, lastTransactionDate: '7 เมษายน 2568'),
-  DebtEntry(name: 'ศิริพร', amount: 10.00, lastTransactionDate: '6 เมษายน 2568'),
-  DebtEntry(name: 'ปริม', amount: 15.25, lastTransactionDate: '5 เมษายน 2568'),
-];
-// ----------------------------
-
+// กำหนดสีหลัก
+const Color _kPrimaryColor = Color(0xFF6B8E23);
+const Color _kBackgroundColor = Color(0xFFF7F7F7);
+const Color _kSearchFillColor = Color(0xFFEFEFEF);
+const Color _kCardColor = Color(0xFFFFFFFF);
+const Color _kPayButtonColor = Color(0xFF8BC34A);
 
 class DebtLedgerScreen extends StatefulWidget {
   const DebtLedgerScreen({super.key});
@@ -45,19 +26,103 @@ class DebtLedgerScreen extends StatefulWidget {
 }
 
 class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
-  int _selectedIndex = 3; // Index 3: คนค้างชำระ
+  int _selectedIndex = 3;
   final TextEditingController _searchController = TextEditingController();
-  String _currentDate = '9 เมษายน 2568'; // วันที่ปัจจุบัน (จำลอง)
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    print('Tab tapped: $index');
-    // Logic for navigation goes here (e.g., Get.to(Screen()));
+  // --- ตัวแปรสำหรับข้อมูล API ---
+  List<DebtorResponse> _allDebtors = []; // รายชื่อทั้งหมด
+  List<DebtorResponse> _searchResults = []; // ผลลัพธ์การค้นหา
+  bool _isLoading = true; // สถานะโหลด
+  bool _isSearching = false; // สถานะกำลังค้นหา
+  bool _showDropdown = false; // โชว์ Dropdown ไหม
+  Timer? _debounce; // ตัวหน่วงเวลาค้นหา
+
+  // ★ 2. ตัวแปรเก็บ ShopID (ค่าเริ่มต้นเป็น 0 หรือ 1 ไปก่อน)
+  int _currentShopId = 1; 
+
+  @override
+  void initState() {
+    super.initState();
+    // ★ 3. เรียกฟังก์ชันเตรียมข้อมูล (ดึง ShopID -> ดึงลูกหนี้)
+    _initialData(); 
   }
 
-  // 🔍 Widget สำหรับ Search Input Field และ Calendar Icon
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // ★ 4. ฟังก์ชันใหม่: ดึง ShopID จากเครื่อง แล้วค่อยดึงข้อมูล API
+  Future<void> _initialData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // ถ้าไม่มีให้ใช้ค่า Default เป็น 1
+      _currentShopId = prefs.getInt('shopId') ?? 1; 
+    });
+    
+    print("Shop ID loaded: $_currentShopId"); // เช็คค่าใน Console
+    _fetchAllDebtors(); // พอได้ ID แล้วค่อยไปดึง API
+  }
+
+  // --- ฟังก์ชันดึงลูกหนี้ทั้งหมด ---
+  Future<void> _fetchAllDebtors() async {
+    setState(() => _isLoading = true);
+    try {
+      // ส่ง _currentShopId ที่ดึงมาจาก prefs ไปใช้
+      final result = await ApiDebtor.getDebtorsByShop(_currentShopId);
+      setState(() {
+        _allDebtors = result;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("Error loading debtors: $e");
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // --- ฟังก์ชันค้นหา (Search) ---
+  void _onSearchChanged(String keyword) {
+    if (keyword.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _showDropdown = false;
+      });
+      return;
+    }
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      setState(() => _isSearching = true);
+      try {
+        final results = await ApiDebtor.searchDebtor(keyword);
+        setState(() {
+          _searchResults = results;
+          _showDropdown = true; 
+        });
+      } catch (e) {
+        print("Error searching: $e");
+        setState(() => _searchResults = []);
+      } finally {
+        if (mounted) setState(() => _isSearching = false);
+      }
+    });
+  }
+
+  // เลือกรายการจาก Dropdown
+  void _selectFromDropdown(DebtorResponse debtor) {
+    setState(() {
+      _showDropdown = false;
+      _searchController.text = ""; 
+      FocusScope.of(context).unfocus(); 
+    });
+    Get.to(() => const DebtPaymentScreen()); 
+  }
+
+  // --- Widgets (ส่วนแสดงผลเหมือนเดิม) ---
+
   Widget _buildSearchBar() {
     return Container(
       height: 48,
@@ -68,25 +133,16 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
       ),
       child: TextField(
         controller: _searchController,
+        onChanged: _onSearchChanged,
         style: const TextStyle(color: Colors.black87),
         decoration: InputDecoration(
-          hintText: 'ค้นหารายชื่อ',
+          hintText: 'ค้นหารายชื่อ หรือเบอร์โทร',
           hintStyle: TextStyle(color: Colors.grey.shade500),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 10.0,
-            horizontal: 12.0,
-          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          suffixIcon: IconButton(
-            icon: Icon(Icons.calendar_month_outlined, color: Colors.grey[700], size: 28),
-            onPressed: () {
-              // Logic สำหรับเปิด Calendar Picker
-              print('Calendar Picker opened...');
-            },
-          ),
           filled: true,
-          fillColor: Colors.transparent, 
-          border: InputBorder.none, 
+          fillColor: Colors.transparent,
+          border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
         ),
@@ -94,120 +150,103 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
     );
   }
 
-  // 📝 Widget สำหรับ Card แสดงรายละเอียดการค้างชำระของลูกค้า
-  Widget _buildDebtCard(DebtEntry debt) {
-    // ฟังก์ชันสำหรับฟอร์แมตจำนวนเงินให้มีทศนิยม 2 ตำแหน่ง
-    String formatAmount(double amount) {
-      return amount.toStringAsFixed(2);
-    }
-    
+  Widget _buildSearchResultsDropdown() {
+    if (!_showDropdown) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 60, 
+      left: 0,
+      right: 0,
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 250), 
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
+          ],
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: _searchResults.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(15.0),
+                child: Text("ไม่พบข้อมูล", textAlign: TextAlign.center),
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: _searchResults.length,
+                separatorBuilder: (ctx, i) => const Divider(height: 1),
+                itemBuilder: (ctx, i) {
+                  final item = _searchResults[i];
+                  return ListTile(
+                    title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(item.phone),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                    onTap: () => _selectFromDropdown(item),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _buildDebtorCard(DebtorResponse debtor) {
+    // Mock ยอดเงิน (รอ Backend ส่งมา)
+    double mockAmount = 0.00; 
+
     return Card(
       color: _kCardColor,
       elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       margin: const EdgeInsets.only(bottom: 15),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ข้อมูลลูกค้า (ชื่อ, ยอดค้าง)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    debt.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                    debtor.name, 
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  Text(
+                    debtor.phone, 
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 4),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
                     children: [
+                      Text('ค้าง ', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
                       Text(
-                        'ค้าง ',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[700],
-                        ),
+                        mockAmount.toStringAsFixed(2),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.red),
                       ),
-                      Text(
-                        '${formatAmount(debt.amount)}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.red, // ใช้สีแดงสำหรับยอดค้าง
-                        ),
-                      ),
-                      const Text(
-                        ' บาท',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.red,
-                        ),
-                      ),
+                      const Text(' บาท', style: TextStyle(fontSize: 16, color: Colors.red)),
                     ],
-                  ),
-                  const SizedBox(height: 2),
-                  // รายละเอียดเพิ่มเติม (Last Transaction Date)
-                  InkWell(
-                    onTap: () {
-                      print('Viewing details for ${debt.name}');
-                      // Logic for viewing debt details
-                    },
-                    child: Text(
-                      'รายละเอียดเพิ่มเติม',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[500],
-                        decoration: TextDecoration.underline,
-                        decorationColor: Colors.grey[500],
-                      ),
-                    ),
                   ),
                 ],
               ),
             ),
-            
-            // ปุ่ม Actions
             Column(
               children: [
-                
-              
-                const SizedBox(height: 8),
-                // ปุ่ม ชำระเงิน
                 SizedBox(
                   height: 35,
                   child: ElevatedButton(
                     onPressed: () {
-                      Get.to(() => const DebtPaymentScreen());
-                      print('Processing payment for ${debt.name}');
-                      // Logic for processing payment
+                      Get.to(() => const DebtPaymentScreen()); 
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _kPayButtonColor, // สีเขียวสว่าง
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
+                      backgroundColor: _kPayButtonColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
                       elevation: 3,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                     ),
-                    child: const Text(
-                      'ชำระเงิน',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: const Text('ชำระเงิน', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
               ],
@@ -218,83 +257,61 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
     );
   }
 
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBackgroundColor,
-      // AppBar สำหรับหัวข้อ "บัญชีคนค้างชำระ"
       appBar: AppBar(
-        title: const Text(
-          'บัญชีคนค้างชำระ',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: Colors.black87,
-          ),
-        ),
+        title: const Text('บัญชีคนค้างชำระ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.black87)),
         centerTitle: true,
         backgroundColor: _kBackgroundColor,
         elevation: 0,
+        automaticallyImplyLeading: false, 
       ),
-      
-      // Body ส่วนเนื้อหา
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Search Bar
-            _buildSearchBar(),
+            // --- Layer ล่าง: เนื้อหาหลัก ---
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 70), 
             
-            const SizedBox(height: 15),
 
-            // วันที่แสดงปัจจุบัน (ตามภาพ)
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(5.0),
+                const Text('รายชื่อทั้งหมด', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 10),
+
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _allDebtors.isEmpty
+                          ? const Center(child: Text("ยังไม่มีรายการค้างชำระ"))
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(top: 5, bottom: 20),
+                              itemCount: _allDebtors.length,
+                              itemBuilder: (context, index) {
+                                return _buildDebtorCard(_allDebtors[index]);
+                              },
+                            ),
                 ),
-                child: Text(
-                  _currentDate,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-              ),
+              ],
             ),
 
-            const SizedBox(height: 15),
-            
-            // หัวข้อ "รายชื่อ"
-            const Text(
-              'รายชื่อ',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            // รายการลูกค้าที่ค้างชำระ
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.only(top: 5, bottom: 20),
-                itemCount: dummyDebts.length,
-                itemBuilder: (context, index) {
-                  return _buildDebtCard(dummyDebts[index]);
-                },
-              ),
+            // --- Layer บน: Search Bar และ Dropdown ---
+            Column(
+              children: [
+                _buildSearchBar(),
+                _buildSearchResultsDropdown(), 
+              ],
             ),
           ],
         ),
       ),
-
-      // Bottom Navigation Bar
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
