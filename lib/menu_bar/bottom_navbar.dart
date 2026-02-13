@@ -1,12 +1,11 @@
 import 'package:eazy_store/homepage/home_page.dart';
 import 'package:eazy_store/page/debt_ledger.dart';
 import 'package:eazy_store/page/sales_account.dart';
-import 'package:eazy_store/sale_producct/checkout_page.dart'; // ✅ เพิ่ม Import CheckoutPage
+import 'package:eazy_store/sale_producct/checkout_page.dart'; // ✅ Import
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// กำหนดสีหลักที่ใช้ในแอปพลิเคชัน
 const Color primaryColor = Color(0xFFC0392B);
 const Color surfaceLight = Color(0xFFFFFFFF);
 const Color surfaceDark = Color(0xFF1F2937);
@@ -17,13 +16,9 @@ class BottomNavBar extends StatelessWidget {
     required this.currentIndex,
     required this.onTap,
   });
-
   final int currentIndex;
   final Function(int) onTap;
 
-  // --- Utility Widgets สำหรับสร้างแต่ละปุ่ม ---
-
-  // Widget สำหรับปุ่มเมนูทั่วไป
   Widget _buildNavItem(
     IconData icon,
     String label,
@@ -46,7 +41,7 @@ class BottomNavBar extends StatelessWidget {
             Icon(
               icon,
               color: isActive ? activeColor : inactiveColor,
-              size: isActive ? 28 : 24, // ปรับขนาดเมื่อ Active
+              size: isActive ? 28 : 24,
             ),
             const SizedBox(height: 4),
             Text(
@@ -63,33 +58,39 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  // Widget สำหรับปุ่มสแกนตรงกลาง (ยกขึ้น)
   Widget _buildScanButton(bool isDarkMode) {
-    const int index = 2; // Index สำหรับปุ่มสแกน
-
+    const int index = 2;
     return Expanded(
       child: Transform.translate(
-        offset: const Offset(0, -20), // ยกปุ่มขึ้น
+        offset: const Offset(0, -20),
         child: GestureDetector(
           onTap: () async {
-            // ✅ เปลี่ยนเป็น async เพื่อรอรับค่า
-            // 1. เรียกหน้าสแกน และ "รอ" (await) ผลลัพธ์
+            // 1. ไปหน้าสแกน รอรับค่าบาร์โค้ด
             var barcode = await Get.to(() => const ScanBarcodePage());
 
-            // 2. ถ้าสแกนเจอ (barcode ไม่เป็น null)
             if (barcode != null && barcode is String) {
-              // 3. ไปหน้า CheckoutPage และส่ง barcode ไปด้วยผ่าน arguments
-              Get.to(
-                () => const CheckoutPage(),
-                arguments: {'barcode': barcode}, // 📦 ฝากบาร์โค้ดไป
-              );
-              // อัปเดต index ของ Navbar ให้เป็นหน้า Checkout (ถ้า CheckoutPage เป็น index 2)
-              onTap(index);
-            } else {
-              // กรณีไม่ได้สแกน หรือกดกลับเฉยๆ อาจจะเลือกให้ไปหน้า Checkout เปล่าๆ หรืออยู่ที่เดิม
-              // ในที่นี้ถ้ากดปุ่มสแกนตรงกลางแต่ไม่ได้สแกนอะไร อาจจะอยากให้ไปหน้า Checkout เปล่าๆ ก็ได้
-              // Get.to(() => const CheckoutPage());
-              // onTap(index);
+              // ✅ 2. หา Controller (หรือสร้างใหม่ถ้ายังไม่มี)
+              CheckoutController ctrl;
+              try {
+                ctrl = Get.find<CheckoutController>();
+              } catch (e) {
+                ctrl = Get.put(CheckoutController());
+              }
+
+              // ✅ 3. ไปหน้า Checkout (ถ้ายังไม่อยู่)
+              if (Get.currentRoute != '/CheckoutPage') {
+                // ใช้ Get.to หรือ Get.off ตามความเหมาะสม
+                Get.to(() => const CheckoutPage());
+              }
+
+              // ✅ 4. สั่ง Controller ทำงานโดยตรง (แก้ปัญหาสแกนซ้ำไม่ติด)
+              // รอให้หน้าจอพร้อมก่อนค่อยสั่ง
+              WidgetsBinding.instance.addPostFrameCallback((_) async {
+                await ctrl.checkShopAndLoadData(); // เช็คก่อนว่าร้านเปลี่ยนไหม
+                ctrl.addProductByBarcode(barcode); // เพิ่มสินค้า
+              });
+
+              onTap(index); // อัปเดต tab เป็นหน้า Checkout
             }
           },
           child: Column(
@@ -136,32 +137,22 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  // Logic สำหรับการนำทาง
   void _navigateToPage(int index) {
-    if (index == 0) {
+    if (index == 0)
       Get.to(() => const HomePage());
-    } else if (index == 1) {
+    else if (index == 1)
       Get.to(() => const SalesAccountScreen());
-    }
-    // index == 2 จัดการใน onTap ของ _buildScanButton แล้ว
-    else if (index == 3) {
+    else if (index == 3)
       Get.to(() => const DebtLedgerScreen());
-    } else if (index == 4) {
-      // Get.to(() => const SettingsPage());
-    }
   }
-
-  // --- Widget build หลัก ---
 
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color surfaceColor = isDarkMode ? surfaceDark : surfaceLight;
-
     return Container(
       decoration: BoxDecoration(
         color: surfaceColor,
-        // เพิ่มมุมโค้งด้านบน
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)),
         boxShadow: [
           BoxShadow(
@@ -177,18 +168,13 @@ class BottomNavBar extends StatelessWidget {
           ),
         ),
       ),
-      padding: const EdgeInsets.only(
-        top: 12.0,
-        bottom: 24.0,
-        left: 16.0,
-        right: 16.0,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildNavItem(Icons.home, 'หน้าหลัก', 0, isDarkMode),
           _buildNavItem(Icons.receipt_long, 'บัญชี', 1, isDarkMode),
-          _buildScanButton(isDarkMode), // ปุ่มสแกนตรงกลาง
+          _buildScanButton(isDarkMode),
           _buildNavItem(Icons.person, 'คนค้างชำระ', 3, isDarkMode),
           _buildNavItem(
             Icons.account_circle_outlined,

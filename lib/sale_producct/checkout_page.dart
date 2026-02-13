@@ -1,8 +1,9 @@
 import 'package:eazy_store/api/api_product.dart';
-import 'package:eazy_store/api/api_shop.dart';
+import 'package:eazy_store/api/api_shop.dart'; // ✅ Import
 import 'package:eazy_store/model/request/baskets_model.dart';
 import 'package:eazy_store/model/request/product_model.dart';
-import 'package:eazy_store/model/request/shop_model.dart';
+import 'package:eazy_store/model/request/shop_model.dart'; // ✅ Import
+import 'package:eazy_store/page/debt_register.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -13,28 +14,37 @@ class CheckoutController extends GetxController {
   // 🛒 ตะกร้าสินค้า
   var cartItems = <ProductItem>[].obs;
 
-  // 🔍 คลังสินค้า & ค้นหา
+  // 🔍 คลังสินค้า
   var allProducts = <Product>[];
   var searchResults = <Product>[].obs;
   var isSearching = false.obs;
 
-  // 💰 การชำระเงิน (เหลือแค่รับเงินสด)
+  // 💰 การชำระเงิน
+  var isDebtMode = false.obs;
   final receivedAmountController = TextEditingController();
   var changeAmount = 0.0.obs;
-  var shopQrCodeUrl = "".obs;
+  var shopQrCodeUrl = "".obs; // เก็บ URL รูป QR Code ร้านค้า
 
+  // 📝 ข้อมูลอื่นๆ
+  final debtorNameController = TextEditingController();
+  final payAmountController = TextEditingController(text: "0");
+  final debtRemarkController = TextEditingController();
   final searchController = TextEditingController();
   var currentNavIndex = 2.obs;
+
+  // ✅ ตัวแปรจำ Shop ID ล่าสุด (เพื่อป้องกันข้อมูลร้านเก่าค้าง)
+  int? loadedShopId;
 
   @override
   void onInit() {
     super.onInit();
-    _loadAllProducts();
-    _fetchShopData();
+    // เรียกเช็คข้อมูลครั้งแรก
+    checkShopAndLoadData();
 
-    // คำนวณเงินทอน
+    // Listener คำนวณเงินทอน
     receivedAmountController.addListener(() {
       double received = double.tryParse(receivedAmountController.text) ?? 0;
+      // ✅ เช็คว่าจ่ายพอไหม ถ้าไม่พอให้เงินทอนเป็น 0
       if (received >= totalPrice) {
         changeAmount.value = received - totalPrice;
       } else {
@@ -42,11 +52,10 @@ class CheckoutController extends GetxController {
       }
     });
 
-    // รับบาร์โค้ดจากหน้าอื่น
     if (Get.arguments != null && Get.arguments is Map) {
       String? barcode = Get.arguments['barcode'];
       if (barcode != null) {
-        // รอหน้าจอวาดเสร็จก่อนค่อยเรียกฟังก์ชัน
+        // ใช้ addPostFrameCallback เพื่อรอให้หน้าจอสร้างเสร็จก่อนค่อยทำงาน
         WidgetsBinding.instance.addPostFrameCallback((_) {
           addProductByBarcode(barcode);
         });
@@ -54,13 +63,46 @@ class CheckoutController extends GetxController {
     }
   }
 
-  // --- โหลดข้อมูล ---
+  @override
+  void onReady() {
+    super.onReady();
+    // ✅ เช็คทุกครั้งที่หน้าจอพร้อมใช้งาน (เผื่อสลับมาจากหน้าอื่นแล้วร้านเปลี่ยน)
+    checkShopAndLoadData();
+  }
+
+  // ✅ ฟังก์ชันตรวจสอบและโหลดข้อมูล (หัวใจหลักแก้ Data Leakage)
+  Future<void> checkShopAndLoadData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int currentShopId = prefs.getInt('shopId') ?? 0;
+
+    // ถ้าร้านเปลี่ยน หรือ ยังไม่เคยโหลด
+    if (loadedShopId != currentShopId) {
+      print(
+        "♻️ ร้านค้าเปลี่ยน ($loadedShopId -> $currentShopId) กำลังรีเซ็ตข้อมูล...",
+      );
+
+      // 1. เคลียร์ข้อมูลเก่าทิ้งให้หมด
+      allProducts.clear();
+      cartItems.clear();
+      searchResults.clear();
+      receivedAmountController.clear();
+      changeAmount.value = 0.0;
+      shopQrCodeUrl.value = "";
+
+      // 2. อัปเดต ID ปัจจุบัน
+      loadedShopId = currentShopId;
+
+      // 3. โหลดข้อมูลใหม่ของร้านนี้
+      await _loadAllProducts();
+      await _fetchShopData();
+    }
+  }
+
+  // โหลดสินค้าทั้งหมด
   Future<void> _loadAllProducts() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int shopId = prefs.getInt('shopId') ?? 0;
-      if (shopId != 0) {
-        List<Product> list = await ApiProduct.getProductsByShop(shopId);
+      if (loadedShopId != null && loadedShopId != 0) {
+        List<Product> list = await ApiProduct.getProductsByShop(loadedShopId!);
         allProducts = list;
       }
     } catch (e) {
@@ -68,18 +110,19 @@ class CheckoutController extends GetxController {
     }
   }
 
+  // ✅ ดึงข้อมูลร้านค้า (เพื่อเอา QR Code)
   Future<void> _fetchShopData() async {
     try {
       ShopModel? shop = await ApiShop.getCurrentShop();
       if (shop != null && shop.imgQrcode.isNotEmpty) {
         shopQrCodeUrl.value = shop.imgQrcode;
+        print("QR Code Loaded: ${shop.imgQrcode}");
       }
     } catch (e) {
       print("Error loading shop data: $e");
     }
   }
 
-  // --- ระบบค้นหา ---
   void onSearchChanged(String query) {
     if (query.isEmpty) {
       isSearching.value = false;
@@ -103,7 +146,6 @@ class CheckoutController extends GetxController {
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
-  // --- สแกนบาร์โค้ด ---
   Future<void> openInternalScanner() async {
     var result = await Get.to(() => const ScanBarcodePage());
     if (result != null && result is String) {
@@ -111,28 +153,51 @@ class CheckoutController extends GetxController {
     }
   }
 
+  // 🔥 แก้ไขฟังก์ชันนี้: เพิ่มการตรวจสอบ Shop ID ก่อนค้นหาเสมอ!
   Future<void> addProductByBarcode(String barcode) async {
+    // 🛡️ STEP 1: เช็คความปลอดภัยก่อน! ร้านเปลี่ยนไหม?
+    // ถ้าเปลี่ยน ฟังก์ชันนี้จะล้าง allProducts เก่าทิ้งทันที
+    await checkShopAndLoadData();
+
+    // 🛡️ STEP 2: ตรวจสอบว่าโหลดสินค้าเสร็จหรือยัง
+    if (allProducts.isEmpty) {
+      await _loadAllProducts();
+    }
+
+    // 🔍 STEP 3: ค้นหาในเครื่อง (ตอนนี้ allProducts เป็นของร้านปัจจุบันแน่นอนแล้ว)
     var match = allProducts.firstWhereOrNull((p) => p.barcode == barcode);
+
     if (match != null) {
+      // เจอในเครื่อง (แปลว่าเป็นสินค้าของร้านนี้จริงๆ)
       _addToCart(match);
     } else {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int shopId = prefs.getInt('shopId') ?? 0;
-
+      // ไม่เจอในเครื่อง -> ยิง API ไปเช็คที่ Server
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
         barrierDismissible: false,
       );
+
       try {
-        Product? product = await ApiProduct.searchProduct(barcode, shopId);
-        Get.back();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        int currentShopId = prefs.getInt('shopId') ?? 0;
+
+        // ✅ ส่ง currentShopId ไปด้วย เพื่อให้ Server กรองสินค้าเฉพาะร้านนี้
+        Product? product = await ApiProduct.searchProduct(
+          barcode,
+          currentShopId,
+        ); // แก้ไขให้ส่ง shopId ด้วย
+
+        Get.back(); // ปิด Loading
+
         if (product != null) {
+          // ถ้า Server ส่งกลับมา แสดงว่าเป็นของร้านนี้จริงๆ
           _addToCart(product);
           allProducts.add(product);
         } else {
+          // ถ้า Server ไม่ส่งกลับมา แสดงว่าไม่มีในร้านนี้ (แม้ว่าร้านอื่นจะมีบาร์โค้ดนี้ก็ตาม)
           Get.snackbar(
             "ไม่พบสินค้า",
-            "รหัส $barcode ไม่มีในระบบ",
+            "รหัส $barcode ไม่มีในร้านนี้",
             backgroundColor: Colors.orange,
             colorText: Colors.white,
           );
@@ -143,7 +208,6 @@ class CheckoutController extends GetxController {
     }
   }
 
-  // --- จัดการตะกร้า ---
   void _addToCart(Product product) {
     int currentQty = cartItems
         .where((item) => item.id == product.productId.toString())
@@ -211,11 +275,12 @@ class CheckoutController extends GetxController {
 
   double get totalPrice => cartItems.fold(0, (sum, item) => sum + item.price);
 
-  // --- Payment ---
-  void openPaymentSheet(BuildContext context) {
-    receivedAmountController.clear();
-    changeAmount.value = 0.0;
-
+  void openPaymentSheet(BuildContext context, bool initialDebtMode) {
+    isDebtMode.value = initialDebtMode;
+    if (!initialDebtMode) {
+      receivedAmountController.clear();
+      changeAmount.value = 0.0;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -224,16 +289,22 @@ class CheckoutController extends GetxController {
     );
   }
 
+  void goToDebtPaymentPage() {
+    // ยังไม่ทำ ว่างไว้ก่อน
+  }
+
   void confirmPayment() {
     Get.back();
     Get.snackbar(
       "สำเร็จ",
-      "ชำระเงินเรียบร้อย",
+      "บันทึกรายการเรียบร้อย",
       backgroundColor: Colors.green,
       colorText: Colors.white,
     );
     clearAll();
   }
+
+  void registerNewDebtor() => Get.to(() => const DebtRegisterScreen());
 
   @override
   void onClose() {
@@ -264,7 +335,6 @@ class CheckoutPage extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 800),
                   child: Column(
                     children: [
-                      // Search Bar
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                         child: Container(
@@ -297,7 +367,6 @@ class CheckoutPage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // List Area
                       Expanded(
                         child: Obx(() {
                           if (controller.isSearching.value)
@@ -593,15 +662,16 @@ class CheckoutPage extends StatelessWidget {
                 child: _actionButton(
                   "จ่ายสด",
                   const Color(0xFF00C853),
-                  () => controller.openPaymentSheet(context),
+                  () => controller.openPaymentSheet(context, false),
                 ),
               ),
               const SizedBox(width: 20),
-              // 👇 ปุ่ม "ค้างชำระ" ใส่ฟังก์ชันว่างไว้ตามที่ขอ
               Expanded(
-                child: _actionButton("ค้างชำระ", const Color(0xFF03A9F4), () {
-                  // ยังไม่ทำ ว่างไว้ก่อน
-                }),
+                child: _actionButton(
+                  "ค้างชำระ",
+                  const Color(0xFF03A9F4),
+                  controller.goToDebtPaymentPage,
+                ),
               ),
             ],
           ),
