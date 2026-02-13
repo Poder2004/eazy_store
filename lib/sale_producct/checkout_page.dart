@@ -1,54 +1,28 @@
 import 'package:eazy_store/api/api_product.dart';
-import 'package:eazy_store/api/api_shop.dart'; // ✅ อย่าลืม Import ไฟล์นี้
+import 'package:eazy_store/api/api_shop.dart';
+import 'package:eazy_store/model/request/baskets_model.dart';
 import 'package:eazy_store/model/request/product_model.dart';
 import 'package:eazy_store/model/request/shop_model.dart';
-import 'package:eazy_store/page/debt_register.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../menu_bar/bottom_navbar.dart';
 
-// ----------------------------------------------------------------------
-// Model: Product Item (UI)
-// ----------------------------------------------------------------------
-class ProductItem {
-  final String id;
-  final String name;
-  final double price;
-  final String category;
-  final String imagePath;
-  final int maxStock;
-  RxBool showDelete;
-
-  ProductItem({
-    required this.id,
-    required this.name,
-    required this.price,
-    required this.category,
-    required this.imagePath,
-    required this.maxStock,
-  }) : showDelete = false.obs;
-}
-
-// ----------------------------------------------------------------------
-// Controller
-// ----------------------------------------------------------------------
 class CheckoutController extends GetxController {
+  // 🛒 ตะกร้าสินค้า
   var cartItems = <ProductItem>[].obs;
 
+  // 🔍 คลังสินค้า & ค้นหา
   var allProducts = <Product>[];
   var searchResults = <Product>[].obs;
   var isSearching = false.obs;
 
-  var isDebtMode = false.obs;
+  // 💰 การชำระเงิน (เหลือแค่รับเงินสด)
   final receivedAmountController = TextEditingController();
   var changeAmount = 0.0.obs;
-  var shopQrCodeUrl = "".obs; // เก็บ URL รูป QR Code
+  var shopQrCodeUrl = "".obs;
 
-  final debtorNameController = TextEditingController();
-  final payAmountController = TextEditingController(text: "0");
-  final debtRemarkController = TextEditingController();
   final searchController = TextEditingController();
   var currentNavIndex = 2.obs;
 
@@ -56,7 +30,7 @@ class CheckoutController extends GetxController {
   void onInit() {
     super.onInit();
     _loadAllProducts();
-    _fetchShopData(); // ดึงข้อมูลร้านค้า (QR Code)
+    _fetchShopData();
 
     // คำนวณเงินทอน
     receivedAmountController.addListener(() {
@@ -68,13 +42,19 @@ class CheckoutController extends GetxController {
       }
     });
 
+    // รับบาร์โค้ดจากหน้าอื่น
     if (Get.arguments != null && Get.arguments is Map) {
       String? barcode = Get.arguments['barcode'];
-      if (barcode != null) addProductByBarcode(barcode);
+      if (barcode != null) {
+        // รอหน้าจอวาดเสร็จก่อนค่อยเรียกฟังก์ชัน
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          addProductByBarcode(barcode);
+        });
+      }
     }
   }
 
-  // โหลดสินค้าทั้งหมด
+  // --- โหลดข้อมูล ---
   Future<void> _loadAllProducts() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -84,11 +64,10 @@ class CheckoutController extends GetxController {
         allProducts = list;
       }
     } catch (e) {
-      // Handle Error
+      print("Error loading products: $e");
     }
   }
 
-  // ดึงข้อมูลร้านค้า (เพื่อเอา QR Code)
   Future<void> _fetchShopData() async {
     try {
       ShopModel? shop = await ApiShop.getCurrentShop();
@@ -96,10 +75,11 @@ class CheckoutController extends GetxController {
         shopQrCodeUrl.value = shop.imgQrcode;
       }
     } catch (e) {
-      // Handle Error
+      print("Error loading shop data: $e");
     }
   }
 
+  // --- ระบบค้นหา ---
   void onSearchChanged(String query) {
     if (query.isEmpty) {
       isSearching.value = false;
@@ -123,6 +103,7 @@ class CheckoutController extends GetxController {
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
+  // --- สแกนบาร์โค้ด ---
   Future<void> openInternalScanner() async {
     var result = await Get.to(() => const ScanBarcodePage());
     if (result != null && result is String) {
@@ -135,12 +116,15 @@ class CheckoutController extends GetxController {
     if (match != null) {
       _addToCart(match);
     } else {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
         barrierDismissible: false,
       );
       try {
-        Product? product = await ApiProduct.searchProduct(barcode);
+        Product? product = await ApiProduct.searchProduct(barcode, shopId);
         Get.back();
         if (product != null) {
           _addToCart(product);
@@ -159,6 +143,7 @@ class CheckoutController extends GetxController {
     }
   }
 
+  // --- จัดการตะกร้า ---
   void _addToCart(Product product) {
     int currentQty = cartItems
         .where((item) => item.id == product.productId.toString())
@@ -214,9 +199,8 @@ class CheckoutController extends GetxController {
     if (index != -1) cartItems.removeAt(index);
   }
 
-  void removeItem(ProductItem item) {
-    cartItems.removeWhere((e) => e.id == item.id);
-  }
+  void removeItem(ProductItem item) =>
+      cartItems.removeWhere((e) => e.id == item.id);
 
   void toggleDelete(ProductItem item) {
     for (var i in cartItems) i.showDelete.value = false;
@@ -227,13 +211,11 @@ class CheckoutController extends GetxController {
 
   double get totalPrice => cartItems.fold(0, (sum, item) => sum + item.price);
 
-  void openPaymentSheet(BuildContext context, bool initialDebtMode) {
-    isDebtMode.value = initialDebtMode;
-    // Reset ค่าเมื่อเปิดหน้าจ่ายเงินใหม่
-    if (!initialDebtMode) {
-      receivedAmountController.clear();
-      changeAmount.value = 0.0;
-    }
+  // --- Payment ---
+  void openPaymentSheet(BuildContext context) {
+    receivedAmountController.clear();
+    changeAmount.value = 0.0;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -246,14 +228,12 @@ class CheckoutController extends GetxController {
     Get.back();
     Get.snackbar(
       "สำเร็จ",
-      "บันทึกรายการเรียบร้อย",
+      "ชำระเงินเรียบร้อย",
       backgroundColor: Colors.green,
       colorText: Colors.white,
     );
     clearAll();
   }
-
-  void registerNewDebtor() => Get.to(() => const DebtRegisterScreen());
 
   @override
   void onClose() {
@@ -284,6 +264,7 @@ class CheckoutPage extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 800),
                   child: Column(
                     children: [
+                      // Search Bar
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
                         child: Container(
@@ -316,6 +297,7 @@ class CheckoutPage extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // List Area
                       Expanded(
                         child: Obx(() {
                           if (controller.isSearching.value)
@@ -347,10 +329,7 @@ class CheckoutPage extends StatelessWidget {
         children: [
           const Icon(Icons.search_off, size: 60, color: Colors.grey),
           const SizedBox(height: 10),
-          Text(
-            "ไม่พบสินค้า '${controller.searchController.text}'",
-            style: const TextStyle(color: Colors.grey),
-          ),
+          const Text("ไม่พบสินค้า", style: TextStyle(color: Colors.grey)),
         ],
       );
     }
@@ -439,14 +418,12 @@ class CheckoutPage extends StatelessWidget {
                   ],
                 ),
               );
-
             final groupedItems = <String, List<ProductItem>>{};
             for (var item in controller.cartItems) {
               if (!groupedItems.containsKey(item.id))
                 groupedItems[item.id] = [];
               groupedItems[item.id]!.add(item);
             }
-
             return ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               itemCount: groupedItems.keys.length,
@@ -520,7 +497,7 @@ class CheckoutPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  " ${item.price.toInt()}",
+                  "@${item.price.toInt()}",
                   style: TextStyle(fontSize: 14, color: Colors.grey[400]),
                 ),
               ],
@@ -616,16 +593,15 @@ class CheckoutPage extends StatelessWidget {
                 child: _actionButton(
                   "จ่ายสด",
                   const Color(0xFF00C853),
-                  () => controller.openPaymentSheet(context, false),
+                  () => controller.openPaymentSheet(context),
                 ),
               ),
               const SizedBox(width: 20),
+              // 👇 ปุ่ม "ค้างชำระ" ใส่ฟังก์ชันว่างไว้ตามที่ขอ
               Expanded(
-                child: _actionButton(
-                  "ค้างชำระ",
-                  const Color(0xFF03A9F4),
-                  () => controller.openPaymentSheet(context, true),
-                ),
+                child: _actionButton("ค้างชำระ", const Color(0xFF03A9F4), () {
+                  // ยังไม่ทำ ว่างไว้ก่อน
+                }),
               ),
             ],
           ),
@@ -711,50 +687,22 @@ class _PaymentBottomSheet extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Center(
-                              child: Container(
-                                width: 250,
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                child: Obx(
-                                  () => Row(
-                                    children: [
-                                      _toggleBtn(
-                                        "จ่าย",
-                                        !controller.isDebtMode.value,
-                                        const Color(0xFF00C853),
-                                        () =>
-                                            controller.isDebtMode.value = false,
-                                      ),
-                                      _toggleBtn(
-                                        "ค้างชำระ",
-                                        controller.isDebtMode.value,
-                                        const Color(0xFF03A9F4),
-                                        () =>
-                                            controller.isDebtMode.value = true,
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 10),
+                            child: Text(
+                              "ชำระเงิน",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
                           const Divider(height: 1, color: Color(0xFFEEEEEE)),
                           Expanded(
-                            child: Obx(
-                              () => SingleChildScrollView(
-                                controller: scrollController,
-                                padding: const EdgeInsets.all(20),
-                                child: controller.isDebtMode.value
-                                    ? _buildDebtForm()
-                                    : _buildCashForm(),
-                              ),
+                            child: SingleChildScrollView(
+                              controller: scrollController,
+                              padding: const EdgeInsets.all(20),
+                              child: _buildCashForm(),
                             ),
                           ),
                         ],
@@ -770,42 +718,10 @@ class _PaymentBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _toggleBtn(
-    String text,
-    bool isActive,
-    Color activeColor,
-    VoidCallback onTap,
-  ) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isActive ? activeColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(25),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            text,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.grey[600],
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ✅ ฟอร์มจ่ายสด (ปรับปรุงตามที่ขอ)
   Widget _buildCashForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // แสดงราคารวมชัดเจน
         Center(
           child: Column(
             children: [
@@ -813,19 +729,20 @@ class _PaymentBottomSheet extends StatelessWidget {
                 "ยอดรวมที่ต้องชำระ",
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-              Text(
-                "${controller.totalPrice.toInt()} บาท",
-                style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              Obx(
+                () => Text(
+                  "${controller.totalPrice.toInt()} บาท",
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 30),
-
         const Text(
           "รับเงิน",
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -833,7 +750,6 @@ class _PaymentBottomSheet extends StatelessWidget {
         const SizedBox(height: 10),
         _rowInput("จำนวนเงิน", controller.receivedAmountController, true),
         const SizedBox(height: 15),
-
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -854,8 +770,6 @@ class _PaymentBottomSheet extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 30),
-
-        // ส่วนแสดง QR Code จากร้านค้า
         Center(
           child: Column(
             children: [
@@ -866,26 +780,28 @@ class _PaymentBottomSheet extends StatelessWidget {
                   border: Border.all(color: Colors.grey[300]!),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: controller.shopQrCodeUrl.value.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          controller.shopQrCodeUrl.value,
-                          fit: BoxFit.cover,
-                          errorBuilder: (c, e, s) => const Icon(
-                            Icons.broken_image,
-                            size: 50,
-                            color: Colors.grey,
+                child: Obx(
+                  () => controller.shopQrCodeUrl.value.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            controller.shopQrCodeUrl.value,
+                            fit: BoxFit.cover,
+                            errorBuilder: (c, e, s) => const Icon(
+                              Icons.broken_image,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
                           ),
+                        )
+                      : const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.qr_code_2, size: 100),
+                            Text("ไม่มี QR Code ร้านค้า"),
+                          ],
                         ),
-                      )
-                    : const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.qr_code_2, size: 100),
-                          Text("ไม่มี QR Code ร้านค้า"),
-                        ],
-                      ),
+                ),
               ),
               const SizedBox(height: 10),
               const Text(
@@ -897,43 +813,6 @@ class _PaymentBottomSheet extends StatelessWidget {
         ),
         const SizedBox(height: 40),
         _buildActionButtons(Colors.black87, "ยืนยันการชำระเงิน"),
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildDebtForm() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "ชื่อลูกหนี้",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            TextButton.icon(
-              onPressed: controller.registerNewDebtor,
-              icon: const Icon(Icons.person_add, size: 18),
-              label: const Text(
-                "สมัครใหม่",
-                style: TextStyle(color: Colors.blue),
-              ),
-            ),
-          ],
-        ),
-        TextField(
-          controller: controller.debtorNameController,
-          decoration: _inputDeco("ค้นหาชื่อ หรือ เบอร์โทร"),
-        ),
-        const SizedBox(height: 20),
-        _rowInput("จ่ายบางส่วน", controller.payAmountController, true),
-        const SizedBox(height: 15),
-        _rowDisplay("ยอดค้างชำระ", controller.totalPrice.toInt().toString()),
-        const SizedBox(height: 15),
-        _textFieldInput("หมายเหตุ", controller.debtRemarkController),
-        const SizedBox(height: 40),
-        _buildActionButtons(Colors.black87, "บันทึกยอดค้าง"),
         const SizedBox(height: 40),
       ],
     );
@@ -969,65 +848,6 @@ class _PaymentBottomSheet extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _rowDisplay(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        Row(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.red,
-              ),
-            ),
-            const SizedBox(width: 5),
-            const Text(
-              "฿",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _textFieldInput(String label, TextEditingController ctrl) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: ctrl,
-          decoration: _inputDeco("ระบุรายละเอียดเพิ่มเติม"),
-        ),
-      ],
-    );
-  }
-
-  InputDecoration _inputDeco(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-      isDense: true,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.grey[300]!),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.grey[300]!),
-      ),
     );
   }
 
