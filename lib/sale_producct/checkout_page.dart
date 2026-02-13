@@ -853,7 +853,7 @@ class _PaymentBottomSheet extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 35),
         Center(
           child: Column(
             children: [
