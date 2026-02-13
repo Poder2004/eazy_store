@@ -3,8 +3,11 @@ import 'package:get/get.dart';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ✅ Import หน้า Checkout เพื่อใช้ CheckoutController
+import 'package:eazy_store/sale_producct/checkout_page.dart';
+
 // ----------------------------------------------------------------------
-// 1. Model: ตรวจสอบให้แน่ใจว่าไม่มีฟิลด์ IconData ค้างอยู่
+// 1. Model
 // ----------------------------------------------------------------------
 class ProductItem {
   final String id;
@@ -27,7 +30,7 @@ class ProductItem {
 }
 
 // ----------------------------------------------------------------------
-// 2. Controller: เพิ่มการตรวจสอบชื่อฟิลด์ JSON
+// 2. Controller
 // ----------------------------------------------------------------------
 class ManualListController extends GetxController {
   var isLoading = true.obs;
@@ -43,7 +46,6 @@ class ManualListController extends GetxController {
     super.onInit();
     fetchInitialData();
     ever(selectedCategory, (String categoryName) {
-      // ค้นหา ID จากชื่อหมวดหมู่ที่เลือก
       int? categoryId = categoryMap[categoryName];
       refreshProducts(categoryId);
     });
@@ -56,7 +58,6 @@ class ManualListController extends GetxController {
       isLoading(true);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int? storedShopId = prefs.getInt('shopId');
-
       await Future.wait([fetchCategories(), fetchProducts(storedShopId ?? 1)]);
     } catch (e) {
       print("Initial Data Error: $e");
@@ -71,10 +72,9 @@ class ManualListController extends GetxController {
       if (categoryData.isNotEmpty) {
         categoryMap.clear();
         categories.value = ["หมวดหมู่"];
-
         for (var c in categoryData) {
           categories.add(c.name.toString());
-          categoryMap[c.name.toString()] = c.categoryId; // เก็บชื่อคู่กับ ID
+          categoryMap[c.name.toString()] = c.categoryId;
         }
       }
     } catch (e) {
@@ -82,17 +82,15 @@ class ManualListController extends GetxController {
     }
   }
 
-  // 3. ฟังก์ชันสำหรับโหลดสินค้าใหม่ตามหมวดหมู่
   Future<void> refreshProducts(int? categoryId) async {
     try {
       isLoading(true);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 1;
 
-      // เรียก API พร้อมส่ง categoryId (ตามที่เราแก้ฟังก์ชัน API ไปก่อนหน้านี้)
       final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(
         shopId,
-        categoryId: categoryId, // ส่ง ID ไปที่ Server
+        categoryId: categoryId,
       );
 
       var products = data
@@ -103,16 +101,14 @@ class ManualListController extends GetxController {
               sellPrice:
                   double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
               category: item['category_name'] ?? "",
-              categoryId:
-                  item['category_id'] ??
-                  0, // ดึง ID มาจาก Database (ตามรูปที่คุณส่งมา)
+              categoryId: item['category_id'] ?? 0,
               imgProduct: item['img_product'] ?? "",
             ),
           )
           .toList();
 
       allProducts.assignAll(products);
-      filterProducts(); // กรองชื่อสินค้าซ้ำอีกทีถ้ามีการพิมพ์ช่อง Search ค้างไว้
+      filterProducts();
     } catch (e) {
       print("Refresh Products Error: $e");
     } finally {
@@ -125,20 +121,14 @@ class ManualListController extends GetxController {
       final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(
         shopId,
       );
-
       var products = data.map((item) {
         return ProductItem(
           id: (item['product_id'] ?? item['id'] ?? "").toString(),
           name: item['name'] ?? "ไม่มีชื่อสินค้า",
           sellPrice:
               double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
-
-          // เก็บทั้ง ชื่อ (String) และ ID (int)
           category: item['category_name'] ?? "อื่นๆ",
-          categoryId:
-              item['category_id'] ??
-              0, // <--- เพิ่มบรรทัดนี้เพื่อเก็บ ID ไว้เช็ค
-
+          categoryId: item['category_id'] ?? 0,
           imgProduct: item['img_product'] ?? item['image'] ?? "",
         );
       }).toList();
@@ -151,22 +141,16 @@ class ManualListController extends GetxController {
   }
 
   void filterProducts() {
-    // หา ID ของหมวดหมู่ที่เลือกจากชื่อใน Dropdown
     int? selectedId = categoryMap[selectedCategory.value];
-
     var results = allProducts.where((product) {
       final matchesSearch = product.name.toLowerCase().contains(
         searchQuery.value.toLowerCase(),
       );
-
-      // เช็คด้วย ID แทน String
       final matchesCategory =
           selectedCategory.value == "หมวดหมู่" ||
           product.categoryId == selectedId;
-
       return matchesSearch && matchesCategory;
     }).toList();
-
     filteredProducts.assignAll(results);
   }
 
@@ -174,23 +158,49 @@ class ManualListController extends GetxController {
     product.isSelected.value = !product.isSelected.value;
   }
 
+  // ✅ แก้ไขฟังก์ชัน goToCheckout: ส่งเฉพาะ List ของ ID
   void goToCheckout() {
-    final selectedItems = allProducts.where((p) => p.isSelected.value).toList();
-    if (selectedItems.isEmpty) {
+    // 1. ดึงมาเฉพาะ ID ของรายการที่เลือก
+    final List<String> selectedIds = allProducts
+        .where((p) => p.isSelected.value)
+        .map((p) => p.id)
+        .toList();
+
+    if (selectedIds.isEmpty) {
       Get.snackbar(
         "แจ้งเตือน",
         "กรุณาเลือกสินค้าอย่างน้อย 1 ชิ้น",
         backgroundColor: Colors.orange,
         colorText: Colors.white,
       );
-    } else {
-      print("ไปคิดเงิน: ${selectedItems.length} รายการ");
+      return;
+    }
+
+    try {
+      final checkoutCtrl = Get.find<CheckoutController>();
+
+      // 2. ✅ ส่งเฉพาะ List ของ ID ไปยังฟังก์ชันรับ ID ที่หน้า Checkout
+      checkoutCtrl.addItemsByIds(selectedIds);
+
+      // 3. ปิดหน้า ManualList และ ScanBarcode (ย้อนกลับ 2 ขั้น)
+      Get.close(2);
+
+      Get.snackbar(
+        "สำเร็จ",
+        "เพิ่มสินค้าลงตะกร้าแล้ว",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 1),
+      );
+    } catch (e) {
+      print("System Error: $e");
+      Get.to(() => const CheckoutPage());
     }
   }
 }
 
 // ----------------------------------------------------------------------
-// 3. View: ส่วนที่มีปัญหา Error IconData
+// 3. View
 // ----------------------------------------------------------------------
 class ManualListPage extends StatelessWidget {
   const ManualListPage({super.key});
@@ -225,10 +235,12 @@ class ManualListPage extends StatelessWidget {
           const SizedBox(height: 10),
           Expanded(
             child: Obx(() {
-              if (controller.isLoading.value)
+              if (controller.isLoading.value) {
                 return const Center(child: CircularProgressIndicator());
-              if (controller.filteredProducts.isEmpty)
+              }
+              if (controller.filteredProducts.isEmpty) {
                 return const Center(child: Text("ไม่พบรายการสินค้า"));
+              }
 
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -273,7 +285,6 @@ class ManualListPage extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // แก้ไขจุดนี้: ใช้ ClipRRect หุ้ม Image.network
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Image.network(
@@ -403,10 +414,13 @@ class ManualListPage extends StatelessWidget {
           onPressed: controller.goToCheckout,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00C853),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+          icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
           label: const Text(
-            "ไปคิดเงิน",
+            "เพิ่มลงรายการขาย",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

@@ -208,6 +208,20 @@ class CheckoutController extends GetxController {
     }
   }
 
+  // เพิ่มใน CheckoutController (checkout_page.dart)
+  void addItemsByIds(List<String> productIds) {
+    for (var id in productIds) {
+      // หาข้อมูลสินค้าจากลิสต์ allProducts ที่โหลดไว้แล้ว
+      var match = allProducts.firstWhereOrNull(
+        (p) => p.productId.toString() == id,
+      );
+      if (match != null) {
+        _addToCart(match);
+      }
+    }
+    update();
+  }
+
   void _addToCart(Product product) {
     int currentQty = cartItems
         .where((item) => item.id == product.productId.toString())
@@ -921,6 +935,7 @@ class _PaymentBottomSheet extends StatelessWidget {
     );
   }
 
+  //test
   Widget _buildActionButtons(Color color, String text) {
     return SizedBox(
       width: double.infinity,
