@@ -93,4 +93,39 @@ class ApiDebtor {
       return [];
     }
   }
+
+ static Future<List<DebtorResponse>> getDebtorsByShop(int shopId) async {
+    // สร้าง URL: /api/debtor?shop_id=1
+    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtor?shop_id=$shopId');
+  
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', 
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // API ส่งกลับมาเป็น List (Array) []
+        List<dynamic> jsonList = jsonDecode(response.body);
+        
+        // แปลง jsonList เป็น List<DebtorResponse>
+        return jsonList.map((item) => DebtorResponse.fromJson(item)).toList();
+      } else if (response.statusCode == 404) {
+        // ไม่พบข้อมูล (Return list ว่างๆ)
+        return [];
+      } else {
+        throw Exception('Failed to load debtors: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Error fetching debtors: $e");
+      return []; // คืนค่าว่างกรณี error กันแอปเด้ง
+    }
+  }
 }

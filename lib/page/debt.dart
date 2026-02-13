@@ -128,7 +128,7 @@ class _DebtPageState extends State<DebtPage> {
         ),
         centerTitle: true,
         title: const Text(
-          "บันทึกค้างชำระ (แปะ)",
+          "บันทึกค้างชำระ",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
