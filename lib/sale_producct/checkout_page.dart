@@ -62,6 +62,19 @@ class CheckoutController extends GetxController {
         });
       }
     }
+    if (Get.arguments != null && Get.arguments is Map) {
+      var ids = Get.arguments['selectedIds'];
+      if (ids != null) {
+        // ใช้ addPostFrameCallback เพื่อรอให้ Controller โหลดสินค้าจาก API เสร็จก่อนค่อยเพิ่ม
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          // รอจนกว่าสินค้าจะโหลดเสร็จ (ถ้ามีฟังก์ชันโหลดสินค้า)
+          if (allProducts.isEmpty) {
+            await _loadAllProducts();
+          }
+          addItemsByIds(List<String>.from(ids));
+        });
+      }
+    }
   }
 
   @override
@@ -210,9 +223,13 @@ class CheckoutController extends GetxController {
   }
 
   // เพิ่มใน CheckoutController (checkout_page.dart)
-  void addItemsByIds(List<String> productIds) {
+  Future<void> addItemsByIds(List<String> productIds) async {
+    // 🛡️ กันบัคของไม่เข้า: ถ้าลิสต์สินค้ายังว่าง (กรณีเพิ่งเปิดแอป) ให้สั่งโหลดสินค้าก่อน
+    if (allProducts.isEmpty) {
+      await _loadAllProducts();
+    }
+
     for (var id in productIds) {
-      // หาข้อมูลสินค้าจากลิสต์ allProducts ที่โหลดไว้แล้ว
       var match = allProducts.firstWhereOrNull(
         (p) => p.productId.toString() == id,
       );
@@ -220,7 +237,7 @@ class CheckoutController extends GetxController {
         _addToCart(match);
       }
     }
-    update();
+    update(); // แจ้ง UI ให้รีเฟรช
   }
 
   void _addToCart(Product product) {

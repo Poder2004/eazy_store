@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ✅ Import หน้า Checkout เพื่อใช้ CheckoutController
+// ✅ Import หน้า Checkout เพื่อเข้าถึง CheckoutController
 import 'package:eazy_store/sale_producct/checkout_page.dart';
 
 // ----------------------------------------------------------------------
@@ -158,9 +158,8 @@ class ManualListController extends GetxController {
     product.isSelected.value = !product.isSelected.value;
   }
 
-  // ✅ แก้ไขฟังก์ชัน goToCheckout: ส่งเฉพาะ List ของ ID
+  // ✅ แก้ไข goToCheckout: ปรับ Navigation ใหม่เพื่อกันบัคจอดำและของหาย
   void goToCheckout() {
-    // 1. ดึงมาเฉพาะ ID ของรายการที่เลือก
     final List<String> selectedIds = allProducts
         .where((p) => p.isSelected.value)
         .map((p) => p.id)
@@ -176,31 +175,45 @@ class ManualListController extends GetxController {
       return;
     }
 
-    try {
+    // 🛡️ ขั้นตอนการจัดการ Controller และ Navigation
+    if (Get.isRegistered<CheckoutController>()) {
       final checkoutCtrl = Get.find<CheckoutController>();
 
-      // 2. ✅ ส่งเฉพาะ List ของ ID ไปยังฟังก์ชันรับ ID ที่หน้า Checkout
+      // 1. เพิ่มสินค้าลงตะกร้า (ใช้ฟังก์ชันที่แก้ให้เป็น async ในหน้า Checkout)
       checkoutCtrl.addItemsByIds(selectedIds);
 
-      // 3. ปิดหน้า ManualList และ ScanBarcode (ย้อนกลับ 2 ขั้น)
-      Get.close(2);
+      // 2. ตั้งค่า Tab ให้เป็นหน้า Checkout (Index 2)
+      checkoutCtrl.currentNavIndex.value = 2;
 
-      Get.snackbar(
-        "สำเร็จ",
-        "เพิ่มสินค้าลงตะกร้าแล้ว",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 1),
+      // 3. จัดการทิศทางกลับให้ปลอดภัย เพื่อไม่ให้เกิดจอดำ
+      if (Get.previousRoute.contains('CheckoutPage')) {
+        // กรณีเปิดจากหน้า Checkout -> กลับไปที่หน้าเดิม
+        Get.close(2);
+      } else {
+        // กรณีเปิดจากหน้าหลัก (Home) -> ย้อนกลับไปหารูทแรกของแอป (Home)
+        // วิธีนี้ปลอดภัยกว่า Get.offAll เพราะไม่ล้าง Memory ของ Controller ที่เป็น permanent
+        Get.until((route) => route.isFirst);
+      }
+    } else {
+      // กรณีฉุกเฉิน: Controller หาย ให้เปิดหน้า Checkout ใหม่พร้อมส่งค่า
+      Get.offAll(
+        () => const CheckoutPage(),
+        arguments: {'selectedIds': selectedIds},
       );
-    } catch (e) {
-      print("System Error: $e");
-      Get.to(() => const CheckoutPage());
     }
+
+    Get.snackbar(
+      "สำเร็จ",
+      "เพิ่มสินค้าลงตะกร้าแล้ว",
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 1),
+    );
   }
 }
 
 // ----------------------------------------------------------------------
-// 3. View
+// 3. View (UI คงเดิม)
 // ----------------------------------------------------------------------
 class ManualListPage extends StatelessWidget {
   const ManualListPage({super.key});
