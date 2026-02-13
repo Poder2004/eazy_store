@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../menu_bar/bottom_navbar.dart';
+import '../page/debt.dart';
 
 class CheckoutController extends GetxController {
   // 🛒 ตะกร้าสินค้า
@@ -304,10 +305,12 @@ class CheckoutController extends GetxController {
   }
 
   void goToDebtPaymentPage() {
-    // ยังไม่ทำ ว่างไว้ก่อน
+    Get.to(() => const DebtPage());
+
   }
 
   void confirmPayment() {
+    
     Get.back();
     Get.snackbar(
       "สำเร็จ",
@@ -685,6 +688,7 @@ class CheckoutPage extends StatelessWidget {
                   "ค้างชำระ",
                   const Color(0xFF03A9F4),
                   controller.goToDebtPaymentPage,
+
                 ),
               ),
             ],
