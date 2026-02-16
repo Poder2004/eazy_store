@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../menu_bar/bottom_navbar.dart';
-import '../page/debt.dart';
+import 'debt.dart';
 
 class CheckoutController extends GetxController {
   // 🛒 ตะกร้าสินค้า

@@ -1,12 +1,16 @@
 import 'dart:async';
+import 'package:eazy_store/homepage/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 // --- Imports ---
-import '../sale_producct/checkout_page.dart'; 
+import 'checkout_page.dart'; 
 import 'package:eazy_store/page/debt_register.dart'; 
 import '../api/api_debtor.dart'; 
 import '../model/response/debtor_response.dart'; 
+import '../api/api_sale.dart';
+import '../model/request/sales_model_request.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DebtPage extends StatefulWidget {
   const DebtPage({super.key});
@@ -21,6 +25,8 @@ class _DebtPageState extends State<DebtPage> {
   final TextEditingController _debtorPhoneController = TextEditingController();
   final TextEditingController _payAmountController = TextEditingController();
   final TextEditingController _debtRemarkController = TextEditingController();
+
+  DebtorResponse? _selectedDebtor;
 
   // --- ตัวแปรสำหรับระบบค้นหา ---
   Timer? _debounce;
@@ -66,51 +72,133 @@ class _DebtPageState extends State<DebtPage> {
   }
 
   void _selectDebtor(DebtorResponse debtor) {
-    _debtorNameController.text = debtor.name;
-    _debtorPhoneController.text = debtor.phone;
-    setState(() {
-      _showResults = false;
-      FocusScope.of(context).unfocus();
-    });
-  }
+  _selectedDebtor = debtor; // 🔥 เก็บ Object ที่เลือกไว้ทั้งตัว
+  _debtorNameController.text = debtor.name;
+  _debtorPhoneController.text = debtor.phone;
+  setState(() {
+    _showResults = false;
+    FocusScope.of(context).unfocus();
+  });
+}
 
   // =======================================================
   // ★★★ [จุดที่ 1] สร้างฟังก์ชันยืนยัน ตรงนี้เลย ★★★
   // =======================================================
-  void _submitDebt(CheckoutController controller) {
-    // 1. ดึงค่าจาก Text Controller ในหน้านี้โดยตรง
-    String name = _debtorNameController.text;
-    String phone = _debtorPhoneController.text;
-    double payAmount = double.tryParse(_payAmountController.text) ?? 0;
-    String remark = _debtRemarkController.text;
-
-    // เช็คหน่อยว่าเลือกคนหรือยัง (Optional)
-    if (name.isEmpty) {
-      Get.snackbar("แจ้งเตือน", "กรุณาระบุชื่อลูกค้า", backgroundColor: Colors.redAccent, colorText: Colors.white);
+  void _submitDebt(CheckoutController controller) async {
+    // 1. Validation 
+    if (controller.cartItems.isEmpty) {
+      Get.snackbar("แจ้งเตือน", "ไม่มีสินค้าในตะกร้า", 
+          backgroundColor: Colors.orange, colorText: Colors.white);
+      return;
+    }
+    if (_selectedDebtor == null) {
+      Get.snackbar("แจ้งเตือน", "กรุณาเลือกชื่อลูกค้าก่อน", 
+          backgroundColor: Colors.redAccent, colorText: Colors.white);
       return;
     }
 
-    // 2. คำนวณยอดค้าง (ยอดรวมจากตะกร้า - ที่จ่ายจริง)
-    double total = controller.totalPrice;
-    double debt = total - payAmount;
+    try {
+      // 2. ดึงค่าจาก SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int currentShopId = prefs.getInt('shopId') ?? 0;
+      String userName = prefs.getString('name') ?? 
+                        prefs.getString('username') ?? 
+                        "พนักงานขาย";
+      double payAmount = double.tryParse(_payAmountController.text) ?? 0;
 
-    // --- TODO: ตรงนี้ใส่โค้ดเรียก API บันทึกหนี้ ---
-    print("--- บันทึกรายการ ---");
-    print("ลูกค้า: $name, โทร: $phone");
-    print("ยอดเต็ม: $total, จ่าย: $payAmount, แปะไว้: $debt");
-    print("หมายเหตุ: $remark");
+      // 3. เตรียมรายการสินค้า
+      final groupedMap = <String, List<dynamic>>{};
+      for (var item in controller.cartItems) {
+        groupedMap.putIfAbsent(item.id, () => []).add(item);
+      }
 
-    // 3. ปิดหน้าจอและแจ้งเตือน
-    Get.back(); // กลับไปหน้าขาย
-    Get.snackbar(
-      "สำเร็จ",
-      "บันทึกค้างชำระเรียบร้อย (ค้าง $debt บาท)",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
+      List<SaleItemRequest> itemsRequest = groupedMap.entries.map((entry) {
+        var firstItem = entry.value.first;
+        return SaleItemRequest(
+          productId: int.parse(firstItem.id),
+          amount: entry.value.length,
+          pricePerUnit: firstItem.price.toDouble(),
+          totalPrice: (firstItem.price * entry.value.length).toDouble(),
+        );
+      }).toList();
+
+      // 4. สร้าง Request Object (ใช้ debtorId ให้ถูกตาม Model)
+      final saleRequest = SaleRequest(
+        shopId: currentShopId,
+        debtorId: _selectedDebtor!.debtorId, 
+        netPrice: controller.totalPrice.toDouble(),
+        pay: payAmount,
+        paymentMethod: "ค้างชำระ",
+        note: _debtRemarkController.text,
+        createdBuy: userName,
+        saleItems: itemsRequest,
+      );
+
+      // 5. แสดง Loading และเรียก API
+      Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+      final result = await ApiSale.createCreditSale(saleRequest);
+      Get.back(); // ปิด Loading
+
+      if (result != null && result.containsKey('sale_id')) {
+        // ✅ กรณีสำเร็จ
+        Get.snackbar("สำเร็จ", "บันทึกการค้างชำระเรียบร้อยแล้ว",
+            backgroundColor: Colors.green, colorText: Colors.white, snackPosition: SnackPosition.BOTTOM);
+        
+        controller.clearAll(); // ล้างตะกร้าสินค้า
+        
+        // 🔥 เปลี่ยนหน้าไปยัง HomeController (หน้าหลัก)
+        // หากคุณใช้ GetX ในหน้า Home ให้ระบุชื่อ Class หรือ Route ที่ตั้งไว้
+        Get.offAll(() => const HomePage()); 
+      } else {
+        // ❌ กรณี Error จาก Server (เช่น Error 500 เรื่อง total_debt)
+        String errorMsg = result?['error'] ?? "บันทึกไม่สำเร็จ กรุณาลองใหม่";
+        _showErrorDialog(errorMsg);
+      }
+    } catch (e) {
+      Get.back(); // ปิด Loading ถ้าค้างอยู่
+      _showErrorDialog("เกิดข้อผิดพลาด: $e");
+    }
+  }
+
+  // ฟังก์ชันช่วยแสดง Error Dialog
+  void _showErrorDialog(String message) {
+    Get.defaultDialog(
+      title: "แจ้งเตือน",
+      middleText: message,
+      textConfirm: "ตกลง",
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.redAccent,
+      onConfirm: () => Get.back(),
     );
+  }
 
-    // 4. สั่งเคลียร์ตะกร้าสินค้าใน CheckoutController
-    controller.clearAll(); 
+  // ฟังก์ชันสำหรับเด้งหน้าต่างยืนยันการทำรายการ
+  void _confirmSubmit(CheckoutController controller) {
+    // Validation เบื้องต้นก่อนเปิด Dialog
+    if (controller.cartItems.isEmpty) {
+      Get.snackbar("แจ้งเตือน", "ไม่มีสินค้าในตะกร้า", 
+          backgroundColor: Colors.orange, colorText: Colors.white);
+      return;
+    }
+    if (_selectedDebtor == null) {
+      Get.snackbar("แจ้งเตือน", "กรุณาเลือกลูกหนี้ก่อน", 
+          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      return;
+    }
+
+    // แสดง Dialog ยืนยัน
+    Get.defaultDialog(
+      title: "ยืนยันการทำรายการ",
+      middleText: "คุณต้องการบันทึกการค้างชำระของ\n'${_selectedDebtor?.name}' ใช่หรือไม่?",
+      textConfirm: "ยืนยัน",
+      textCancel: "ยกเลิก",
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.black, // สีปุ่มยืนยัน
+      onConfirm: () {
+        Get.back(); // ปิด Dialog คอนเฟิร์ม
+        _submitDebt(controller); // เรียกฟังก์ชันบันทึกข้อมูลที่เราทำไว้
+      },
+    );
   }
 
   @override
@@ -140,7 +228,7 @@ class _DebtPageState extends State<DebtPage> {
             child: TextField(
               onChanged: (value) => _onSearchChanged(value),
               decoration: InputDecoration(
-                hintText: 'พิมพ์ 0 หรือชื่อ/เบอร์ เพื่อค้นหา...',
+                hintText: 'กรอกชื่อหรือเบอร์ลูกหนี้เพื่อค้นหา',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _isSearching
                     ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12.0), child: CircularProgressIndicator(strokeWidth: 2)))
@@ -249,13 +337,13 @@ class _DebtPageState extends State<DebtPage> {
 
           _rowInfo("ชื่อคนเซ็น", _debtorNameController.text.isEmpty ? "-" : _debtorNameController.text, isBold: true),
           _rowInputSimple("เบอร์โทรศัพท์", _textField(_debtorPhoneController, readOnly: true)),
-          _rowInput("จ่ายวันนี้", _textField(_payAmountController, isNumber: true)),
+          _rowInput("จ่ายตอนนี้", _textField(_payAmountController, isNumber: true)),
 
           Builder(
             builder: (_) {
               double pay = double.tryParse(_payAmountController.text) ?? 0;
               int debt = (controller.totalPrice - pay).toInt(); 
-              return _rowInfo("ยอดที่แปะไว้", "$debt", isRed: true);
+              return _rowInfo("ยอดที่เซ็น", "$debt", isRed: true);
             },
           ),
 
@@ -268,7 +356,7 @@ class _DebtPageState extends State<DebtPage> {
               // ★★★ [จุดที่ 2] เรียกใช้ฟังก์ชัน local ที่สร้างไว้ ★★★
               // =======================================================
               _actionBtn("ยืนยันการค้างชำระ", Colors.black, () {
-                 _submitDebt(controller);
+                 _confirmSubmit(controller);
               }),
               
               const SizedBox(height: 10),

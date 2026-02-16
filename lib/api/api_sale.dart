@@ -30,4 +30,34 @@ class ApiSale {
       return null;
     }
   }
+
+
+  static Future<Map<String, dynamic>?> createCreditSale(SaleRequest saleData) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      // ยิงไปที่ Path /api/CreateCreditSale ตามที่เราตั้งค่าไว้ใน Go
+      final response = await http.post(
+        Uri.parse("${AppConfig.baseUrl}/api/createCreditSale"), 
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(saleData.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        // ดึง Error Message จากฝั่ง Go มาแสดง (เช่น "ยอดหนี้เกินวงเงิน")
+        final errorData = jsonDecode(response.body);
+        print("Credit Sale Error: ${errorData['error']}");
+        return {"error": errorData['error'] ?? "บันทึกไม่สำเร็จ"};
+      }
+    } catch (e) {
+      print("Credit Sale Exception: $e");
+      return {"error": "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้"};
+    }
+  }
 }
