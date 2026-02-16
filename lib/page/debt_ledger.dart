@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // ★ 1. import shared_preferences
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- Imports ไฟล์ของคุณ ---
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
-import 'package:eazy_store/page/debt_payment.dart';
+import 'package:eazy_store/page/debt_payment.dart'; // *หมายเหตุ: ต้องแน่ใจว่าหน้านี้รับค่าได้
 
 // --- Imports API และ Model ---
 import '../api/api_debtor.dart';
 import '../model/response/debtor_response.dart';
+import 'package:eazy_store/page/debt_payment.dart';
 
 // กำหนดสีหลัก
 const Color _kPrimaryColor = Color(0xFF6B8E23);
@@ -30,21 +31,20 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   // --- ตัวแปรสำหรับข้อมูล API ---
-  List<DebtorResponse> _allDebtors = []; // รายชื่อทั้งหมด
-  List<DebtorResponse> _searchResults = []; // ผลลัพธ์การค้นหา
-  bool _isLoading = true; // สถานะโหลด
-  bool _isSearching = false; // สถานะกำลังค้นหา
-  bool _showDropdown = false; // โชว์ Dropdown ไหม
-  Timer? _debounce; // ตัวหน่วงเวลาค้นหา
-
-  // ★ 2. ตัวแปรเก็บ ShopID (ค่าเริ่มต้นเป็น 0 หรือ 1 ไปก่อน)
-  int _currentShopId = 1; 
+  List<DebtorResponse> _originalDebtors = []; // ★ เก็บข้อมูลต้นฉบับทั้งหมด (Backup)
+  List<DebtorResponse> _allDebtors = []; // รายชื่อที่แสดงผล (อาจถูกกรองจากการค้นหา)
+  List<DebtorResponse> _searchResults = []; // ผลลัพธ์ Dropdown
+  
+  bool _isLoading = true;
+  bool _isSearching = false;
+  bool _showDropdown = false;
+  Timer? _debounce;
+  int _currentShopId = 1;
 
   @override
   void initState() {
     super.initState();
-    // ★ 3. เรียกฟังก์ชันเตรียมข้อมูล (ดึง ShopID -> ดึงลูกหนี้)
-    _initialData(); 
+    _initialData();
   }
 
   @override
@@ -54,26 +54,22 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
     super.dispose();
   }
 
-  // ★ 4. ฟังก์ชันใหม่: ดึง ShopID จากเครื่อง แล้วค่อยดึงข้อมูล API
   Future<void> _initialData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
-      // ถ้าไม่มีให้ใช้ค่า Default เป็น 1
-      _currentShopId = prefs.getInt('shopId') ?? 1; 
+      _currentShopId = prefs.getInt('shopId') ?? 1;
     });
-    
-    print("Shop ID loaded: $_currentShopId"); // เช็คค่าใน Console
-    _fetchAllDebtors(); // พอได้ ID แล้วค่อยไปดึง API
+    _fetchAllDebtors();
   }
 
   // --- ฟังก์ชันดึงลูกหนี้ทั้งหมด ---
   Future<void> _fetchAllDebtors() async {
     setState(() => _isLoading = true);
     try {
-      // ส่ง _currentShopId ที่ดึงมาจาก prefs ไปใช้
       final result = await ApiDebtor.getDebtorsByShop(_currentShopId);
       setState(() {
-        _allDebtors = result;
+        _originalDebtors = result; // เก็บไว้เป็นตัวยืน
+        _allDebtors = result;      // ตัวนี้เอาไว้แสดงผล (อาจเปลี่ยนไปตามการค้นหา)
         _isLoading = false;
       });
     } catch (e) {
@@ -88,6 +84,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
       setState(() {
         _searchResults = [];
         _showDropdown = false;
+        _allDebtors = _originalDebtors; // ★ คืนค่ารายชื่อทั้งหมดเมื่อลบคำค้นหา
       });
       return;
     }
@@ -100,7 +97,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
         final results = await ApiDebtor.searchDebtor(keyword);
         setState(() {
           _searchResults = results;
-          _showDropdown = true; 
+          _showDropdown = true;
         });
       } catch (e) {
         print("Error searching: $e");
@@ -111,17 +108,17 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
     });
   }
 
-  // เลือกรายการจาก Dropdown
+  // ★ แก้ไข: เลือกจาก Dropdown แล้วแค่ "กรอง" รายชื่อให้เหลือคนนั้น (ยังไม่ไปหน้าจ่ายเงิน)
   void _selectFromDropdown(DebtorResponse debtor) {
     setState(() {
-      _showDropdown = false;
-      _searchController.text = ""; 
-      FocusScope.of(context).unfocus(); 
+      _searchController.text = debtor.name; // ใส่ชื่อในช่องค้นหา
+      _allDebtors = [debtor]; // ★ โชว์เฉพาะคนนี้ในการ์ดรายการ
+      _showDropdown = false;  // ปิด Dropdown
+      FocusScope.of(context).unfocus(); // หุบคีย์บอร์ด
     });
-    Get.to(() => const DebtPaymentScreen()); 
   }
 
-  // --- Widgets (ส่วนแสดงผลเหมือนเดิม) ---
+  // --- Widgets ---
 
   Widget _buildSearchBar() {
     return Container(
@@ -140,11 +137,19 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
           hintStyle: TextStyle(color: Colors.grey.shade500),
           contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          // ปุ่มกากบาทลบคำค้นหา (Optional)
+          suffixIcon: _searchController.text.isNotEmpty 
+            ? IconButton(
+                icon: const Icon(Icons.clear, color: Colors.grey),
+                onPressed: () {
+                  _searchController.clear();
+                  _onSearchChanged(""); // เรียกให้รีเซ็ตลิสต์
+                },
+              ) 
+            : null,
           filled: true,
           fillColor: Colors.transparent,
           border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
         ),
       ),
     );
@@ -154,11 +159,11 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
     if (!_showDropdown) return const SizedBox.shrink();
 
     return Positioned(
-      top: 60, 
+      top: 60,
       left: 0,
       right: 0,
       child: Container(
-        constraints: const BoxConstraints(maxHeight: 250), 
+        constraints: const BoxConstraints(maxHeight: 250),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
@@ -182,7 +187,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                   return ListTile(
                     title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(item.phone),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                    trailing: const Icon(Icons.search, size: 18, color: Colors.grey), // เปลี่ยนไอคอนเป็นแว่นขยายสื่อว่า "ดูข้อมูล"
                     onTap: () => _selectFromDropdown(item),
                   );
                 },
@@ -192,8 +197,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
   }
 
   Widget _buildDebtorCard(DebtorResponse debtor) {
-    // Mock ยอดเงิน (รอ Backend ส่งมา)
-    double mockAmount = 0.00; 
+    double mockAmount = 0.00;
 
     return Card(
       color: _kCardColor,
@@ -211,11 +215,11 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    debtor.name, 
+                    debtor.name,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   Text(
-                    debtor.phone, 
+                    debtor.phone,
                     style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 4),
@@ -238,7 +242,11 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                   height: 35,
                   child: ElevatedButton(
                     onPressed: () {
-                      Get.to(() => const DebtPaymentScreen()); 
+                      // ★ ส่งข้อมูลเมื่อกดปุ่มนี้เท่านั้น! ★
+                      // ต้องแน่ใจว่า DebtPaymentScreen ของคุณรับพารามิเตอร์ (เช่น constructor)
+                      // ตัวอย่าง: DebtPaymentScreen(selectedDebtor: debtor)
+                      
+                      Get.to(() => DebtPaymentScreen(debtor: debtor)); 
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kPayButtonColor,
@@ -270,7 +278,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
         centerTitle: true,
         backgroundColor: _kBackgroundColor,
         elevation: 0,
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -280,8 +288,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 70), 
-            
+                const SizedBox(height: 70), // เว้นที่ให้ Search Bar
 
                 const Text('รายชื่อทั้งหมด', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
                 const SizedBox(height: 10),
@@ -290,7 +297,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _allDebtors.isEmpty
-                          ? const Center(child: Text("ยังไม่มีรายการค้างชำระ"))
+                          ? const Center(child: Text("ยังไม่มีรายการค้างชำระ (หรือค้นหาไม่เจอ)"))
                           : ListView.builder(
                               padding: const EdgeInsets.only(top: 5, bottom: 20),
                               itemCount: _allDebtors.length,
@@ -306,7 +313,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
             Column(
               children: [
                 _buildSearchBar(),
-                _buildSearchResultsDropdown(), 
+                _buildSearchResultsDropdown(),
               ],
             ),
           ],
