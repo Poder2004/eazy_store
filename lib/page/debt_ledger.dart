@@ -31,10 +31,12 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   // --- ตัวแปรสำหรับข้อมูล API ---
-  List<DebtorResponse> _originalDebtors = []; // ★ เก็บข้อมูลต้นฉบับทั้งหมด (Backup)
-  List<DebtorResponse> _allDebtors = []; // รายชื่อที่แสดงผล (อาจถูกกรองจากการค้นหา)
+  List<DebtorResponse> _originalDebtors =
+      []; // ★ เก็บข้อมูลต้นฉบับทั้งหมด (Backup)
+  List<DebtorResponse> _allDebtors =
+      []; // รายชื่อที่แสดงผล (อาจถูกกรองจากการค้นหา)
   List<DebtorResponse> _searchResults = []; // ผลลัพธ์ Dropdown
-  
+
   bool _isLoading = true;
   bool _isSearching = false;
   bool _showDropdown = false;
@@ -69,12 +71,24 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
       final result = await ApiDebtor.getDebtorsByShop(_currentShopId);
       setState(() {
         _originalDebtors = result; // เก็บไว้เป็นตัวยืน
-        _allDebtors = result;      // ตัวนี้เอาไว้แสดงผล (อาจเปลี่ยนไปตามการค้นหา)
+        _allDebtors = result; // ตัวนี้เอาไว้แสดงผล (อาจเปลี่ยนไปตามการค้นหา)
         _isLoading = false;
       });
     } catch (e) {
       print("Error loading debtors: $e");
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _goToPaymentScreen(DebtorResponse debtor) async {
+    // 1. สั่งไปหน้าจ่ายเงิน และรอ (await) ผลลัพธ์
+    final result = await Get.to(() => DebtPaymentScreen(debtor: debtor));
+
+    // 2. ถ้ากลับมาพร้อมค่า true (แปลว่าจ่ายเงินสำเร็จ)
+    if (result == true) {
+      print("Payment Success! Refreshing list...");
+      _searchController.clear(); // ล้างช่องค้นหา (Optional)
+      _fetchAllDebtors(); // ★ เรียกฟังก์ชันโหลดข้อมูลใหม่ตรงนี้
     }
   }
 
@@ -113,7 +127,7 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
     setState(() {
       _searchController.text = debtor.name; // ใส่ชื่อในช่องค้นหา
       _allDebtors = [debtor]; // ★ โชว์เฉพาะคนนี้ในการ์ดรายการ
-      _showDropdown = false;  // ปิด Dropdown
+      _showDropdown = false; // ปิด Dropdown
       FocusScope.of(context).unfocus(); // หุบคีย์บอร์ด
     });
   }
@@ -135,18 +149,21 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
         decoration: InputDecoration(
           hintText: 'ค้นหารายชื่อ หรือเบอร์โทร',
           hintStyle: TextStyle(color: Colors.grey.shade500),
-          contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 10.0,
+            horizontal: 12.0,
+          ),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
           // ปุ่มกากบาทลบคำค้นหา (Optional)
-          suffixIcon: _searchController.text.isNotEmpty 
-            ? IconButton(
-                icon: const Icon(Icons.clear, color: Colors.grey),
-                onPressed: () {
-                  _searchController.clear();
-                  _onSearchChanged(""); // เรียกให้รีเซ็ตลิสต์
-                },
-              ) 
-            : null,
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: Colors.grey),
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged(""); // เรียกให้รีเซ็ตลิสต์
+                  },
+                )
+              : null,
           filled: true,
           fillColor: Colors.transparent,
           border: InputBorder.none,
@@ -168,7 +185,11 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 5))
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
           ],
           border: Border.all(color: Colors.grey.shade300),
         ),
@@ -185,9 +206,16 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                 itemBuilder: (ctx, i) {
                   final item = _searchResults[i];
                   return ListTile(
-                    title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      item.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Text(item.phone),
-                    trailing: const Icon(Icons.search, size: 18, color: Colors.grey), // เปลี่ยนไอคอนเป็นแว่นขยายสื่อว่า "ดูข้อมูล"
+                    trailing: const Icon(
+                      Icons.search,
+                      size: 18,
+                      color: Colors.grey,
+                    ), // เปลี่ยนไอคอนเป็นแว่นขยายสื่อว่า "ดูข้อมูล"
                     onTap: () => _selectFromDropdown(item),
                   );
                 },
@@ -197,7 +225,8 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
   }
 
   Widget _buildDebtorCard(DebtorResponse debtor) {
-    double mockAmount = 0.00;
+    double debtAmount =
+        double.tryParse(debtor.currentDebt?.toString() ?? '0') ?? 0.0;
 
     return Card(
       color: _kCardColor,
@@ -216,7 +245,11 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                 children: [
                   Text(
                     debtor.name,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                   Text(
                     debtor.phone,
@@ -225,12 +258,22 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text('ค้าง ', style: TextStyle(fontSize: 16, color: Colors.grey[700])),
                       Text(
-                        mockAmount.toStringAsFixed(2),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.red),
+                        'ค้าง ',
+                        style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                       ),
-                      const Text(' บาท', style: TextStyle(fontSize: 16, color: Colors.red)),
+                      Text(
+                        debtAmount.toStringAsFixed(2),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const Text(
+                        ' บาท',
+                        style: TextStyle(fontSize: 16, color: Colors.red),
+                      ),
                     ],
                   ),
                 ],
@@ -242,19 +285,24 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                   height: 35,
                   child: ElevatedButton(
                     onPressed: () {
-                      // ★ ส่งข้อมูลเมื่อกดปุ่มนี้เท่านั้น! ★
-                      // ต้องแน่ใจว่า DebtPaymentScreen ของคุณรับพารามิเตอร์ (เช่น constructor)
-                      // ตัวอย่าง: DebtPaymentScreen(selectedDebtor: debtor)
-                      
-                      Get.to(() => DebtPaymentScreen(debtor: debtor)); 
+                      _goToPaymentScreen(debtor);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kPayButtonColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
                       elevation: 3,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                     ),
-                    child: const Text('ชำระเงิน', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    child: const Text(
+                      'ชำระเงิน',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -274,49 +322,67 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
-        title: const Text('บัญชีคนค้างชำระ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.black87)),
+        title: const Text(
+          'บัญชีคนค้างชำระ',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            color: Colors.black87,
+          ),
+        ),
         centerTitle: true,
         backgroundColor: _kBackgroundColor,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Stack(
-          children: [
-            // --- Layer ล่าง: เนื้อหาหลัก ---
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 70), // เว้นที่ให้ Search Bar
+      body: RefreshIndicator(
+        onRefresh: _fetchAllDebtors, // เมื่อลากลง จะเรียกฟังก์ชันนี้
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Stack(
+            children: [
+              // --- Layer ล่าง: เนื้อหาหลัก ---
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 70), // เว้นที่ให้ Search Bar
 
-                const Text('รายชื่อทั้งหมด', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 10),
+                  const Text(
+                    'รายชื่อทั้งหมด',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
 
-                Expanded(
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _allDebtors.isEmpty
-                          ? const Center(child: Text("ยังไม่มีรายการค้างชำระ (หรือค้นหาไม่เจอ)"))
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(top: 5, bottom: 20),
-                              itemCount: _allDebtors.length,
-                              itemBuilder: (context, index) {
-                                return _buildDebtorCard(_allDebtors[index]);
-                              },
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _allDebtors.isEmpty
+                        ? const Center(
+                            child: Text(
+                              "ยังไม่มีรายการค้างชำระ (หรือค้นหาไม่เจอ)",
                             ),
-                ),
-              ],
-            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.only(top: 5, bottom: 20),
+                            itemCount: _allDebtors.length,
+                            itemBuilder: (context, index) {
+                              return _buildDebtorCard(_allDebtors[index]);
+                            },
+                          ),
+                  ),
+                ],
+              ),
 
-            // --- Layer บน: Search Bar และ Dropdown ---
-            Column(
-              children: [
-                _buildSearchBar(),
-                _buildSearchResultsDropdown(),
-              ],
-            ),
-          ],
+              // --- Layer บน: Search Bar และ Dropdown ---
+              Column(
+                children: [_buildSearchBar(), _buildSearchResultsDropdown()],
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavBar(

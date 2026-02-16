@@ -1,3 +1,4 @@
+import 'package:eazy_store/page/debt_ledger.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,7 +33,9 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
   PaymentMethod _selectedMethod = PaymentMethod.cash;
 
   final TextEditingController _amountPaidController = TextEditingController();
-  final TextEditingController _payerNameController = TextEditingController(text: 'เจ้าของร้าน');
+  final TextEditingController _payerNameController = TextEditingController(
+    text: 'เจ้าของร้าน',
+  );
 
   late double _totalDebtAmount;
   double _amountPaid = 0.0;
@@ -44,10 +47,12 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
     super.initState();
     // แปลงหนี้จาก String เป็น Double (จัดการกรณีเป็น null หรือ format ผิด)
     _totalDebtAmount = (widget.debtor?.currentDebt as num?)?.toDouble() ?? 0.0;
-    
+
     // Default หนี้ที่ต้องจ่ายเท่ากับยอดหนี้ทั้งหมด
-    _remainingDebt = _totalDebtAmount; 
-    _amountPaidController.text = _totalDebtAmount.toStringAsFixed(0); // ใส่ค่ายอดหนี้ให้อัตโนมัติ (Option)
+    _remainingDebt = _totalDebtAmount;
+    _amountPaidController.text = _totalDebtAmount.toStringAsFixed(
+      0,
+    ); // ใส่ค่ายอดหนี้ให้อัตโนมัติ (Option)
     _amountPaid = _totalDebtAmount;
 
     _amountPaidController.addListener(_calculateChange);
@@ -91,15 +96,26 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
               setState(() => _selectedMethod = PaymentMethod.cash);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedMethod == PaymentMethod.cash ? _kButtonGreen : Colors.white,
-              foregroundColor: _selectedMethod == PaymentMethod.cash ? Colors.white : Colors.black87,
+              backgroundColor: _selectedMethod == PaymentMethod.cash
+                  ? _kButtonGreen
+                  : Colors.white,
+              foregroundColor: _selectedMethod == PaymentMethod.cash
+                  ? Colors.white
+                  : Colors.black87,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
-                side: BorderSide(color: _selectedMethod == PaymentMethod.cash ? _kButtonGreen : Colors.grey.shade400),
+                side: BorderSide(
+                  color: _selectedMethod == PaymentMethod.cash
+                      ? _kButtonGreen
+                      : Colors.grey.shade400,
+                ),
               ),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: const Text('เงินสด', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'เงินสด',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
         const SizedBox(width: 15),
@@ -109,25 +125,49 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
               setState(() => _selectedMethod = PaymentMethod.transfer);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: _selectedMethod == PaymentMethod.transfer ? _kButtonBlue : Colors.white,
-              foregroundColor: _selectedMethod == PaymentMethod.transfer ? Colors.white : Colors.black87,
+              backgroundColor: _selectedMethod == PaymentMethod.transfer
+                  ? _kButtonBlue
+                  : Colors.white,
+              foregroundColor: _selectedMethod == PaymentMethod.transfer
+                  ? Colors.white
+                  : Colors.black87,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
-                side: BorderSide(color: _selectedMethod == PaymentMethod.transfer ? _kButtonBlue : Colors.grey.shade400),
+                side: BorderSide(
+                  color: _selectedMethod == PaymentMethod.transfer
+                      ? _kButtonBlue
+                      : Colors.grey.shade400,
+                ),
               ),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: const Text('เงินโอน', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'เงินโอน',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPaymentDetailRow({required String label, required String value, bool isInput = false, bool isAction = false, TextEditingController? controller}) {
-    final Color valueColor = isAction ? Colors.black87 : (label == 'เงินค้างชำระคงเหลือ' && _remainingDebt > 0 ? Colors.red : Colors.black87);
-    final FontWeight valueWeight = (label == 'เงินค้างชำระคงเหลือ' || label == 'เงินทอน') ? FontWeight.bold : FontWeight.w500;
-    
+  Widget _buildPaymentDetailRow({
+    required String label,
+    required String value,
+    bool isInput = false,
+    bool isAction = false,
+    TextEditingController? controller,
+  }) {
+    final Color valueColor = isAction
+        ? Colors.black87
+        : (label == 'เงินค้างชำระคงเหลือ' && _remainingDebt > 0
+              ? Colors.red
+              : Colors.black87);
+    final FontWeight valueWeight =
+        (label == 'เงินค้างชำระคงเหลือ' || label == 'เงินทอน')
+        ? FontWeight.bold
+        : FontWeight.w500;
+
     String displayValue = value;
     if (!isInput && double.tryParse(value) != null) {
       displayValue = double.parse(value).toStringAsFixed(2);
@@ -137,19 +177,36 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text(label, style: const TextStyle(fontSize: 18, color: Colors.black87))),
+          Expanded(
+            flex: 3,
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 18, color: Colors.black87),
+            ),
+          ),
           Expanded(
             flex: 2,
             child: isInput
                 ? Container(
                     height: 40,
-                    decoration: BoxDecoration(color: _kInputFillColor, borderRadius: BorderRadius.circular(8.0), border: Border.all(color: Colors.grey.shade400)),
+                    decoration: BoxDecoration(
+                      color: _kInputFillColor,
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
                     child: TextField(
                       controller: controller,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.right,
-                      style: TextStyle(fontSize: 18, fontWeight: valueWeight, color: valueColor),
-                      decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 8.0), border: InputBorder.none),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: valueWeight,
+                        color: valueColor,
+                      ),
+                      decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8.0),
+                        border: InputBorder.none,
+                      ),
                       onChanged: (text) => _calculateChange(),
                     ),
                   )
@@ -157,8 +214,21 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                     height: 40,
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    decoration: BoxDecoration(color: isAction ? _kInputFillColor : _kBackgroundColor, borderRadius: BorderRadius.circular(8.0), border: isAction ? Border.all(color: Colors.grey.shade400) : null),
-                    child: Text(displayValue, style: TextStyle(fontSize: 18, fontWeight: valueWeight, color: valueColor)),
+                    decoration: BoxDecoration(
+                      color: isAction ? _kInputFillColor : _kBackgroundColor,
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: isAction
+                          ? Border.all(color: Colors.grey.shade400)
+                          : null,
+                    ),
+                    child: Text(
+                      displayValue,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: valueWeight,
+                        color: valueColor,
+                      ),
+                    ),
                   ),
           ),
         ],
@@ -167,16 +237,31 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
   }
 
   Widget _buildQRCodeSection() {
-    if (_selectedMethod != PaymentMethod.transfer) return const SizedBox.shrink();
+    if (_selectedMethod != PaymentMethod.transfer)
+      return const SizedBox.shrink();
     return Column(
       children: [
         const SizedBox(height: 20),
-        const Text('คิวอาร์โค้ดชำระเงิน', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFB2B2B2))),
+        const Text(
+          'คิวอาร์โค้ดชำระเงิน',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFB2B2B2),
+          ),
+        ),
         const SizedBox(height: 10),
         Container(
-          width: 150, height: 150,
-          decoration: BoxDecoration(color: _kQRCodePlaceholderColor, borderRadius: BorderRadius.circular(10.0), border: Border.all(color: Colors.grey.shade400, width: 2)),
-          child: const Center(child: Icon(Icons.qr_code_2, size: 100, color: Colors.black54)),
+          width: 150,
+          height: 150,
+          decoration: BoxDecoration(
+            color: _kQRCodePlaceholderColor,
+            borderRadius: BorderRadius.circular(10.0),
+            border: Border.all(color: Colors.grey.shade400, width: 2),
+          ),
+          child: const Center(
+            child: Icon(Icons.qr_code_2, size: 100, color: Colors.black54),
+          ),
         ),
       ],
     );
@@ -194,13 +279,20 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
       builder: (BuildContext context) {
         // Auto focus
         WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (pinController.text.isEmpty) FocusScope.of(context).requestFocus(pinFocusNode);
+          if (pinController.text.isEmpty)
+            FocusScope.of(context).requestFocus(pinFocusNode);
         });
 
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
           contentPadding: const EdgeInsets.all(24.0),
-          title: const Text('ยืนยันการชำระเงิน', textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          title: const Text(
+            'ยืนยันการชำระเงิน',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -213,27 +305,56 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 8),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 8,
+                ),
                 decoration: InputDecoration(
-                  counterText: "", filled: true, fillColor: const Color(0xFFF0F0F0),
-                  hintText: '●●●●●●', hintStyle: TextStyle(color: Colors.grey.shade400, letterSpacing: 5),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15.0), borderSide: BorderSide.none),
+                  counterText: "",
+                  filled: true,
+                  fillColor: const Color(0xFFF0F0F0),
+                  hintText: '●●●●●●',
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    letterSpacing: 5,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15.0),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
                 onSubmitted: (_) => _validateAndSubmit(context, pinController),
               ),
               const SizedBox(height: 20),
               SizedBox(
-                width: double.infinity, height: 50,
+                width: double.infinity,
+                height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: _kButtonGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kButtonGreen,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                   onPressed: () => _validateAndSubmit(context, pinController),
-                  child: const Text('ยืนยัน', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'ยืนยัน',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                child: const Text(
+                  'ยกเลิก',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
               ),
             ],
           ),
@@ -243,67 +364,84 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
   }
 
   // ★ ฟังก์ชันหลัก: เช็ค PIN -> สร้าง Model -> เรียก API
-  Future<void> _validateAndSubmit(BuildContext context, TextEditingController pinController) async {
-    // 1. ตรวจสอบ PIN กับ SharedPreferences
+  Future<void> _validateAndSubmit(
+    BuildContext dialogContext,
+    TextEditingController pinController,
+  ) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String savedPin = prefs.getString('pinCode') ?? ''; 
+    final String savedPin = prefs.getString('pinCode') ?? '';
     final int shopId = prefs.getInt('shopId') ?? 0;
 
     if (savedPin.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ไม่พบรหัส PIN กรุณา Login ใหม่')));
+      ScaffoldMessenger.of(dialogContext).showSnackBar(
+        const SnackBar(content: Text('ไม่พบรหัส PIN ในระบบ กรุณา Login ใหม่')),
+      );
       return;
     }
 
     if (pinController.text == savedPin) {
-      // ✅ PIN ถูกต้อง
-      Navigator.of(context).pop(); // ปิด Dialog PIN
-
-      // แสดง Loading
+      // 1. แสดง Loading (ใช้ dialogContext เพื่อเรียก)
       showDialog(
-        context: context,
+        context: dialogContext,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (BuildContext context) {
+          return const Center(child: CircularProgressIndicator());
+        },
       );
 
       try {
-        // 2. สร้าง Model Request
         final request = PayDebtRequest(
           shopId: shopId,
-          debtorId: widget.debtor?.debtorId ?? 0, // ดึง ID ลูกหนี้
+          debtorId: widget.debtor?.debtorId ?? 0,
           amountPaid: _amountPaid,
-          paymentMethod: _selectedMethod == PaymentMethod.cash ? 'จ่ายเงินสด' : 'โอนจ่าย',
-          payWith: _payerNameController.text, // เอามาจากช่อง "จ่ายกับ"
-          pinCode: pinController.text,        // เอามาจากรหัสที่เพิ่งกรอก
+          paymentMethod: _selectedMethod == PaymentMethod.cash
+              ? 'จ่ายเงินสด'
+              : 'โอนจ่าย',
+          payWith: _payerNameController.text,
+          pinCode: pinController.text,
         );
 
-        // 3. เรียก API ที่คุณเตรียมไว้
         final result = await ApiPayment.payDebt(request);
 
-        // ปิด Loading
-        Navigator.of(context).pop();
+        // --- จุดสำคัญที่แก้ไข ---
 
-        // 4. ตรวจสอบผลลัพธ์
-        if (result.containsKey('error')) {
-          // ❌ มี Error จาก Server
-          _showErrorSnackBar(context, result['error']);
-        } else {
+        // ปิด Loading ก่อน (ใช้ Navigator ตัวเดียวกับที่เปิด)
+        Navigator.of(dialogContext).pop();
+
+        if (result != null && !result.containsKey('error')) {
           // ✅ สำเร็จ
-          _showSuccessDialog(context);
+
+          // 2. ปิด Dialog กรอก PIN (สั่ง pop อีกครั้ง)
+          Navigator.of(dialogContext).pop();
+
+          // 3. เรียก Dialog สีเขียว
+          // (ใช้ 'context' เฉยๆ ซึ่งหมายถึง Context ของหน้าจอหลัก DebtPaymentScreenState)
+          if (mounted) {
+            _showSuccessDialog(context);
+          }
+        } else {
+          // ❌ มี Error จาก Server
+          String errorMsg = result != null
+              ? result['error'].toString()
+              : 'เกิดข้อผิดพลาดที่ไม่รู้จัก';
+          if (mounted) _showErrorSnackBar(context, errorMsg);
         }
-
       } catch (e) {
-        // ❌ Error การเชื่อมต่อ
-        Navigator.of(context).pop(); // ปิด Loading
-        _showErrorSnackBar(context, 'เกิดข้อผิดพลาด: $e');
+        // กรณี Error ก็ต้องปิด Loading ก่อน
+        Navigator.of(dialogContext).pop();
+        print("Error submit: $e");
+        if (mounted) _showErrorSnackBar(context, 'เชื่อมต่อล้มเหลว: $e');
       }
-
     } else {
       // ❌ PIN ผิด
       pinController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('รหัสไม่ถูกต้อง'), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating),
+      ScaffoldMessenger.of(dialogContext).showSnackBar(
+        const SnackBar(
+          content: Text('รหัส PIN ไม่ถูกต้อง'),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 1),
+        ),
       );
-      FocusScope.of(context).requestFocus();
     }
   }
 
@@ -313,31 +451,61 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
     );
   }
 
-  Future<void> _showSuccessDialog(BuildContext context) async {
+  Future<void> _showSuccessDialog(BuildContext parentContext) async {
     await showDialog(
-      context: context,
+      context: parentContext,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
+        // 1. ตั้งชื่อ context นี้ว่า dialogContext เพื่อไม่ให้ซ้ำกับ parentContext
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
           contentPadding: const EdgeInsets.all(24.0),
-          title: const Text('ชำระเงินสำเร็จ', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          title: const Text(
+            'ชำระเงินสำเร็จ',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Container(
-                decoration: const BoxDecoration(color: _kButtonGreen, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: _kButtonGreen,
+                  shape: BoxShape.circle,
+                ),
                 padding: const EdgeInsets.all(15.0),
                 child: const Icon(Icons.check, color: Colors.white, size: 50),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: _kButtonGreen, minimumSize: const Size(double.infinity, 50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                onPressed: () {
-                  Navigator.of(context).pop(); // ปิด Dialog
-                  Get.back(result: true); // กลับไปหน้า DebtLedger และรีเฟรช
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kButtonGreen,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () async {
+                  // 1. ปิด Dialog สีเขียว
+                  Navigator.of(dialogContext).pop();
+
+                  // 2. รอแป๊บนึงเพื่อให้ Animation จบ (ป้องกันบั๊ก)
+                  await Future.delayed(const Duration(milliseconds: 200));
+
+                  // 3. ปิดหน้าจอจ่ายเงิน กลับไปหน้า Ledger
+                  if (parentContext.mounted) {
+                    Navigator.of(parentContext).pop(true);
+                  } // ปิดหน้า DebtPaymentScreen พร้อมส่งค่า
                 },
-                child: const Text('ตกลง', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'ตกลง',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -351,9 +519,21 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: const Text('ชำระเงิน', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.black87)),
-        centerTitle: true, backgroundColor: _kBackgroundColor, elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'ชำระเงิน',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            color: Colors.black87,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: _kBackgroundColor,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
@@ -361,43 +541,87 @@ class _DebtPaymentScreenState extends State<DebtPaymentScreen> {
           children: [
             Row(
               children: [
-                Text(widget.debtor?.name ?? 'ไม่ระบุชื่อ', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  widget.debtor?.name ?? 'ไม่ระบุชื่อ',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const Spacer(),
-                Text('ค้าง ${_totalDebtAmount.toStringAsFixed(0)} บาท', style: const TextStyle(fontSize: 18, color: Colors.red, fontWeight: FontWeight.bold)),
+                Text(
+                  'ค้าง ${_totalDebtAmount.toStringAsFixed(0)} บาท',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),
             _buildPaymentMethodButtons(),
             const SizedBox(height: 30),
-            _buildPaymentDetailRow(label: 'จ่าย', value: _amountPaid.toString(), isInput: true, controller: _amountPaidController),
-            _buildPaymentDetailRow(label: 'เงินค้างชำระคงเหลือ', value: _remainingDebt.toString()),
+            _buildPaymentDetailRow(
+              label: 'จ่าย',
+              value: _amountPaid.toString(),
+              isInput: true,
+              controller: _amountPaidController,
+            ),
+            _buildPaymentDetailRow(
+              label: 'เงินค้างชำระคงเหลือ',
+              value: _remainingDebt.toString(),
+            ),
             _buildPaymentDetailRow(label: 'เงินทอน', value: _change.toString()),
             Divider(color: Colors.grey.shade400, thickness: 1),
-            _buildPaymentDetailRow(label: 'จ่ายกับ', value: _payerNameController.text, isAction: true, isInput: true, controller: _payerNameController),
+            _buildPaymentDetailRow(
+              label: 'จ่ายกับ',
+              value: _payerNameController.text,
+              isAction: true,
+              isInput: true,
+              controller: _payerNameController,
+            ),
             _buildQRCodeSection(),
-            
+
             // ปุ่มยืนยัน
             Padding(
               padding: const EdgeInsets.only(top: 40.0, bottom: 20.0),
               child: SizedBox(
-                height: 55, width: double.infinity,
+                height: 55,
+                width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                     if (_amountPaid <= 0) {
-                       _showErrorSnackBar(context, 'กรุณาระบุยอดเงินที่ชำระ');
-                       return;
-                     }
-                     _showPinInputDialog(context);
+                    if (_amountPaid <= 0) {
+                      _showErrorSnackBar(context, 'กรุณาระบุยอดเงินที่ชำระ');
+                      return;
+                    }
+                    _showPinInputDialog(context);
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: _kButtonGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)), elevation: 5),
-                  child: const Text('ยืนยันการชำระเงิน', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kButtonGreen,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    elevation: 5,
+                  ),
+                  child: const Text(
+                    'ยืนยันการชำระเงิน',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavBar(currentIndex: _selectedIndex, onTap: _onItemTapped),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
 }

@@ -82,6 +82,7 @@ class MyShopController extends GetxController {
     // 1. บันทึก shopId ลงเครื่อง เพื่อเอาไปใช้ในหน้าเพิ่มสินค้า
     await prefs.setInt('shopId', shop.shopId);
     await prefs.setString('shopName', shop.name);
+    await prefs.setString('pinCode', shop.pinCode ?? '');
 
     // 2. แสดงแจ้งเตือนเล็กน้อย
     Get.snackbar(
