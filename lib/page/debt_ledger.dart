@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:eazy_store/page/debtor_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -275,6 +276,30 @@ class _DebtLedgerScreenState extends State<DebtLedgerScreen> {
                         style: TextStyle(fontSize: 16, color: Colors.red),
                       ),
                     ],
+                  ),
+                  InkWell(
+                    // ครอบ Row ด้วย InkWell หรือ GestureDetector
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DebtorDetailScreen(
+                            debtor: debtor,
+                          ), // ส่งข้อมูลคนนั้นไป
+                        ),
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Text(
+                          'รายละเอียดเพิ่มเติม',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: const Color.fromARGB(255, 0, 119, 255),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
