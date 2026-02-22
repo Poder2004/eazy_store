@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // Imports ของโปรเจกต์ (เช็ค path ให้ตรงกับของคุณนะครับ)
 import 'package:eazy_store/page/homepage/home_page.dart'; 
-import '../../../model/request/create_shop_request.dart';
+import '../../../model/response/shop_response.dart';
 import '../../../api/api_shop.dart';
 import '../set_shop_pin_page.dart';
 import '../../../api/api_service_image.dart';
@@ -272,7 +272,8 @@ class CreateShopController extends GetxController {
           "${zipCodeController.text}";
 
       // --- สร้าง Request (ใส่ PIN ที่ได้มา) ---
-      CreateShopRequest request = CreateShopRequest(
+      ShopResponse request = ShopResponse(
+        shopId: 0,
         userId: userId,
         name: shopNameController.text,
         phone: shopPhoneController.text,

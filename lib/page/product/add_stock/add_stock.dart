@@ -25,7 +25,7 @@ class AddStockScreen extends StatelessWidget {
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'รับสินค้าเข้า',
+          'เพิ่มสต็อกสินค้า',
           style: GoogleFonts.prompt(
             fontWeight: FontWeight.bold,
             fontSize: 22,
@@ -38,10 +38,8 @@ class AddStockScreen extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: controller.handleClear,
-            icon: const Icon(
-              Icons.cleaning_services_outlined,
-              color: Colors.grey,
-            ),
+            icon: const Icon(Icons.refresh, color: Color.fromARGB(255, 147, 192, 43)),
+         
           ),
         ],
       ),

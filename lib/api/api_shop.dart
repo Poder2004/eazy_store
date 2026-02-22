@@ -1,17 +1,14 @@
-import 'package:eazy_store/model/request/shop_model.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../model/request/create_shop_request.dart';
-import 'package:eazy_store/config/app_config.dart';
 import '../model/response/shop_response.dart';
+import 'package:eazy_store/config/app_config.dart';
+
 
 class ApiShop {
   // ไม่ต้องรับ File แยกแล้ว เพราะมันอยู่ใน request object แล้ว
-  Future<bool> createShop(CreateShopRequest request) async {
-    final url = Uri.parse(
-      "${AppConfig.baseUrl}/api/shops",
-    ); // เช็ค path ให้ตรงกับ router go (/api/createShop หรือ /createShop)
+  Future<bool> createShop(ShopResponse request) async {
+    final url = Uri.parse("${AppConfig.baseUrl}/api/shops"); 
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -23,10 +20,17 @@ class ApiShop {
           "Content-Type": "application/json",
           if (token != null) "Authorization": "Bearer $token",
         },
-        body: request.toRawJson(), // ส่ง JSON ที่มี Base64 รูปภาพอยู่ข้างใน
+        // ✅ 3. ใช้ toRawJson() หรือ json.encode(request.toJson())
+        body: request.toRawJson(), 
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // หากสร้างสำเร็จ อาจจะดึงข้อมูลร้านค้าที่สร้างเสร็จแล้วเก็บลงเครื่อง
+        // เช่น เก็บ shopId ลง SharedPreferences
+        final responseData = json.decode(response.body);
+        if (responseData['shop_id'] != null) {
+           await prefs.setInt('shopId', responseData['shop_id']);
+        }
         return true;
       } else {
         print("Error API: ${response.statusCode} - ${response.body}");

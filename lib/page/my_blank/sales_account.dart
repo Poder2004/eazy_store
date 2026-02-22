@@ -242,13 +242,27 @@ class SalesAccountScreen extends StatelessWidget {
           icon: const Icon(Icons.chevron_left, color: _kTextMuted),
           onPressed: () => controller.navigatePeriod(-1),
         ),
-        Obx(
-          () => Text(
-            controller.getPeriodLabel(),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: _kTextDark,
+        // ✅ แก้ไขตรงนี้: เพิ่ม InkWell เพื่อให้กดเลือกวันที่ได้
+        InkWell(
+          onTap: () => controller.selectDate(Get.context!),
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Obx(
+                  () => Text(
+                    controller.getPeriodLabel(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _kTextDark,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                const Icon(Icons.calendar_month, size: 18, color: _kPrimaryBlue),
+              ],
             ),
           ),
         ),

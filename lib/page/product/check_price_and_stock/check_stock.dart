@@ -15,7 +15,7 @@ class StockController extends GetxController {
   var products = <ProductResponse>[].obs;
   var filteredProducts = <ProductResponse>[].obs;
   var selectedIndex = 0.obs;
-
+  var isAscending = true.obs;
   // Controller สำหรับช่องค้นหา เพื่อให้เราสั่งใส่ข้อความได้
   final TextEditingController searchCtrl = TextEditingController();
 
@@ -48,6 +48,7 @@ class StockController extends GetxController {
         list.sort((a, b) => a.stock.compareTo(b.stock));
 
         products.assignAll(list);
+        _applySortAndFilter();
         filteredProducts.assignAll(list);
       }
     } catch (e) {
@@ -62,8 +63,33 @@ class StockController extends GetxController {
     }
   }
 
+  void toggleSort() {
+    isAscending.value = !isAscending.value;
+    _applySortAndFilter();
+  }
+
+  void _applySortAndFilter() {
+    String query = searchCtrl.text.toLowerCase();
+
+    // กรองข้อมูลก่อน
+    var result = products.where((p) {
+      return p.name.toLowerCase().contains(query) ||
+          (p.barcode != null && p.barcode!.contains(query));
+    }).toList();
+
+    // แล้วจึงเรียงลำดับตามสถานะ isAscending
+    if (isAscending.value) {
+      result.sort((a, b) => a.stock.compareTo(b.stock)); // น้อยไปมาก
+    } else {
+      result.sort((a, b) => b.stock.compareTo(a.stock)); // มากไปน้อย
+    }
+
+    filteredProducts.assignAll(result);
+  }
+
   // 🔍 ค้นหาสินค้า
   void searchProduct(String query) {
+    _applySortAndFilter();
     if (query.isEmpty) {
       filteredProducts.assignAll(products);
     } else {
@@ -132,10 +158,73 @@ class CheckStockScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           children: [
-            // 🔍 ส่วนช่องค้นหา + ปุ่มสแกน
             _buildSearchBar(controller, primaryColor),
             const SizedBox(height: 15),
 
+            // 🏷️ ส่วนแสดงการเรียงลำดับแบบ Chip และ Switch ตามรูป
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // ฝั่งซ้าย: ปุ่มแสดงสถานะปัจจุบัน (คลิกเพื่อสลับได้ด้วย)
+                  InkWell(
+                    onTap: controller.toggleSort,
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.sort,
+                          color: Colors.blueGrey.shade700,
+                        ), // ไอคอนขีด
+                        const SizedBox(width: 8),
+                        const Text(
+                          "เรียงโดย:",
+                          style: TextStyle(fontSize: 16, color: Colors.black87),
+                        ),
+                        const SizedBox(width: 8),
+                        Obx(
+                          () => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25),
+                              border: Border.all(
+                                color: Colors.deepPurple.shade100,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  controller.isAscending.value
+                                      ? "สต็อก: น้อย ➡️ มาก"
+                                      : "สต็อก: มาก ➡️ น้อย",
+                                  style: const TextStyle(
+                                    color: Colors.purple,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 18,
+                                  color: Colors.purple,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                ],
+              ),
+            ),
+            const SizedBox(height: 15),
             // 📦 รายการสินค้า
             Expanded(
               child: Obx(() {
