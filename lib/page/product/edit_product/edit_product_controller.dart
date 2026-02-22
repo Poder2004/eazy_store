@@ -2,7 +2,8 @@
 import 'dart:io';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_service_image.dart';
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/request/product_request.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -20,7 +21,7 @@ class EditProductController extends GetxController {
   late TextEditingController unitCtrl;
 
   // ---------------- Data Variables ----------------
-  late Product originalProduct;
+  late ProductResponse originalProduct;
   var isLoading = false.obs;
 
   // 📷 ส่วนจัดการรูปภาพ
@@ -35,8 +36,8 @@ class EditProductController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    if (Get.arguments != null && Get.arguments is Product) {
-      originalProduct = Get.arguments as Product;
+    if (Get.arguments != null && Get.arguments is ProductResponse) {
+      originalProduct = Get.arguments as ProductResponse;
 
       // Setup ค่าเริ่มต้น
       nameCtrl = TextEditingController(text: originalProduct.name);
@@ -252,7 +253,7 @@ class EditProductController extends GetxController {
         updateData["img_product"] = newImageUrl;
       }
 
-      Product? updatedProduct = await ApiProduct.updateProduct(
+      ProductResponse? updatedProduct = await ApiProduct.updateProduct(
         originalProduct.productId!,
         updateData,
       );

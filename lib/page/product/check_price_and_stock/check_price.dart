@@ -1,6 +1,6 @@
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ----------------------------------------------------------------------
 class PriceController extends GetxController {
   var isLoading = true.obs;
-  var products = <Product>[].obs;
-  var filteredProducts = <Product>[].obs;
+  var products = <ProductResponse>[].obs;
+  var filteredProducts = <ProductResponse>[].obs;
   var selectedIndex = 2.obs; // หน้าเช็คราคาเป็น Index 2
 
   // เพิ่ม Controller สำหรับช่องค้นหา
@@ -39,7 +39,7 @@ class PriceController extends GetxController {
       int shopId = prefs.getInt('shopId') ?? 0;
 
       if (shopId != 0) {
-        List<Product> list = await ApiProduct.getProductsByShop(shopId);
+        List<ProductResponse> list = await ApiProduct.getProductsByShop(shopId);
 
         // 🔥 แก้ไขตรงนี้: กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true) มาแสดง
         list = list.where((p) => p.status == true).toList();
@@ -222,7 +222,7 @@ class CheckPriceScreen extends StatelessWidget {
   }
 
   // 📦 Widget Card แสดงราคา (เน้นราคาตัวใหญ่)
-  Widget _buildPriceCard(Product product, Color primaryColor) {
+  Widget _buildPriceCard(ProductResponse product, Color primaryColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(15),

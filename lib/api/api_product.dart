@@ -3,11 +3,12 @@ import 'package:eazy_store/model/request/category_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
-import '../model/request/product_model.dart';
+import '../model/request/product_request.dart';
+import '../model/response/product_response.dart';
 
 class ApiProduct {
   // ฟังก์ชันสำหรับบันทึกสินค้าใหม่
-  static Future<Map<String, dynamic>> createProduct(Product product) async {
+  static Future<Map<String, dynamic>> createProduct(ProductRequest product) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products');
 
     try {
@@ -31,7 +32,7 @@ class ApiProduct {
         return {
           "success": true,
           "message": responseData['message'],
-          "data": Product.fromJson(responseData['data']),
+          "data": ProductResponse.fromJson(responseData['data']),
         };
       } else {
         return {
@@ -67,7 +68,7 @@ class ApiProduct {
     }
   }
 
-  static Future<List<Product>> getProductsByShop(int shopId) async {
+  static Future<List<ProductResponse>> getProductsByShop(int shopId) async {
     // ส่ง shop_id ไปเป็น Query String
     final url = Uri.parse('${AppConfig.baseUrl}/api/products?shop_id=$shopId');
 
@@ -86,7 +87,7 @@ class ApiProduct {
       if (response.statusCode == 200) {
         List<dynamic> body = jsonDecode(response.body);
         // Map ข้อมูล JSON กลับเป็น List ของ Object Product
-        return body.map((item) => Product.fromJson(item)).toList();
+        return body.map((item) => ProductResponse.fromJson(item)).toList();
       } else {
         return [];
       }
@@ -98,7 +99,7 @@ class ApiProduct {
 
   // ค้นหาสินค้า (Search) ตาม Barcode หรือ Product Code
 
-  static Future<Product?> searchProduct(String keyword, int shopId) async {
+  static Future<ProductResponse?> searchProduct(String keyword, int shopId) async {
     // รับ shopId
     final url = Uri.parse(
       '${AppConfig.baseUrl}/api/products/search?keyword=$keyword&shop_id=$shopId',
@@ -118,7 +119,7 @@ class ApiProduct {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return Product.fromJson(data); // <--- เรียกใช้ Model ที่คุณเพิ่งเขียน
+        return ProductResponse.fromJson(data); // <--- เรียกใช้ Model ที่คุณเพิ่งเขียน
       } else {
         print("Product not found: ${response.body}");
         return null;
@@ -163,7 +164,7 @@ class ApiProduct {
   }
 
   // ✅ ใช้ฟังก์ชันนี้แทน (ส่ง JSON Update ปกติ)
-  static Future<Product?> updateProduct(
+  static Future<ProductResponse?> updateProduct(
     int productId,
     Map<String, dynamic> updateData,
   ) async {
@@ -184,7 +185,7 @@ class ApiProduct {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        return Product.fromJson(jsonResponse['data']);
+        return ProductResponse.fromJson(jsonResponse['data']);
       } else {
         print("Update failed: ${response.body}");
         return null;
