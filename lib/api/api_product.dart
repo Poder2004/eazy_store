@@ -8,7 +8,7 @@ import '../model/request/product_model.dart';
 class ApiProduct {
   // ฟังก์ชันสำหรับบันทึกสินค้าใหม่
   static Future<Map<String, dynamic>> createProduct(Product product) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/createProduct');
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products');
 
     try {
       // 1. ดึง Token จาก SharedPreferences
@@ -101,7 +101,7 @@ class ApiProduct {
   static Future<Product?> searchProduct(String keyword, int shopId) async {
     // รับ shopId
     final url = Uri.parse(
-      '${AppConfig.baseUrl}/api/product/search?keyword=$keyword&shop_id=$shopId',
+      '${AppConfig.baseUrl}/api/products/search?keyword=$keyword&shop_id=$shopId',
     );
 
     try {
@@ -131,7 +131,7 @@ class ApiProduct {
 
   // อัปเดตสต็อก (Update Stock)
   static Future<bool> updateStock(int productId, int amountToAdd) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/product/stock');
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/stock');
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -201,7 +201,7 @@ class ApiProduct {
   }) async {
     // สร้าง URL พื้นฐานที่มี shop_id
     String urlString =
-        '${AppConfig.baseUrl}/api/getNullBarcode?shop_id=$shopId';
+        '${AppConfig.baseUrl}/api/products/null-barcode?shop_id=$shopId';
 
     // ถ้ามีการส่ง categoryId มา (และไม่ใช่ค่าว่าง/0) ให้ต่อท้าย URL
     if (categoryId != null && categoryId != 0) {

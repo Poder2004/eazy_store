@@ -1,4 +1,4 @@
-import 'package:eazy_store/api/api_service.dart';
+import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/auth/forgot_password.dart';
 import 'package:eazy_store/auth/register.dart';
 import 'package:eazy_store/auth/verify_register.dart';
@@ -28,7 +28,7 @@ class LoginController extends GetxController {
       password: passwordController.text,
     );
 
-    var res = await ApiService.login(request);
+    var res = await ApiAuth.login(request);
     isLoading.value = false;
 
     if (res.token != null) {

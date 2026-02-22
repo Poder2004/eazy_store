@@ -11,7 +11,7 @@ class ApiSale {
       String? token = prefs.getString('token');
 
       final response = await http.post(
-        Uri.parse("${AppConfig.baseUrl}/api/createSale"), // ✅ ต่อ URL อัตโนมัติ
+        Uri.parse("${AppConfig.baseUrl}/api/sales"), // ✅ ต่อ URL อัตโนมัติ
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -39,7 +39,7 @@ class ApiSale {
 
       // ยิงไปที่ Path /api/CreateCreditSale ตามที่เราตั้งค่าไว้ใน Go
       final response = await http.post(
-        Uri.parse("${AppConfig.baseUrl}/api/createCreditSale"), 
+        Uri.parse("${AppConfig.baseUrl}/api/sales/credit"), 
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",

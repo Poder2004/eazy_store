@@ -10,7 +10,7 @@ class ApiShop {
   // ไม่ต้องรับ File แยกแล้ว เพราะมันอยู่ใน request object แล้ว
   Future<bool> createShop(CreateShopRequest request) async {
     final url = Uri.parse(
-      "${AppConfig.baseUrl}/api/createShop",
+      "${AppConfig.baseUrl}/api/shops",
     ); // เช็ค path ให้ตรงกับ router go (/api/createShop หรือ /createShop)
 
     try {
@@ -39,7 +39,7 @@ class ApiShop {
   }
 
   Future<List<ShopResponse>> getShops() async {
-    final url = Uri.parse("${AppConfig.baseUrl}/api/getShop");
+    final url = Uri.parse("${AppConfig.baseUrl}/api/shops");
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -49,15 +49,14 @@ class ApiShop {
         url,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $token", // ส่ง Token ไปด้วย
+          if (token != null) "Authorization": "Bearer $token",
         },
       );
 
       if (response.statusCode == 200) {
-        // แปลง JSON String เป็น List<ShopResponse>
         return shopResponseFromJson(response.body);
       } else {
-        // กรณี Error หรือ 404
+        print("API Error: ${response.statusCode} - ${response.body}");
         return [];
       }
     } catch (e) {
@@ -82,7 +81,7 @@ class ApiShop {
       }
 
       final url = Uri.parse(
-        "${AppConfig.baseUrl}/api/deleteShop/$shopId",
+        "${AppConfig.baseUrl}/api/shops/$shopId",
       ); // เช็ค URL ให้ตรงกับ Backend
 
       final response = await http.delete(
@@ -107,7 +106,7 @@ class ApiShop {
 
   // ฟังก์ชันแก้ไขร้านค้า
   Future<bool> updateShop(int shopId, Map<String, dynamic> data) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/updateShop/$shopId');
+    final url = Uri.parse('${AppConfig.baseUrl}/api/shops/$shopId');
 
     try {
       // --- เพิ่มส่วนนี้เข้ามาเหมือน createShop ---
@@ -137,47 +136,26 @@ class ApiShop {
     }
   }
 
-  // เปลี่ยนชื่อฟังก์ชันเป็น getCurrentShop เพื่อสื่อความหมายให้ชัดเจน
-  static Future<ShopModel?> getCurrentShop() async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/getShop');
-
+  // เปลี่ยนชื่อฟังก์ชันเป็น getCurrentShop 
+  Future<ShopResponse?> getCurrentShop() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('token');
-
-      // ✅ 1. ดึง ID ของร้านที่ User กำลังใช้งานอยู่
       int currentShopId = prefs.getInt('shopId') ?? 0;
 
-      // ถ้ายังไม่ได้เลือกร้าน หรือ ID เป็น 0 ให้จบการทำงานเลย
+      // ถ้ายังไม่มีการเลือกร้านค้า ให้จบการทำงาน
       if (currentShopId == 0) return null;
 
-      final response = await http.get(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      );
+      // ✅ ไปเรียกฟังก์ชัน getShops() ด้านบน เพื่อดึงลิสต์ร้านค้ามาทั้งหมด
+      List<ShopResponse> allShops = await getShops();
 
-      if (response.statusCode == 200) {
-        // Backend ส่งมาเป็น List ของร้านค้าทั้งหมดที่ User เป็นเจ้าของ
-        List<dynamic> jsonList = jsonDecode(response.body);
-
-        // ✅ 2. วนลูปหา Shop ที่ shop_id ตรงกับ currentShopId
-        for (var jsonItem in jsonList) {
-          ShopModel shop = ShopModel.fromJson(jsonItem);
-
-          if (shop.shopId == currentShopId) {
-            return shop; // เจอแล้ว! ส่งร้านนี้กลับไป
-          }
+      // ✅ กรองหาร้านที่ ID ตรงกับ currentShopId
+      for (var shop in allShops) {
+        if (shop.shopId == currentShopId) {
+          return shop; // เจอแล้ว ส่งกลับไปเลย
         }
-
-        // ถ้าวนจนจบแล้วไม่เจอ (กรณีผิดพลาด) อาจจะ return null
-      } else {
-        print("API Error: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print("Error fetching shop: $e");
+      print("Error in getCurrentShop: $e");
     }
     return null;
   }

@@ -1,4 +1,4 @@
-import 'package:eazy_store/api/api_service.dart';
+import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/auth/login.dart';
 import 'package:eazy_store/auth/verify_register.dart';
 import 'package:flutter/material.dart';
@@ -63,7 +63,7 @@ class SignupController extends GetxController {
       password: password,
     );
 
-    final response = await ApiService.register(request);
+    final response = await ApiAuth.register(request);
     isLoading.value = false;
 
     // 🔥 การจัดการ Response ตามเงื่อนไขที่คุณต้องการ

@@ -14,7 +14,7 @@ import 'package:eazy_store/config/app_config.dart'; // import config ของ�
 import 'package:eazy_store/model/request/login_request.dart';
 import 'package:eazy_store/model/response/login_response.dart';
 
-class ApiService {
+class ApiAuth {
   // ฟังก์ชัน Login
   // ฟังก์ชัน Login ที่ปรับปรุงให้รองรับการดึง Email เมื่อยังไม่ได้ยืนยันตัวตน
   static Future<LoginResponse> login(LoginRequest request) async {

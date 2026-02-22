@@ -17,7 +17,7 @@ class ApiDashboad {
 
       // ส่งวันที่ไปใน Query Parameter
       final Uri url = Uri.parse(
-        "${AppConfig.baseUrl}/api/sales/summary?shop_id=$shopId&start_date=$startDate&end_date=$endDate",
+        "${AppConfig.baseUrl}/api/dashboard/sales-summary?shop_id=$shopId&start_date=$startDate&end_date=$endDate",
       );
 
       final response = await http.get(

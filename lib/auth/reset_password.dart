@@ -1,6 +1,6 @@
 import 'package:eazy_store/auth/login.dart';
 import 'package:flutter/material.dart';
-import 'package:eazy_store/api/api_service.dart';
+import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/update_password_request.dart';
 import 'package:get/get.dart';
 
@@ -57,7 +57,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       otpCode: _otp,
       newPassword: _passController.text,
     );
-    final response = await ApiService.updatePassword(request);
+    final response = await ApiAuth.updatePassword(request);
     setState(() => _isLoading = false);
 
     if (response.error == null) {

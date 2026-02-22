@@ -7,7 +7,7 @@ import '../model/response/debtor_response.dart';
 
 class ApiDebtor {
   static Future<Map<String, dynamic>> createDebtor(DebtorRequest debtorData) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/createDebtor');
+    final url = Uri.parse('${AppConfig.baseUrl}/api/debtors');
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -56,7 +56,7 @@ class ApiDebtor {
       }
 
       // สร้าง URL พร้อม Query Parameters
-      final uri = Uri.parse('${AppConfig.baseUrl}/api/debtor/search');
+      final uri = Uri.parse('${AppConfig.baseUrl}/api/debtors/search');
       
       // ✅ ต้องใช้ key ว่า 'keyword' และ 'shop_id' ให้ตรงกับ c.Query() ใน Go
       final url = uri.replace(queryParameters: {
@@ -96,7 +96,7 @@ class ApiDebtor {
 
  static Future<List<DebtorResponse>> getDebtorsByShop(int shopId) async {
     // สร้าง URL: /api/debtor?shop_id=1
-    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtor?shop_id=$shopId');
+    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtors?shop_id=$shopId');
   
 
     try {
@@ -131,7 +131,7 @@ class ApiDebtor {
 
   static Future<Map<String, dynamic>?> getDebtorHistory(int debtorId) async {
     // สร้าง URL: /api/debtor/{id}/history
-    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtor/$debtorId/history');
+    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtors/$debtorId/history');
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();

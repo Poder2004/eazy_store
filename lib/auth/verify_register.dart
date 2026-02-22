@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:eazy_store/auth/login.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:eazy_store/api/api_service.dart';
+import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/verify_registration_request.dart';
 import 'package:eazy_store/model/request/change_email_verify_request.dart';
 
@@ -64,7 +64,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
   // ฟังก์ชันส่งรหัสใหม่ (จะทำงานเมื่อกดปุ่ม Resend และ Timer เป็น 0)
   void _resendCode() async {
     setState(() => _isLoading = true);
-    final res = await ApiService.changeEmailVerify(
+    final res = await ApiAuth.changeEmailVerify(
       ChangeEmailVerifyRequest(username: username, newEmail: email),
     );
     setState(() => _isLoading = false);
@@ -94,7 +94,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     if (otp.length < 6) return;
 
     setState(() => _isLoading = true);
-    final res = await ApiService.verifyRegistration(
+    final res = await ApiAuth.verifyRegistration(
       VerifyRegistrationRequest(email: email, otp: otp),
     );
 

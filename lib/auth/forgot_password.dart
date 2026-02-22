@@ -1,6 +1,6 @@
 import 'package:eazy_store/auth/verify_otp_page.dart';
 import 'package:flutter/material.dart';
-import 'package:eazy_store/api/api_service.dart';
+import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/reset_request.dart';
 import 'package:get/get.dart';
 
@@ -86,7 +86,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
     setState(() => _isLoading = true);
     final request = ResetRequest(email: _emailController.text.trim());
-    final response = await ApiService.requestResetOTP(request);
+    final response = await ApiAuth.requestResetOTP(request);
     setState(() => _isLoading = false);
 
     // 2. กรณีส่งสำเร็จ

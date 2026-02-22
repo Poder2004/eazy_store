@@ -14,7 +14,7 @@ class ApiPayment {
 
       // 2. ยิง API ไปที่ /api/paymentDebt
       final response = await http.post(
-        Uri.parse("${AppConfig.baseUrl}/api/paymentDebt"),
+        Uri.parse("${AppConfig.baseUrl}/api/payments"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token", // แนบ Token ไปด้วย

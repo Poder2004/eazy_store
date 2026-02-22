@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:eazy_store/auth/reset_password.dart';
 import 'package:flutter/material.dart';
-import 'package:eazy_store/api/api_service.dart';
+import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/reset_request.dart';
 import 'package:eazy_store/model/request/verify_otp_request.dart';
 import 'package:get/get.dart';
@@ -63,7 +63,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   // ฟังก์ชันขอส่งรหัส OTP อีกครั้ง
   void _handleResendOTP() async {
     setState(() => _isLoading = true);
-    final response = await ApiService.requestResetOTP(
+    final response = await ApiAuth.requestResetOTP(
       ResetRequest(email: _email),
     );
     setState(() => _isLoading = false);
@@ -91,7 +91,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     if (otp.length < 6) return;
 
     setState(() => _isLoading = true);
-    final response = await ApiService.verifyOTP(
+    final response = await ApiAuth.verifyOTP(
       VerifyOtpRequest(email: _email, otpCode: otp),
     );
     setState(() => _isLoading = false);

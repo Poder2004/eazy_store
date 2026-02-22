@@ -5,13 +5,13 @@ import 'package:eazy_store/api/api_sale.dart';
 import 'package:eazy_store/model/request/baskets_model.dart';
 import 'package:eazy_store/model/request/product_model.dart';
 import 'package:eazy_store/model/request/sales_model_request.dart';
-import 'package:eazy_store/model/request/shop_model.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
 import 'package:eazy_store/page/debt/debtSale/debt_sale.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:eazy_store/model/response/shop_response.dart';
 
 class CheckoutController extends GetxController {
   // 🛒 ตะกร้าสินค้า
@@ -139,7 +139,7 @@ class CheckoutController extends GetxController {
 
   Future<void> _fetchShopData() async {
     try {
-      ShopModel? shop = await ApiShop.getCurrentShop();
+      ShopResponse? shop = await ApiShop().getCurrentShop();
       if (shop != null && shop.imgQrcode.isNotEmpty) {
         shopQrCodeUrl.value = shop.imgQrcode;
       }
