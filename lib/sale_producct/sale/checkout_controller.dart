@@ -103,11 +103,34 @@ class CheckoutController extends GetxController {
     }
   }
 
+  Future<void> fetchFreshProducts() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId != 0) {
+        // ดึงข้อมูลใหม่จาก API
+        List<Product> list = await ApiProduct.getProductsByShop(shopId);
+
+        // กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true) มาใส่ในหน่วยความจำใหม่
+        allProducts = list.where((p) => p.status == true).toList();
+
+        // ถ้าผู้ใช้พิมพ์ข้อความค้นหาค้างไว้ ให้มันอัปเดตผลลัพธ์ด้วย
+        if (searchController.text.isNotEmpty) {
+          onSearchChanged(searchController.text);
+        }
+      }
+    } catch (e) {
+      print("Error fetching fresh products: $e");
+    }
+  }
+
   Future<void> _loadAllProducts() async {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
         List<Product> list = await ApiProduct.getProductsByShop(loadedShopId!);
-        allProducts = list;
+        // 🔥 แก้ไขตรงนี้: กรองเอาเฉพาะสินค้าที่ status == true (ไม่ได้ถูกซ่อน) มาแสดงเท่านั้น
+        allProducts = list.where((p) => p.status == true).toList();
       }
     } catch (e) {
       print("Error loading products: $e");

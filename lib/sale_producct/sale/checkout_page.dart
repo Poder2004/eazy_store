@@ -12,6 +12,9 @@ class CheckoutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final CheckoutController controller = Get.put(CheckoutController());
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchFreshProducts();
+    });
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(

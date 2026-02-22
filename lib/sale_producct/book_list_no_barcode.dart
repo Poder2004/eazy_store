@@ -92,6 +92,9 @@ class ManualListController extends GetxController {
       );
 
       var products = data
+          .where(
+            (item) => item['status'] == true,
+          ) // 🔥 กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true)
           .map(
             (item) => ProductItem(
               id: (item['product_id'] ?? "").toString(),
@@ -119,17 +122,23 @@ class ManualListController extends GetxController {
       final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(
         shopId,
       );
-      var products = data.map((item) {
-        return ProductItem(
-          id: (item['product_id'] ?? item['id'] ?? "").toString(),
-          name: item['name'] ?? "ไม่มีชื่อสินค้า",
-          sellPrice:
-              double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
-          category: item['category_name'] ?? "อื่นๆ",
-          categoryId: item['category_id'] ?? 0,
-          imgProduct: item['img_product'] ?? item['image'] ?? "",
-        );
-      }).toList();
+
+      var products = data
+          .where(
+            (item) => item['status'] == true,
+          ) // 🔥 กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true)
+          .map((item) {
+            return ProductItem(
+              id: (item['product_id'] ?? item['id'] ?? "").toString(),
+              name: item['name'] ?? "ไม่มีชื่อสินค้า",
+              sellPrice:
+                  double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
+              category: item['category_name'] ?? "อื่นๆ",
+              categoryId: item['category_id'] ?? 0,
+              imgProduct: item['img_product'] ?? item['image'] ?? "",
+            );
+          })
+          .toList();
 
       allProducts.assignAll(products);
       filterProducts();
@@ -156,7 +165,6 @@ class ManualListController extends GetxController {
     product.isSelected.value = !product.isSelected.value;
   }
 
-  // ✅ แก้ไข goToCheckout: ปรับ Navigation ใหม่เพื่อกันบัคจอดำและของหาย
   void goToCheckout() {
     final List<String> selectedIds = allProducts
         .where((p) => p.isSelected.value)
@@ -173,27 +181,18 @@ class ManualListController extends GetxController {
       return;
     }
 
-    // 🛡️ ขั้นตอนการจัดการ Controller และ Navigation
     if (Get.isRegistered<CheckoutController>()) {
       final checkoutCtrl = Get.find<CheckoutController>();
 
-      // 1. เพิ่มสินค้าลงตะกร้า (ใช้ฟังก์ชันที่แก้ให้เป็น async ในหน้า Checkout)
       checkoutCtrl.addItemsByIds(selectedIds);
-
-      // 2. ตั้งค่า Tab ให้เป็นหน้า Checkout (Index 2)
       checkoutCtrl.currentNavIndex.value = 2;
 
-      // 3. จัดการทิศทางกลับให้ปลอดภัย เพื่อไม่ให้เกิดจอดำ
       if (Get.previousRoute.contains('CheckoutPage')) {
-        // กรณีเปิดจากหน้า Checkout -> กลับไปที่หน้าเดิม
         Get.close(2);
       } else {
-        // กรณีเปิดจากหน้าหลัก (Home) -> ย้อนกลับไปหารูทแรกของแอป (Home)
-        // วิธีนี้ปลอดภัยกว่า Get.offAll เพราะไม่ล้าง Memory ของ Controller ที่เป็น permanent
         Get.until((route) => route.isFirst);
       }
     } else {
-      // กรณีฉุกเฉิน: Controller หาย ให้เปิดหน้า Checkout ใหม่พร้อมส่งค่า
       Get.offAll(
         () => const CheckoutPage(),
         arguments: {'selectedIds': selectedIds},

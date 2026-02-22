@@ -231,4 +231,36 @@ class ApiProduct {
       throw Exception("Error connecting to API: $e");
     }
   }
+
+  // ✅ ฟังก์ชันสำหรับลบสินค้า (Smart Delete)
+  static Future<Map<String, dynamic>> deleteProduct(int productId) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.delete(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": responseData['message'],
+          "status": responseData['status'], // 'deleted' หรือ 'hidden'
+        };
+      } else {
+        return {
+          "success": false,
+          "error": responseData['error'] ?? "ไม่สามารถลบสินค้าได้",
+        };
+      }
+    } catch (e) {
+      return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
+    }
+  }
 }

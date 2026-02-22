@@ -1,15 +1,14 @@
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/request/product_model.dart';
-import 'package:eazy_store/page/product/product_detail.dart';
+import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
-// ⚠️ อย่าลืม Import หน้าสแกนของคุณ
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ----------------------------------------------------------------------
-// 1. Controller
+// 1. Controller: จัดการ Logic การดึงข้อมูลและค้นหา
 // ----------------------------------------------------------------------
 class StockController extends GetxController {
   var isLoading = true.obs;
@@ -17,7 +16,7 @@ class StockController extends GetxController {
   var filteredProducts = <Product>[].obs;
   var selectedIndex = 0.obs;
 
-  // เพิ่ม Controller สำหรับช่องค้นหา เพื่อให้เราสั่งใส่ข้อความได้
+  // Controller สำหรับช่องค้นหา เพื่อให้เราสั่งใส่ข้อความได้
   final TextEditingController searchCtrl = TextEditingController();
 
   @override
@@ -26,8 +25,14 @@ class StockController extends GetxController {
     fetchStockData();
   }
 
+  @override
+  void onClose() {
+    searchCtrl.dispose();
+    super.onClose();
+  }
+
+  // 🚀 ดึงข้อมูลสินค้า
   Future<void> fetchStockData() async {
-    // ... (โค้ดเดิมของคุณ) ...
     isLoading.value = true;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -35,7 +40,13 @@ class StockController extends GetxController {
 
       if (shopId != 0) {
         List<Product> list = await ApiProduct.getProductsByShop(shopId);
+
+        // 🔥 กรองเอาเฉพาะสินค้าที่สถานะเป็น true (ไม่ได้ถูกซ่อน/ลบ) มาแสดง
+        list = list.where((p) => p.status == true).toList();
+
+        // เรียงลำดับตามจำนวนสต็อก จากน้อยไปมาก
         list.sort((a, b) => a.stock.compareTo(b.stock));
+
         products.assignAll(list);
         filteredProducts.assignAll(list);
       }
@@ -51,6 +62,7 @@ class StockController extends GetxController {
     }
   }
 
+  // 🔍 ค้นหาสินค้า
   void searchProduct(String query) {
     if (query.isEmpty) {
       filteredProducts.assignAll(products);
@@ -60,7 +72,7 @@ class StockController extends GetxController {
             (p) =>
                 p.name.toLowerCase().contains(query.toLowerCase()) ||
                 (p.barcode != null && p.barcode!.contains(query)),
-          ) // เพิ่มค้นหาด้วยบาร์โค้ด
+          )
           .toList();
       filteredProducts.assignAll(result);
     }
@@ -80,16 +92,10 @@ class StockController extends GetxController {
   }
 
   void changeTab(int index) => selectedIndex.value = index;
-
-  @override
-  void onClose() {
-    searchCtrl.dispose();
-    super.onClose();
-  }
 }
 
 // ----------------------------------------------------------------------
-// 2. The View
+// 2. The View: หน้าจอแสดงสต็อกสินค้า
 // ----------------------------------------------------------------------
 class CheckStockScreen extends StatelessWidget {
   const CheckStockScreen({super.key});
@@ -97,6 +103,7 @@ class CheckStockScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final StockController controller = Get.put(StockController());
+
     const Color primaryColor = Color(0xFF6B8E23);
     const Color warningColor = Color(0xFFFFCC00);
 
@@ -125,11 +132,11 @@ class CheckStockScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           children: [
-            _buildSearchBar(
-              controller,
-              primaryColor,
-            ), // ส่ง primaryColor ไปด้วย
+            // 🔍 ส่วนช่องค้นหา + ปุ่มสแกน
+            _buildSearchBar(controller, primaryColor),
             const SizedBox(height: 15),
+
+            // 📦 รายการสินค้า
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
@@ -137,6 +144,7 @@ class CheckStockScreen extends StatelessWidget {
                     child: CircularProgressIndicator(color: primaryColor),
                   );
                 }
+
                 if (controller.filteredProducts.isEmpty) {
                   return const Center(
                     child: Text("ไม่พบข้อมูลสินค้าในร้านนี้"),
@@ -149,12 +157,18 @@ class CheckStockScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final product = controller.filteredProducts[index];
                     return InkWell(
-                      onTap: () {
-                        Get.to(
-                          () => ProductDetailScreen(),
+                      onTap: () async {
+                        // 1. นำทางไปหน้า Detail และ "รอ" ผลลัพธ์กลับมา
+                        var result = await Get.to(
+                          () => const ProductDetailScreen(),
                           arguments: product,
                           transition: Transition.rightToLeft,
                         );
+
+                        // 2. ถ้าย้อนกลับมาแล้วมีการแก้ไข หรือลบ (result == true) ให้รีเฟรชข้อมูลสต็อกใหม่
+                        if (result == true) {
+                          controller.fetchStockData();
+                        }
                       },
                       borderRadius: BorderRadius.circular(15),
                       child: _buildProductCard(product, warningColor),
@@ -191,10 +205,11 @@ class CheckStockScreen extends StatelessWidget {
         ],
       ),
       child: TextField(
-        controller: controller.searchCtrl, // ผูก Controller
+        controller: controller.searchCtrl,
         onChanged: controller.searchProduct,
         decoration: InputDecoration(
           hintText: 'ค้นหาชื่อสินค้า หรือ บาร์โค้ด...',
+          hintStyle: const TextStyle(color: Colors.grey),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
           // ✨ เพิ่มปุ่มสแกนด้านขวา
           suffixIcon: IconButton(
@@ -209,7 +224,6 @@ class CheckStockScreen extends StatelessWidget {
   }
 
   Widget _buildProductCard(Product product, Color warningColor) {
-    // ... (ส่วนนี้เหมือนเดิมเป๊ะๆ ไม่ต้องแก้) ...
     final bool isLowStock = product.stock <= 10;
     final bool isOutOfStock = product.stock == 0;
 
