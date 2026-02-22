@@ -26,44 +26,61 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
     _fetchHistory();
   }
 
-  // จำลองการดึงข้อมูลประวัติ (เปลี่ยนเป็น API จริงของคุณตรงนี้)
   Future<void> _fetchHistory() async {
     setState(() => _isLoading = true);
     try {
-      // final result = await ApiDebtor.getHistory(_currentDebtor.id); // เรียก API จริง
-      
-      // ★ Mock Data (สมมติว่าได้ข้อมูลมาแบบนี้) ★
-      await Future.delayed(const Duration(seconds: 1)); 
-      final mockData = [
-        DebtorHistoryResponse(
-          orderId: 101,
-          date: "15 ต.ค. 2023 14:30",
-          totalAmount: 500.0,
-          paidAmount: 200.0,
-          remainingAmount: 300.0,
-          items: [
-            DebtorHistoryItem(name: "ปุ๋ยสูตรเสมอ", qty: 1, price: 450),
-            DebtorHistoryItem(name: "ถุงมือผ้า", qty: 2, price: 25),
-          ],
-        ),
-        DebtorHistoryResponse(
-          orderId: 99,
-          date: "10 ต.ค. 2023 09:15",
-          totalAmount: 1200.0,
-          paidAmount: 0.0,
-          remainingAmount: 1200.0,
-          items: [
-            DebtorHistoryItem(name: "อาหารไก่", qty: 2, price: 600),
-          ],
-        ),
-      ];
-      
-      setState(() {
-        _historyList = mockData;
-        _isLoading = false;
-      });
+      // เรียก API โดยส่ง ID ลูกหนี้ (แก้ _currentDebtor.debtorId ให้ตรงกับชื่อตัวแปรใน Model ของคุณ เช่น .id หรือ .debtorId)
+      final result = await ApiDebtor.getDebtorHistory(_currentDebtor.debtorId!); 
+
+      if (result != null) {
+        
+        // 1. (Optional) อัปเดตข้อมูลลูกหนี้ล่าสุด เผื่อมีการเปลี่ยนแปลงยอดหนี้จากหน้าอื่น
+        setState(() {
+           // จำเป็นต้องสร้างเมธอด copyWith ใน DebtorResponse หรืออัปเดตค่าตรงๆ ถ้าทำได้
+           // _currentDebtor.currentDebt = double.parse(result['current_debt'].toString());
+        });
+
+        // 2. ดึง List ประวัติบิลออกมา
+        List<dynamic> rawHistories = result['histories'] ?? [];
+
+        // 3. แปลง JSON ให้กลายเป็น List<DebtorHistoryResponse>
+        List<DebtorHistoryResponse> fetchedHistory = rawHistories.map((bill) {
+          
+          // แปลงรายการสินค้าในบิล
+          List<dynamic> rawItems = bill['items'] ?? [];
+          List<DebtorHistoryItem> itemsList = rawItems.map((item) {
+            return DebtorHistoryItem(
+              name: item['product_name'] ?? 'ไม่ทราบชื่อ',
+              qty: item['amount'] ?? 0,
+              // ใช้ .toString() แล้ว parse ป้องกัน Error กรณี API ส่งมาเป็น int หรือ double
+              price: double.parse(item['total_price'].toString()), 
+            );
+          }).toList();
+
+          // ประกอบร่างข้อมูลบิล 1 บิล
+          return DebtorHistoryResponse(
+            orderId: bill['sale_id'],
+            date: bill['created_at'],
+            totalAmount: double.parse(bill['net_price'].toString()),
+            paidAmount: double.parse(bill['paid'].toString()),
+            remainingAmount: double.parse(bill['remaining'].toString()),
+            items: itemsList,
+          );
+          
+        }).toList();
+
+        // 4. อัปเดต State เพื่อให้หน้าจอแสดงผล
+        setState(() {
+          _historyList = fetchedHistory;
+          _isLoading = false;
+        });
+
+      } else {
+        // กรณีเรียก API แล้วได้ค่า null (error)
+        setState(() => _isLoading = false);
+      }
     } catch (e) {
-      print(e);
+      print("Error fetching history: $e");
       setState(() => _isLoading = false);
     }
   }
@@ -324,7 +341,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text("${item.name} x${item.qty}"),
+                          Text("${item.name} จำนวน ${item.qty} "),
                           Text("${item.price * item.qty}"),
                         ],
                       ),

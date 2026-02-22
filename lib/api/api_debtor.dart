@@ -128,4 +128,37 @@ class ApiDebtor {
       return []; // คืนค่าว่างกรณี error กันแอปเด้ง
     }
   }
+
+  static Future<Map<String, dynamic>?> getDebtorHistory(int debtorId) async {
+    // สร้าง URL: /api/debtor/{id}/history
+    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtor/$debtorId/history');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      print("Calling API: $url"); // Log ดู URL
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // API ส่งข้อมูลกลับมาเป็น Object {} ของลูกหนี้พร้อมประวัติ
+        // เรา decode เป็น Map<String, dynamic> แล้วส่งกลับไปให้ UI ใช้ได้เลย
+        return jsonDecode(response.body);
+      } else {
+        // กรณี Error อื่นๆ เช่น 400, 404, 500
+        print("API Error: ${response.statusCode} - ${response.body}");
+        return null; // คืนค่า null เพื่อบอก UI ว่าโหลดไม่สำเร็จ
+      }
+    } catch (e) {
+      print("Exception in getDebtorHistory: $e");
+      return null;
+    }
+  }
 }
