@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
 
 class ApiDashboad {
-  // ✅ ฟังก์ชันใหม่ สำหรับดึงข้อมูลสรุปยอดขาย
+  // ✅ ฟังก์ชัน สำหรับดึงข้อมูลสรุปยอดขาย วัน เดือน ปี
   static Future<SalesSummaryModel?> getSalesSummary(
     int shopId,
     String startDate,
