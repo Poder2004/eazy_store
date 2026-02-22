@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import '../model/response/debtor_response.dart';
 import '../model/request/debtor_history_model.dart'; // import model ที่เพิ่งสร้าง
-// import '../api/api_debtor.dart'; // อย่าลืม import API จริงของคุณ
+import '../api/api_debtor.dart'; // อย่าลืม import API จริงของคุณ
 
 class DebtorDetailScreen extends StatefulWidget {
   final DebtorResponse debtor;
