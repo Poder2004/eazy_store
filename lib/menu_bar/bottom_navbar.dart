@@ -1,5 +1,5 @@
 import 'package:eazy_store/homepage/home_page.dart';
-import 'package:eazy_store/page/debt_ledger.dart';
+import 'package:eazy_store/page/debt/debtLedger/debt_ledger.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart'; // ตรวจสอบ path นี้ให้ตรงด้วยนะครับ
 import 'package:eazy_store/page/my_blank/sales_account_controller.dart';
 import 'package:eazy_store/sale_producct/sale/checkout_controller.dart';
@@ -146,7 +146,7 @@ class BottomNavBar extends StatelessWidget {
       }
       Get.to(() => const SalesAccountScreen());
     } else if (index == 3) {
-      Get.to(() => const DebtLedgerScreen());
+      Get.to(() => DebtLedgerScreen());
     }
   }
 

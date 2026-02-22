@@ -5,22 +5,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 // --- Imports ---
-import '../sale_producct/sale/checkout_page.dart';
-import 'package:eazy_store/page/debt_register.dart';
-import '../api/api_debtor.dart';
-import '../model/response/debtor_response.dart';
-import '../api/api_sale.dart';
-import '../model/request/sales_model_request.dart';
+import '../../sale_producct/sale/checkout_page.dart';
+import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
+import '../../api/api_debtor.dart';
+import '../../model/response/debtor_response.dart';
+import '../../api/api_sale.dart';
+import '../../model/request/sales_model_request.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class DebtPage extends StatefulWidget {
-  const DebtPage({super.key});
+class DebtSalePage extends StatefulWidget {
+  const DebtSalePage({super.key});
 
   @override
-  State<DebtPage> createState() => _DebtPageState();
+  State<DebtSalePage> createState() => _DebtPageState();
 }
 
-class _DebtPageState extends State<DebtPage> {
+class _DebtPageState extends State<DebtSalePage> {
   // --- 1. Controller ประจำหน้านี้ ---
   final TextEditingController _debtorNameController = TextEditingController();
   final TextEditingController _debtorPhoneController = TextEditingController();
