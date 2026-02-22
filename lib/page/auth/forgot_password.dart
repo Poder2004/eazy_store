@@ -1,4 +1,4 @@
-import 'package:eazy_store/auth/verify_otp_page.dart';
+import 'package:eazy_store/page/auth/verify_otp_page.dart';
 import 'package:flutter/material.dart';
 import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/reset_request.dart';

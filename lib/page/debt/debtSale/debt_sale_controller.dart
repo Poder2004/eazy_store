@@ -8,8 +8,8 @@ import '../../../api/api_debtor.dart';
 import '../../../api/api_sale.dart';
 import '../../../model/request/sales_model_request.dart';
 import '../../../model/response/debtor_response.dart';
-import '../../../sale_producct/sale/checkout_controller.dart';
-import '../../../homepage/home_page.dart';
+import '../../sale_producct/sale/checkout_controller.dart';
+import '../../homepage/home_page.dart';
 
 class DebtSaleController extends GetxController {
   // --- Controllers สำหรับ TextFields ---

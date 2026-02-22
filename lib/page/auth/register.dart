@@ -1,6 +1,6 @@
 import 'package:eazy_store/api/api_auth.dart';
-import 'package:eazy_store/auth/login.dart';
-import 'package:eazy_store/auth/verify_register.dart';
+import 'package:eazy_store/page/auth/login.dart';
+import 'package:eazy_store/page/auth/verify_register.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';

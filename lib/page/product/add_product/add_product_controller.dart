@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_service_image.dart';
-import 'package:eazy_store/homepage/home_page.dart';
+import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/model/request/product_model.dart';
 import 'package:flutter/material.dart';

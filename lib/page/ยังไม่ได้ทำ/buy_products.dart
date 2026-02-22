@@ -1,4 +1,4 @@
-import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/%E0%B8%A2%E0%B8%B1%E0%B8%87%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%97%E0%B8%B3/order_list.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_core/src/get_main.dart';

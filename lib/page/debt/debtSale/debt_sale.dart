@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 // --- Imports ---
-import '../../../sale_producct/sale/checkout_controller.dart';
+import '../../sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
 import 'debt_sale_controller.dart';
 

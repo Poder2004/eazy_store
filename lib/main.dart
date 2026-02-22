@@ -1,5 +1,5 @@
-import 'package:eazy_store/auth/login.dart';
-import 'package:eazy_store/homepage/home_page.dart';
+import 'package:eazy_store/page/auth/login.dart';
+import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart'; // 1. ต้องเพิ่ม Import นี้ครับ
 

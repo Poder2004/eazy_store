@@ -7,7 +7,7 @@ import 'package:eazy_store/model/request/product_model.dart';
 import 'package:eazy_store/model/request/sales_model_request.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
 import 'package:eazy_store/page/debt/debtSale/debt_sale.dart';
-import 'package:eazy_store/sale_producct/scan_barcode.dart';
+import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
