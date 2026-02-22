@@ -1,11 +1,14 @@
+import 'package:eazy_store/api/api_dashboad.dart'; // ✅ อย่าลืมเช็ค Path
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
-import 'package:eazy_store/page/%E0%B8%A2%E0%B8%B1%E0%B8%87%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%97%E0%B8%B3/buy_products.dart';
+
 import 'package:eazy_store/page/product/check_price_and_stock/check_price.dart';
 import 'package:eazy_store/page/product/check_price_and_stock/check_stock.dart';
+import 'package:eazy_store/page/wait_coming/buy_products.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart'; // ✅ ต้องใช้ intl สำหรับจัด Format ตัวเลขและวันที่
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ----------------------------------------------------------------------
@@ -15,8 +18,10 @@ class HomeController extends GetxController {
   var currentIndex = 0.obs;
   var shopName = "กำลังโหลด...".obs;
   var shopId = 0.obs;
-  var dailyTotal =
-      "12,450.00".obs; // ตัวอย่างยอดขาย (สามารถดึงจาก API ได้ในอนาคต)
+
+  // ตัวแปรสำหรับยอดขาย
+  var dailyTotal = "0".obs;
+  var isSalesLoading = true.obs; // เช็คสถานะตอนกำลังโหลด API
 
   @override
   void onInit() {
@@ -30,6 +35,40 @@ class HomeController extends GetxController {
     shopId.value = prefs.getInt('shopId') ?? 0;
     shopName.value = prefs.getString('shopName') ?? "ยังไม่ได้เลือกร้าน";
     print("🏠 ปัจจุบันจัดการร้าน: ${shopName.value} (ID: ${shopId.value})");
+
+    // โหลดข้อมูลร้านเสร็จแล้ว ให้เรียกยอดขายของร้านนี้ต่อเลย
+    if (shopId.value != 0) {
+      fetchTodaySales();
+    }
+  }
+
+  // ✨ ฟังก์ชันใหม่: ดึงยอดขายของ "วันนี้"
+  Future<void> fetchTodaySales() async {
+    isSalesLoading.value = true;
+    try {
+      // หาวันที่วันนี้ในรูปแบบ yyyy-MM-dd
+      DateTime now = DateTime.now();
+      String todayStr = DateFormat('yyyy-MM-dd').format(now);
+
+      // เรียก API (ส่ง start_date และ end_date เป็นวันนี้ทั้งคู่)
+      final summary = await ApiDashboad.getSalesSummary(
+        shopId.value,
+        todayStr,
+        todayStr,
+      );
+
+      if (summary != null) {
+        // จัด Format ตัวเลขให้มีลูกน้ำ เช่น 12,450
+        dailyTotal.value = NumberFormat('#,##0').format(summary.sales);
+      } else {
+        dailyTotal.value = "0";
+      }
+    } catch (e) {
+      print("Error fetching today sales: $e");
+      dailyTotal.value = "0";
+    } finally {
+      isSalesLoading.value = false;
+    }
   }
 
   void changeTab(int index) {
@@ -52,58 +91,75 @@ class HomePage extends StatelessWidget {
 
     final HomeController controller = Get.put(HomeController());
 
+    // 🔥 สั่งโหลดข้อมูลใหม่ทุกครั้งที่ผู้ใช้เข้าหน้านี้ (เผื่อเพิ่งขายของเสร็จแล้วกดกลับมาหน้าหลัก)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.shopId.value != 0) {
+        controller.fetchTodaySales();
+      }
+    });
+
     return Scaffold(
       backgroundColor: scaffoldBgColor,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // --- 1. ส่วน Header (ชื่อร้านที่ดึงมาจาก SharedPreferences) ---
-            _buildHeader(context, controller, headerBgColor: headerBgColor),
+      body: RefreshIndicator(
+        // เลื่อนจอลงเพื่อดึงข้อมูลใหม่แบบ Manual
+        onRefresh: () async => controller.fetchTodaySales(),
+        color: headerBgColor,
+        child: SingleChildScrollView(
+          physics:
+              const AlwaysScrollableScrollPhysics(), // บังคับให้ Scroll ได้ตลอดเพื่อใช้ RefreshIndicator
+          child: Column(
+            children: [
+              // --- 1. ส่วน Header (ชื่อร้านที่ดึงมาจาก SharedPreferences) ---
+              _buildHeader(context, controller, headerBgColor: headerBgColor),
 
-            // --- 2. ส่วนเมนูรายการ ---
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Column(
-                children: [
-                  _buildMenuTile(
-                    icon: Icons.add_circle_outline,
-                    iconColor: iconColor,
-                    title: "เพิ่มสินค้า",
-                    subtitle: "สร้างรายการสินค้าใหม่สำหรับร้านนี้",
-                    onTap: () => Get.to(() => const AddProductScreen()),
-                  ),
-                  _buildMenuTile(
-                    icon: Icons.inventory_2_outlined,
-                    iconColor: Colors.blue.shade600,
-                    title: "เพิ่มสต็อกสินค้า",
-                    subtitle: "เติมจำนวนสินค้าในคลัง",
-                    onTap: () => Get.to(() => const AddStockScreen()),
-                  ),
-                  _buildMenuTile(
-                    icon: Icons.local_offer_outlined,
-                    iconColor: Colors.orange.shade700,
-                    title: "เช็คราคาสินค้า",
-                    subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
-                    onTap: () => Get.to(() => const CheckPriceScreen()),
-                  ),
-                  _buildMenuTile(
-                    icon: Icons.fact_check_outlined,
-                    iconColor: Colors.purple.shade600,
-                    title: "เช็คสต็อกสินค้า",
-                    subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
-                    onTap: () => Get.to(() => const CheckStockScreen()),
-                  ),
-                  _buildMenuTile(
-                    icon: Icons.receipt_long,
-                    iconColor: Colors.teal.shade500,
-                    title: "สั่งซื้อสินค้า",
-                    subtitle: "รายการจัดซื้อและประวัติการสั่ง",
-                    onTap: () => Get.to(() => const BuyProductsScreen()),
-                  ),
-                ],
+              // --- 2. ส่วนเมนูรายการ ---
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 20,
+                ),
+                child: Column(
+                  children: [
+                    _buildMenuTile(
+                      icon: Icons.add_circle_outline,
+                      iconColor: iconColor,
+                      title: "เพิ่มสินค้า",
+                      subtitle: "สร้างรายการสินค้าใหม่สำหรับร้านนี้",
+                      onTap: () => Get.to(() => const AddProductScreen()),
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.inventory_2_outlined,
+                      iconColor: Colors.blue.shade600,
+                      title: "เพิ่มสต็อกสินค้า",
+                      subtitle: "เติมจำนวนสินค้าในคลัง",
+                      onTap: () => Get.to(() => const AddStockScreen()),
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.local_offer_outlined,
+                      iconColor: Colors.orange.shade700,
+                      title: "เช็คราคาสินค้า",
+                      subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
+                      onTap: () => Get.to(() => const CheckPriceScreen()),
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.fact_check_outlined,
+                      iconColor: Colors.purple.shade600,
+                      title: "เช็คสต็อกสินค้า",
+                      subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
+                      onTap: () => Get.to(() => const CheckStockScreen()),
+                    ),
+                    _buildMenuTile(
+                      icon: Icons.receipt_long,
+                      iconColor: Colors.teal.shade500,
+                      title: "สั่งซื้อสินค้า",
+                      subtitle: "รายการจัดซื้อและประวัติการสั่ง",
+                      onTap: () => Get.to(() => const BuyProductsScreen()),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       // --- 3. Bottom Navigation Bar ---
@@ -146,7 +202,6 @@ class HomePage extends StatelessWidget {
                   "ยินดีต้อนรับเข้าสู่",
                   style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
-                // ✨ แสดงชื่อร้านค้าที่เลือกมา
                 Obx(
                   () => Text(
                     controller.shopName.value,
@@ -207,16 +262,32 @@ class HomePage extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Obx(
-                () => Text(
+              Obx(() {
+                // ถ้ากำลังโหลด API ให้โชว์วงกลมหมุนเล็กๆ แทนตัวเลขชั่วคราว
+                if (controller.isSalesLoading.value) {
+                  return const Padding(
+                    padding: EdgeInsets.only(bottom: 4.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFFE55D30),
+                      ),
+                    ),
+                  );
+                }
+
+                // โหลดเสร็จแล้วโชว์ตัวเลข
+                return Text(
                   "฿ ${controller.dailyTotal.value}",
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2D2D2D),
                   ),
-                ),
-              ),
+                );
+              }),
               const Spacer(),
               _buildSmallBar(25, Colors.grey.shade200),
               _buildSmallBar(45, Colors.red.shade300),
