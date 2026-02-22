@@ -1,14 +1,12 @@
+import 'package:eazy_store/sale_producct/sale/checkout_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ✅ Import หน้า Checkout เพื่อเข้าถึง CheckoutController
-import 'package:eazy_store/sale_producct/checkout_page.dart';
+import 'package:eazy_store/sale_producct/sale/checkout_page.dart';
 
-// ----------------------------------------------------------------------
-// 1. Model
-// ----------------------------------------------------------------------
 class ProductItem {
   final String id;
   final String name;

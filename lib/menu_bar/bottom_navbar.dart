@@ -2,7 +2,8 @@ import 'package:eazy_store/homepage/home_page.dart';
 import 'package:eazy_store/page/debt_ledger.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart'; // ตรวจสอบ path นี้ให้ตรงด้วยนะครับ
 import 'package:eazy_store/page/my_blank/sales_account_controller.dart';
-import 'package:eazy_store/sale_producct/checkout_page.dart';
+import 'package:eazy_store/sale_producct/sale/checkout_controller.dart';
+import 'package:eazy_store/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
