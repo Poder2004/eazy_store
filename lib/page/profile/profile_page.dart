@@ -1,8 +1,10 @@
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'profile_controller.dart'; // ✅ Import Controller ที่แยกไว้
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   final Color primaryColor = const Color(0xFF4F46E5);
   final Color dangerColor = const Color(0xFFE11D48);
@@ -10,6 +12,14 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ เรียกใช้งาน Controller
+    final ProfileController controller = Get.put(ProfileController());
+
+    // 🔥 โหลดข้อมูลใหม่ทุกครั้งที่เปิดหน้า เผื่อมีการสลับร้าน
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadProfileData();
+    });
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -41,78 +51,87 @@ class ProfilePage extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              onPressed: () {},
+              onPressed: controller.goToEditProfile, // ✅ ผูกฟังก์ชัน
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileHeader(),
-            const SizedBox(height: 36),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'CURRENT STORE',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.blueGrey.shade400,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: () {},
-                  icon: Icon(
-                    Icons.swap_horiz_rounded,
-                    size: 18,
-                    color: primaryColor,
-                  ),
-                  label: Text(
-                    'Switch Store',
+      body: RefreshIndicator(
+        onRefresh: controller.loadProfileData, // ดึงจอลงเพื่อโหลดข้อมูลใหม่ได้
+        color: primaryColor,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildProfileHeader(controller),
+              const SizedBox(height: 36),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'CURRENT STORE',
                     style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.blueGrey.shade400,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: controller.switchStore,
+                    icon: Icon(
+                      Icons.swap_vert_rounded,
+                      size: 18,
                       color: primaryColor,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                    ),
+                    label: Text(
+                      'Switch Store',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: primaryColor.withOpacity(
+                        0.05,
+                      ), // มีพื้นหลังจางๆ
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildStoreCard(),
-            const SizedBox(height: 36),
-            Text(
-              'PREFERENCES',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: Colors.blueGrey.shade400,
-                letterSpacing: 1.2,
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            _buildActionMenu(),
-          ],
+              const SizedBox(height: 12),
+              _buildStoreCard(controller),
+              const SizedBox(height: 36),
+              Text(
+                'PREFERENCES',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.blueGrey.shade400,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildActionMenu(controller),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomNavBar(currentIndex: 4, onTap: (index) {}),
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(ProfileController controller) {
     return Row(
       children: [
         Stack(
@@ -127,16 +146,25 @@ class ProfilePage extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
               ),
-              child: const CircleAvatar(
-                radius: 36,
-                backgroundColor: Color(0xFF1E293B),
-                child: Text(
-                  'SM',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+              child: Obx(
+                () => CircleAvatar(
+                  radius: 36,
+                  backgroundColor: const Color(0xFF1E293B),
+                  // ✨ ถ้ามี URL รูปภาพให้โชว์รูป
+                  backgroundImage: controller.userImage.value.isNotEmpty
+                      ? NetworkImage(controller.userImage.value)
+                      : null,
+                  // ✨ ถ้าไม่มีรูปภาพให้โชว์ตัวย่อชื่อ
+                  child: controller.userImage.value.isEmpty
+                      ? Text(
+                          controller.userInitials.value,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -160,12 +188,16 @@ class ProfilePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Sarah Mitchell',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
+              Obx(
+                () => Text(
+                  controller.userName.value, // ✅ ดึงชื่อจริงมาแสดง
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(height: 4),
@@ -175,12 +207,14 @@ class ProfilePage extends StatelessWidget {
                   color: Colors.blueGrey.shade100.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  'Super Admin',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blueGrey.shade700,
+                child: Obx(
+                  () => Text(
+                    controller.userRole.value, // ✅ ดึงตำแหน่ง
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blueGrey.shade700,
+                    ),
                   ),
                 ),
               ),
@@ -191,7 +225,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStoreCard() {
+  Widget _buildStoreCard(ProfileController controller) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -209,28 +243,44 @@ class ProfilePage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'DL',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+              Obx(
+                () => Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(14),
+                    // ✨ ถ้าร้านมี URL รูปภาพให้โชว์เป็นพื้นหลัง
+                    image: controller.shopImage.value.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(controller.shopImage.value),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
+                  alignment: Alignment.center,
+                  // ✨ ถ้าไม่มีรูปร้านให้โชว์ตัวอักษรแทน
+                  child: controller.shopImage.value.isEmpty
+                      ? Text(
+                          controller.shopName.value.length >= 2
+                              ? controller.shopName.value
+                                    .substring(0, 2)
+                                    .toUpperCase()
+                              : "SH",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(width: 16),
@@ -238,12 +288,16 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'สาขากลางเมือง',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
+                    Obx(
+                      () => Text(
+                        controller.shopName.value, // ✅ ดึงชื่อร้านค้า
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -255,11 +309,19 @@ class ProfilePage extends StatelessWidget {
                           color: Colors.blueGrey.shade400,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          '123 ถนนสุขุมวิท กรุงเทพฯ',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.blueGrey.shade500,
+                        Expanded(
+                          child: Obx(
+                            () => Text(
+                              controller
+                                  .shopAddress
+                                  .value, // ✅ ดึงที่อยู่ร้านค้า
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.blueGrey.shade500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                       ],
@@ -270,13 +332,24 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          // 🔥 Stat Card แบบใหม่: Compact & Premium
-          _buildStatCard(
-            icon: Icons.auto_graph_rounded,
-            title: 'Today Sales',
-            value: '฿34,500',
-            iconColor: const Color(0xFF10B981),
-          ),
+
+          // 🔥 Stat Card แสดงยอดขายวันนี้ผ่าน API
+          Obx(() {
+            if (controller.isSalesLoading.value) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            return _buildStatCard(
+              icon: Icons.auto_graph_rounded,
+              title: 'Today Sales',
+              value: '฿${controller.todaySales.value}', // ✅ ยอดขายจาก API
+              iconColor: const Color(0xFF10B981),
+            );
+          }),
         ],
       ),
     );
@@ -289,10 +362,7 @@ class ProfilePage extends StatelessWidget {
     required Color iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 12,
-        horizontal: 16,
-      ), // ลด vertical padding ลงเล็กน้อย
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: BoxDecoration(
         color: iconColor.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
@@ -309,11 +379,7 @@ class ProfilePage extends StatelessWidget {
                   color: iconColor.withOpacity(0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  icon,
-                  size: 16,
-                  color: iconColor,
-                ), // ปรับขนาดไอคอนลงเล็กน้อยให้รับกับฟอนต์
+                child: Icon(icon, size: 16, color: iconColor),
               ),
               const SizedBox(width: 12),
               Text(
@@ -329,9 +395,8 @@ class ProfilePage extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              fontSize: 18, // 🔥 ปรับจาก 22 ลงมาเหลือ 18 เพื่อความพอดี
-              fontWeight: FontWeight
-                  .bold, // ใช้ Bold ปกติแทน w800 เพื่อไม่ให้ดูหนาเทอะทะ
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
               color: Color(0xFF0F172A),
               letterSpacing: -0.2,
             ),
@@ -341,75 +406,64 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildActionMenu() {
+  Widget _buildActionMenu(ProfileController controller) {
     return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.shade100), // ใส่เส้นขอบบางๆ
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF0F172A).withOpacity(0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         children: [
           _buildMenuTile(
-            icon: Icons.storefront_rounded,
+            icon: Icons.store_rounded,
             title: 'Manage Stores',
-            subtitle: 'เพิ่มหรือแก้ไขข้อมูลร้านค้า',
-            iconColor: primaryColor,
-            onTap: () {},
+            subtitle: 'แก้ไขข้อมูลหรือเพิ่มสาขาใหม่',
+            iconColor: const Color(0xFF6366F1),
+            onTap: controller.goToManageStores,
           ),
-          Divider(height: 1, color: Colors.grey.shade100, indent: 64),
+          _buildDivider(),
           _buildMenuTile(
-            icon: Icons.security_rounded,
+            icon: Icons.shield_moon_rounded,
             title: 'Security & Password',
-            subtitle: 'ตั้งค่ารหัสผ่านและสิทธิ์',
+            subtitle: 'ความปลอดภัยและสิทธิ์การเข้าถึง',
             iconColor: const Color(0xFFF59E0B),
-            onTap: () {},
+            onTap: controller.goToSecurity,
           ),
-          Divider(height: 1, color: Colors.grey.shade100, indent: 64),
+          _buildDivider(),
           _buildMenuTile(
-            icon: Icons.support_agent_rounded,
+            icon: Icons.headset_mic_rounded,
             title: 'Help & Support',
-            subtitle: 'ติดต่อทีมงานและแจ้งปัญหา',
-            iconColor: const Color(0xFF8B5CF6),
-            onTap: () {},
+            subtitle: 'ศูนย์ช่วยเหลือและแจ้งปัญหาการใช้งาน',
+            iconColor: const Color(0xFF10B981),
+            onTap: controller.goToSupport,
           ),
-          Divider(height: 1, color: Colors.grey.shade100, indent: 64),
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 8,
-            ),
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: dangerColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.logout_rounded, color: dangerColor, size: 22),
-            ),
-            title: Text(
-              'Logout',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: dangerColor,
-              ),
-            ),
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-            ),
-            onTap: () {},
+          _buildDivider(),
+          // Logout Menu (เน้นสีแดงเฉพาะจุด)
+          _buildMenuTile(
+            icon: Icons.logout_rounded,
+            title: 'Sign Out',
+            subtitle: 'ออกจากบัญชีผู้ใช้ปัจจุบัน',
+            iconColor: const Color(0xFFE11D48),
+            onTap: controller.logout,
+            isDestructive: true,
           ),
         ],
       ),
     );
   }
+
+  // ตัวคั่นที่ดู Clean
+  Widget _buildDivider() =>
+      Divider(height: 1, color: Colors.grey.shade50, indent: 70);
 
   Widget _buildMenuTile({
     required IconData icon,
@@ -417,31 +471,38 @@ class ProfilePage extends StatelessWidget {
     required String subtitle,
     required Color iconColor,
     required VoidCallback onTap,
+    bool isDestructive = false,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       leading: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          color: iconColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(icon, color: iconColor, size: 22),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF0F172A),
+          color: isDestructive
+              ? const Color(0xFFE11D48)
+              : const Color(0xFF1E293B),
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(fontSize: 13, color: Colors.blueGrey.shade400),
+        style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade300),
       ),
-      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
-      onTap: onTap,
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        color: Colors.grey.shade300,
+        size: 20,
+      ),
     );
   }
 }

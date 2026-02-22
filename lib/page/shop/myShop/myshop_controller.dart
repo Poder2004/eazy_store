@@ -8,7 +8,7 @@ import '../../../model/response/shop_response.dart';
 
 // Import หน้าจอสำหรับการนำทาง
 import '../createShop/create_shop.dart';
-import '../editShop/edit_shop.dart'; 
+import '../editShop/edit_shop.dart';
 import '../../homepage/home_page.dart';
 
 class MyShopController extends GetxController {
@@ -78,10 +78,13 @@ class MyShopController extends GetxController {
   void selectShop(ShopResponse shop) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    // 1. บันทึก shopId ลงเครื่อง เพื่อเอาไปใช้ในหน้าเพิ่มสินค้า
+    // 1. บันทึกข้อมูลร้านค้าลงเครื่อง
     await prefs.setInt('shopId', shop.shopId);
     await prefs.setString('shopName', shop.name);
     await prefs.setString('pinCode', shop.pinCode ?? '');
+
+    await prefs.setString('shop_image', shop.imgShop);
+    await prefs.setString('shopAddress', shop.address);
 
     // 2. แสดงแจ้งเตือนเล็กน้อย
     Get.snackbar(
