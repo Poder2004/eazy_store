@@ -17,6 +17,7 @@ class DebtLedgerController extends GetxController {
   var allDebtors = <DebtorResponse>[].obs; 
   var searchResults = <DebtorResponse>[].obs;
 
+  var isSearchEmpty = true.obs;
   var isLoading = true.obs;
   var isSearching = false.obs;
   var showDropdown = false.obs;
@@ -69,6 +70,7 @@ class DebtLedgerController extends GetxController {
 
   // --- ฟังก์ชันค้นหา (Search) ---
   void onSearchChanged(String keyword) {
+     isSearchEmpty.value = keyword.isEmpty;
     if (keyword.isEmpty) {
       searchResults.clear();
       showDropdown.value = false;
@@ -103,6 +105,7 @@ class DebtLedgerController extends GetxController {
   void clearSearch() {
     searchController.clear();
     onSearchChanged(""); 
+    isSearchEmpty.value = true;
   }
 
   void onItemTapped(int index) {

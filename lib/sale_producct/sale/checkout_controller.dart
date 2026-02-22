@@ -7,7 +7,7 @@ import 'package:eazy_store/model/request/product_model.dart';
 import 'package:eazy_store/model/request/sales_model_request.dart';
 import 'package:eazy_store/model/request/shop_model.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
-import 'package:eazy_store/page/debt/debt_sale.dart';
+import 'package:eazy_store/page/debt/debtSale/debt_sale.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -336,7 +336,7 @@ class CheckoutController extends GetxController {
   }
 
   void goToDebtPaymentPage() {
-    Get.to(() => const DebtSalePage());
+    Get.to(() =>  DebtSalePage());
   }
 
   // ✅ ฟังก์ชันแสดง Popup ยืนยันการชำระเงิน (ก่อนเรียก API)

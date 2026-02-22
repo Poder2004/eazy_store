@@ -31,7 +31,8 @@ class DebtLedgerScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
         border: Border.all(color: Colors.grey.shade300, width: 1.0),
       ),
-      child: Obx(() => TextField(
+      // ✅ ถอด Obx ออกจากตรงนี้ แล้วใช้ TextField เพียวๆ
+      child: TextField(
         controller: controller.searchController,
         onChanged: controller.onSearchChanged,
         style: const TextStyle(color: Colors.black87),
@@ -43,18 +44,22 @@ class DebtLedgerScreen extends StatelessWidget {
             horizontal: 12.0,
           ),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          // ปุ่มกากบาทลบคำค้นหา
-          suffixIcon: controller.searchController.text.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.grey),
-                  onPressed: controller.clearSearch,
-                )
-              : null,
+
+          // ✅ เอา Obx มาครอบแค่ตรง Icon เพื่อให้มันซ่อน/โชว์ แบบ Real-time
+          suffixIcon: Obx(
+            () => controller.isSearchEmpty.value
+                ? const SizedBox.shrink() // ถ้าว่างเปล่า ไม่ต้องแสดงปุ่ม
+                : IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    onPressed: controller.clearSearch,
+                  ),
+          ),
+
           filled: true,
           fillColor: Colors.transparent,
           border: InputBorder.none,
         ),
-      )),
+      ),
     );
   }
 
@@ -92,7 +97,25 @@ class DebtLedgerScreen extends StatelessWidget {
                   separatorBuilder: (ctx, i) => const Divider(height: 1),
                   itemBuilder: (ctx, i) {
                     final item = controller.searchResults[i];
+                    final String? profileImage = item.imgDebtor;
                     return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor:
+                            Colors.blue[100], // สีพื้นหลังถ้าไม่มีรูป
+                        backgroundImage:
+                            (profileImage != null && profileImage.isNotEmpty)
+                            ? NetworkImage(profileImage) // ใส่ URL รูป
+                            : null,
+                        child: (profileImage == null || profileImage.isEmpty)
+                            ? Text(
+                                item.name.isNotEmpty ? item.name[0] : "?",
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      ),
                       title: Text(
                         item.name,
                         style: const TextStyle(fontWeight: FontWeight.bold),
@@ -102,7 +125,7 @@ class DebtLedgerScreen extends StatelessWidget {
                         Icons.search,
                         size: 18,
                         color: Colors.grey,
-                      ), 
+                      ),
                       onTap: () => controller.selectFromDropdown(item),
                     );
                   },
@@ -113,7 +136,8 @@ class DebtLedgerScreen extends StatelessWidget {
   }
 
   Widget _buildDebtorCard(DebtorResponse debtor) {
-    double debtAmount = double.tryParse(debtor.currentDebt?.toString() ?? '0') ?? 0.0;
+    double debtAmount =
+        double.tryParse(debtor.currentDebt?.toString() ?? '0') ?? 0.0;
 
     return Card(
       color: _kCardColor,
@@ -261,7 +285,9 @@ class DebtLedgerScreen extends StatelessWidget {
                       }
                       if (controller.allDebtors.isEmpty) {
                         return const Center(
-                          child: Text("ยังไม่มีรายการค้างชำระ (หรือค้นหาไม่เจอ)"),
+                          child: Text(
+                            "ยังไม่มีรายการค้างชำระ (หรือค้นหาไม่เจอ)",
+                          ),
                         );
                       }
                       return ListView.builder(
@@ -284,10 +310,12 @@ class DebtLedgerScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: Obx(() => BottomNavBar(
-        currentIndex: controller.selectedIndex.value,
-        onTap: controller.onItemTapped,
-      )),
+      bottomNavigationBar: Obx(
+        () => BottomNavBar(
+          currentIndex: controller.selectedIndex.value,
+          onTap: controller.onItemTapped,
+        ),
+      ),
     );
   }
 }
