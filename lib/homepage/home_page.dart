@@ -1,9 +1,9 @@
 import 'package:eazy_store/menu_bar/bottom_navbar.dart';
-import 'package:eazy_store/page/product/add_product.dart';
-import 'package:eazy_store/page/product/add_stock.dart';
+import 'package:eazy_store/page/product/add_product/add_product.dart';
+import 'package:eazy_store/page/product/add_stock/add_stock.dart';
 import 'package:eazy_store/page/%E0%B8%A2%E0%B8%B1%E0%B8%87%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%97%E0%B8%B3/buy_products.dart';
-import 'package:eazy_store/page/product/check_price.dart';
-import 'package:eazy_store/page/product/check_stock.dart';
+import 'package:eazy_store/page/product/check_price_and_stock/check_price.dart';
+import 'package:eazy_store/page/product/check_price_and_stock/check_stock.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';

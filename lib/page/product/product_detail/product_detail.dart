@@ -1,5 +1,5 @@
 import 'package:eazy_store/model/request/product_model.dart';
-import 'package:eazy_store/page/product/edit_product_screen.dart';
+import 'package:eazy_store/page/product/edit_product/edit_product_screen.dart';
 // ⚠️ อย่าลืม Import หน้าแก้ไขสินค้าที่คุณสร้างไว้
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';

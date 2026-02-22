@@ -1,294 +1,17 @@
-import 'dart:io';
-import 'package:eazy_store/api/api_product.dart';
-import 'package:eazy_store/api/api_service_image.dart'; // ตรวจสอบ path ให้ถูกต้อง
-import 'package:eazy_store/model/request/product_model.dart';
+// ไฟล์: lib/sale_producct/edit_product_screen.dart (ปรับ path ตามจริงของคุณ)
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'edit_product_controller.dart'; // ✅ นำเข้า Controller ที่แยกไว้
 
-// ----------------------------------------------------------------------
-// 1. Controller: จัดการ Logic ทุกอย่าง
-// ----------------------------------------------------------------------
-class EditProductController extends GetxController {
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-
-  // Text Controllers
-  late TextEditingController nameCtrl;
-  late TextEditingController barcodeCtrl;
-  late TextEditingController sellPriceCtrl;
-  late TextEditingController costPriceCtrl;
-  late TextEditingController stockCtrl;
-  late TextEditingController unitCtrl;
-
-  // Data Variables
-  late Product originalProduct;
-  var isLoading = false.obs;
-
-  // 📷 ส่วนจัดการรูปภาพ
-  var selectedImage = Rxn<File>();
-  final ImagePicker _picker = ImagePicker();
-  final ImageUploadService _imageService = ImageUploadService();
-
-  // 📂 ส่วนจัดการหมวดหมู่
-  var categories = <CategoryModel>[].obs;
-  var selectedCategory = Rxn<CategoryModel>();
-
-  @override
-  void onInit() {
-    super.onInit();
-    if (Get.arguments != null && Get.arguments is Product) {
-      originalProduct = Get.arguments as Product;
-
-      // Setup ค่าเริ่มต้น
-      nameCtrl = TextEditingController(text: originalProduct.name);
-      barcodeCtrl = TextEditingController(text: originalProduct.barcode ?? "");
-      sellPriceCtrl = TextEditingController(
-        text: originalProduct.sellPrice.toString(),
-      );
-      costPriceCtrl = TextEditingController(
-        text: originalProduct.costPrice.toString(),
-      );
-      stockCtrl = TextEditingController(text: originalProduct.stock.toString());
-      unitCtrl = TextEditingController(text: originalProduct.unit);
-
-      // โหลดหมวดหมู่
-      fetchCategories();
-    } else {
-      Get.back();
-    }
-  }
-
-  // ดึงหมวดหมู่
-  Future<void> fetchCategories() async {
-    try {
-      var list = await ApiProduct.getCategories();
-      categories.assignAll(list);
-
-      if (originalProduct.categoryId != 0) {
-        selectedCategory.value = categories.firstWhere(
-          (cat) => cat.categoryId == originalProduct.categoryId,
-          orElse: () => CategoryModel(categoryId: 0, name: "ไม่ระบุ"),
-        );
-      }
-    } catch (e) {
-      print("Error fetching categories: $e");
-    }
-  }
-
-  // เลือกรูปภาพ
-  Future<void> pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(
-      source: source,
-      imageQuality: 80,
-    );
-    if (image != null) {
-      selectedImage.value = File(image.path);
-    }
-    Get.back();
-  }
-
-  // ✨ ฟังก์ชันใหม่: แสดง Dialog ยืนยันก่อนบันทึก
-  void confirmSave(BuildContext context) {
-    // ตรวจสอบฟอร์มเบื้องต้นก่อน (ถ้าไม่ผ่าน ไม่ต้องโชว์ Dialog)
-    if (!formKey.currentState!.validate()) return;
-    if (selectedCategory.value == null) {
-      Get.snackbar(
-        "แจ้งเตือน",
-        "กรุณาเลือกหมวดหมู่สินค้า",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    // แสดง Dialog สวยๆ
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon ส่วนหัว
-              Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6B8E23).withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.save_as_rounded,
-                  size: 40,
-                  color: Color(0xFF6B8E23),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // ข้อความ
-              const Text(
-                "ยืนยันการแก้ไข?",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "ข้อมูลสินค้าจะถูกอัปเดตเข้าสู่ระบบ\nคุณตรวจสอบความถูกต้องเรียบร้อยแล้วใช่ไหม?",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 25),
-
-              // ปุ่มกด
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(), // ปิด Dialog
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        side: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      child: const Text(
-                        "ตรวจสอบก่อน",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back(); // ปิด Dialog
-                        saveProduct(); // เรียกฟังก์ชันบันทึกจริง
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6B8E23),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        "ยืนยันบันทึก",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false, // บังคับให้กดปุ่มเท่านั้นถึงจะปิดได้
-    );
-  }
-
-  // 💾 บันทึกข้อมูล (Logic เดิม ย้ายมาอยู่หลัง Dialog)
-  Future<void> saveProduct() async {
-    isLoading.value = true;
-
-    try {
-      String? newImageUrl;
-
-      // 3. ☁️ อัปรูป (ถ้ามี)
-      if (selectedImage.value != null) {
-        Get.snackbar(
-          "กำลังประมวลผล",
-          "กำลังอัปโหลดรูปภาพ...",
-          showProgressIndicator: true,
-        );
-        newImageUrl = await _imageService.uploadImage(selectedImage.value!);
-
-        if (newImageUrl == null) {
-          isLoading.value = false;
-          Get.snackbar(
-            "ผิดพลาด",
-            "อัปโหลดรูปไม่ผ่าน กรุณาลองใหม่",
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
-          );
-          return;
-        }
-      }
-
-      // 4. เตรียมข้อมูล JSON
-      Map<String, dynamic> updateData = {
-        "name": nameCtrl.text.trim(),
-        "barcode": barcodeCtrl.text.trim().isEmpty
-            ? null
-            : barcodeCtrl.text.trim(),
-        "sell_price": double.tryParse(sellPriceCtrl.text) ?? 0.0,
-        "cost_price": double.tryParse(costPriceCtrl.text) ?? 0.0,
-        "unit": unitCtrl.text.trim(),
-        "category_id": selectedCategory.value!.categoryId,
-      };
-
-      if (newImageUrl != null) {
-        updateData["img_product"] = newImageUrl;
-      }
-
-      // 5. 🚀 ยิง API
-      Product? updatedProduct = await ApiProduct.updateProduct(
-        originalProduct.productId!,
-        updateData,
-      );
-
-      isLoading.value = false;
-
-      if (updatedProduct != null) {
-        Get.back(result: updatedProduct); // กลับหน้า Detail
-        Get.snackbar(
-          "สำเร็จ",
-          "แก้ไขข้อมูลเรียบร้อย",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
-      } else {
-        Get.snackbar(
-          "ผิดพลาด",
-          "บันทึกข้อมูลไม่สำเร็จ",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-      }
-    } catch (e) {
-      isLoading.value = false;
-      Get.snackbar("Error", "เกิดข้อผิดพลาด: $e", backgroundColor: Colors.red);
-    }
-  }
-}
-
-// ----------------------------------------------------------------------
-// 2. View: หน้าจอ UI
-// ----------------------------------------------------------------------
 class EditProductScreen extends StatelessWidget {
   const EditProductScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(EditProductController());
+    // ✅ เรียกใช้ Controller
+    final EditProductController controller = Get.put(EditProductController());
     const primaryColor = Color(0xFF6B8E23);
 
     return Scaffold(
@@ -308,7 +31,6 @@ class EditProductScreen extends StatelessWidget {
         actions: [
           Obx(
             () => TextButton(
-              // ✨ เปลี่ยนตรงนี้: เรียก confirmSave แทน saveProduct โดยตรง
               onPressed: controller.isLoading.value
                   ? null
                   : () => controller.confirmSave(context),
@@ -547,7 +269,8 @@ class EditProductScreen extends StatelessWidget {
     );
   }
 
-  // --- Widgets Helpers ---
+  // ==================== Widget Helpers ====================
+
   void _showImagePickerOptions(
     BuildContext context,
     EditProductController controller,
