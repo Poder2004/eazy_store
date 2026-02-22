@@ -1,7 +1,8 @@
 import 'package:eazy_store/homepage/home_page.dart';
 import 'package:eazy_store/page/debt_ledger.dart';
-import 'package:eazy_store/page/my_blank/sales_account.dart';
-import 'package:eazy_store/sale_producct/checkout_page.dart'; // ✅ Import
+import 'package:eazy_store/page/my_blank/sales_account.dart'; // ตรวจสอบ path นี้ให้ตรงด้วยนะครับ
+import 'package:eazy_store/page/my_blank/sales_account_controller.dart';
+import 'package:eazy_store/sale_producct/checkout_page.dart';
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -65,11 +66,9 @@ class BottomNavBar extends StatelessWidget {
         offset: const Offset(0, -20),
         child: GestureDetector(
           onTap: () async {
-            // 1. ไปหน้าสแกน รอรับค่าบาร์โค้ด
             var barcode = await Get.to(() => const ScanBarcodePage());
 
             if (barcode != null && barcode is String) {
-              // ✅ 2. หา Controller (หรือสร้างใหม่ถ้ายังไม่มี)
               CheckoutController ctrl;
               try {
                 ctrl = Get.find<CheckoutController>();
@@ -77,20 +76,16 @@ class BottomNavBar extends StatelessWidget {
                 ctrl = Get.put(CheckoutController());
               }
 
-              // ✅ 3. ไปหน้า Checkout (ถ้ายังไม่อยู่)
               if (Get.currentRoute != '/CheckoutPage') {
-                // ใช้ Get.to หรือ Get.off ตามความเหมาะสม
                 Get.to(() => const CheckoutPage());
               }
 
-              // ✅ 4. สั่ง Controller ทำงานโดยตรง (แก้ปัญหาสแกนซ้ำไม่ติด)
-              // รอให้หน้าจอพร้อมก่อนค่อยสั่ง
               WidgetsBinding.instance.addPostFrameCallback((_) async {
-                await ctrl.checkShopAndLoadData(); // เช็คก่อนว่าร้านเปลี่ยนไหม
-                ctrl.addProductByBarcode(barcode); // เพิ่มสินค้า
+                await ctrl.checkShopAndLoadData();
+                ctrl.addProductByBarcode(barcode);
               });
 
-              onTap(index); // อัปเดต tab เป็นหน้า Checkout
+              onTap(index);
             }
           },
           child: Column(
@@ -138,12 +133,20 @@ class BottomNavBar extends StatelessWidget {
   }
 
   void _navigateToPage(int index) {
-    if (index == 0)
+    if (index == 0) {
       Get.to(() => const HomePage());
-    else if (index == 1)
+    } else if (index == 1) {
+      // 🔥 แก้ไขตรงนี้: รีเซ็ตวันที่ให้กลับมาเป็น "ปัจจุบัน" ทุกครั้งที่กดเข้าหน้าบัญชี
+      if (Get.isRegistered<SalesAccountController>()) {
+        final ctrl = Get.find<SalesAccountController>();
+        ctrl.selectedView.value = 'วันนี้'; // กลับมาหน้าวัน
+        ctrl.currentDate.value = DateTime.now(); // กลับมาใช้วันนี้
+        ctrl.fetchSummaryData(); // ดึงข้อมูลใหม่
+      }
       Get.to(() => const SalesAccountScreen());
-    else if (index == 3)
+    } else if (index == 3) {
       Get.to(() => const DebtLedgerScreen());
+    }
   }
 
   @override
