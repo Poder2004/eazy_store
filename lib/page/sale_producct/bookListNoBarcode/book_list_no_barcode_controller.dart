@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/api/api_product.dart';
-import 'package:eazy_store/sale_producct/sale/checkout_controller.dart';
-import 'package:eazy_store/sale_producct/sale/checkout_page.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 
 // ----------------------------------------------------------------------
 // 1. Model

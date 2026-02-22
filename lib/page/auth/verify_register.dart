@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:eazy_store/auth/login.dart';
+import 'package:eazy_store/page/auth/login.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/api/api_auth.dart';

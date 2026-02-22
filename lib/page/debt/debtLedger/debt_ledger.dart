@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 
 // --- Imports ไฟล์ของคุณ ---
 import 'package:eazy_store/page/debt/debtorDetail/debtor_detail.dart';
-import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import '../../../model/response/debtor_response.dart';
 
 // --- Import Controller ---

@@ -3,8 +3,8 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Import API และ Model
-import '../../api/api_shop.dart';
-import '../../model/response/shop_response.dart';
+import '../../../api/api_shop.dart';
+import '../../../model/response/shop_response.dart';
 
 // Import หน้าจอสำหรับการนำทาง
 import '../createShop/create_shop.dart';

@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 // Import Model ของคุณ
-import '../../model/response/shop_response.dart';
+import '../../../model/response/shop_response.dart';
 
 // Import Controller ที่เพิ่งแยกออกไป
 import 'edit_shop_controller.dart'; 

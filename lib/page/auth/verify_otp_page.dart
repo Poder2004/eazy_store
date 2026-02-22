@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:eazy_store/auth/reset_password.dart';
+import 'package:eazy_store/page/auth/reset_password.dart';
 import 'package:flutter/material.dart';
 import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/reset_request.dart';

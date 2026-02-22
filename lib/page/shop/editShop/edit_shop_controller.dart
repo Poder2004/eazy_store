@@ -4,8 +4,8 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 // Import Model และ API
-import '../../model/response/shop_response.dart'; 
-import '../../api/api_shop.dart'; 
+import '../../../model/response/shop_response.dart'; 
+import '../../../api/api_shop.dart'; 
 
 class EditShopController extends GetxController {
   final ShopResponse shop;

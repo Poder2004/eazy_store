@@ -1,9 +1,9 @@
 import 'package:eazy_store/api/api_auth.dart';
-import 'package:eazy_store/auth/forgot_password.dart';
-import 'package:eazy_store/auth/register.dart';
-import 'package:eazy_store/auth/verify_register.dart';
+import 'package:eazy_store/page/auth/forgot_password.dart';
+import 'package:eazy_store/page/auth/register.dart';
+import 'package:eazy_store/page/auth/verify_register.dart';
 import 'package:eazy_store/model/request/login_request.dart';
-import 'package:eazy_store/shop/myShop/myshop.dart';
+import 'package:eazy_store/page/shop/myShop/myshop.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';

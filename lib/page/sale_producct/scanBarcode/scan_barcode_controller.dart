@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import 'package:eazy_store/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
-import 'package:eazy_store/sale_producct/sale/checkout_page.dart';
+import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 
 // ----------------------------------------------------------------------
 // 1. Controller: จัดการ Logic การสแกน
