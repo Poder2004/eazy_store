@@ -1,4 +1,4 @@
-import 'package:eazy_store/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
 
 class ProfilePage extends StatelessWidget {
