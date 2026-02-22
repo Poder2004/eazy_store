@@ -1,6 +1,6 @@
 import 'package:eazy_store/homepage/home_page.dart';
 import 'package:eazy_store/page/debt_ledger.dart';
-import 'package:eazy_store/page/sales_account.dart';
+import 'package:eazy_store/page/my_blank/sales_account.dart';
 import 'package:eazy_store/sale_producct/checkout_page.dart'; // ✅ Import
 import 'package:eazy_store/sale_producct/scan_barcode.dart';
 import 'package:flutter/material.dart';
