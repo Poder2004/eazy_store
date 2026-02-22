@@ -1,19 +1,19 @@
 // ไฟล์: lib/page/product/product_detail_controller.dart
 import 'package:eazy_store/api/api_product.dart';
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class ProductDetailController extends GetxController {
-  late Rx<Product> product;
+  late Rx<ProductResponse> product;
   var isStatusLoading = false.obs;
 
   @override
   void onInit() {
     super.onInit();
     // รับค่า Product มาจาก arguments
-    if (Get.arguments != null && Get.arguments is Product) {
-      product = (Get.arguments as Product).obs;
+    if (Get.arguments != null && Get.arguments is ProductResponse) {
+      product = (Get.arguments as ProductResponse).obs;
     } else {
       // กรณีไม่มีข้อมูลส่งมา ให้เด้งกลับเพื่อป้องกัน Error
       WidgetsBinding.instance.addPostFrameCallback((_) {

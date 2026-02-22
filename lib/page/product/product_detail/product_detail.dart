@@ -1,5 +1,5 @@
 // ไฟล์: lib/page/product/product_detail_screen.dart
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/edit_product/edit_product_screen.dart'; // ตรวจสอบ Path ด้วยนะครับ
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -147,7 +147,7 @@ class ProductDetailScreen extends StatelessWidget {
   }
 
   // Widget แสดงราคาและสต็อกแบบช่องตาราง
-  Widget _buildInfoGrid(Product product, Color color) {
+  Widget _buildInfoGrid(ProductResponse product, Color color) {
     return Row(
       children: [
         _infoItem("ราคาขาย", "฿${product.sellPrice.toStringAsFixed(2)}", color),
@@ -234,7 +234,7 @@ class ProductDetailScreen extends StatelessWidget {
                   transition: Transition.rightToLeft,
                 );
 
-                if (result != null && result is Product) {
+                if (result != null && result is ProductResponse) {
                   controller.product.value = result;
                 }
               },

@@ -3,7 +3,7 @@ import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_shop.dart';
 import 'package:eazy_store/api/api_sale.dart';
 import 'package:eazy_store/model/request/baskets_model.dart';
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/sales_model_request.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
 import 'package:eazy_store/page/debt/debtSale/debt_sale.dart';
@@ -18,8 +18,8 @@ class CheckoutController extends GetxController {
   var cartItems = <ProductItem>[].obs;
 
   // 🔍 คลังสินค้า
-  var allProducts = <Product>[];
-  var searchResults = <Product>[].obs;
+  var allProducts = <ProductResponse>[];
+  var searchResults = <ProductResponse>[].obs;
   var isSearching = false.obs;
 
   // 💰 การชำระเงิน
@@ -110,7 +110,7 @@ class CheckoutController extends GetxController {
 
       if (shopId != 0) {
         // ดึงข้อมูลใหม่จาก API
-        List<Product> list = await ApiProduct.getProductsByShop(shopId);
+        List<ProductResponse> list = await ApiProduct.getProductsByShop(shopId);
 
         // กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true) มาใส่ในหน่วยความจำใหม่
         allProducts = list.where((p) => p.status == true).toList();
@@ -128,7 +128,7 @@ class CheckoutController extends GetxController {
   Future<void> _loadAllProducts() async {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
-        List<Product> list = await ApiProduct.getProductsByShop(loadedShopId!);
+        List<ProductResponse> list = await ApiProduct.getProductsByShop(loadedShopId!);
         // 🔥 แก้ไขตรงนี้: กรองเอาเฉพาะสินค้าที่ status == true (ไม่ได้ถูกซ่อน) มาแสดงเท่านั้น
         allProducts = list.where((p) => p.status == true).toList();
       }
@@ -163,7 +163,7 @@ class CheckoutController extends GetxController {
     }).toList();
   }
 
-  void selectProductToAdd(Product product) {
+  void selectProductToAdd(ProductResponse product) {
     _addToCart(product);
     searchController.clear();
     isSearching.value = false;
@@ -199,7 +199,7 @@ class CheckoutController extends GetxController {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         int currentShopId = prefs.getInt('shopId') ?? 0;
 
-        Product? product = await ApiProduct.searchProduct(
+        ProductResponse? product = await ApiProduct.searchProduct(
           barcode,
           currentShopId,
         );
@@ -239,7 +239,7 @@ class CheckoutController extends GetxController {
     update();
   }
 
-  void _addToCart(Product product) {
+  void _addToCart(ProductResponse product) {
     int currentQty = cartItems
         .where((item) => item.id == product.productId.toString())
         .length;

@@ -1,5 +1,5 @@
 import 'package:eazy_store/api/api_product.dart';
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,7 +8,7 @@ class AddStockController extends GetxController {
   // ---------------- State Variables ----------------
   var selectedIndex = 1.obs; // เมนู Stock ลำดับที่ 1
   var isSearching = false.obs;
-  Rx<Product?> foundProduct = Rx<Product?>(null);
+  Rx<ProductResponse?> foundProduct = Rx<ProductResponse?>(null);
   var calculatedTotal = 0.obs;
 
   // ---------------- Controllers ----------------
@@ -60,7 +60,7 @@ class AddStockController extends GetxController {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
-      List<Product> allProducts = await ApiProduct.getProductsByShop(shopId);
+      List<ProductResponse> allProducts = await ApiProduct.getProductsByShop(shopId);
 
       var match = allProducts.firstWhereOrNull(
         (p) => (p.barcode == keyword) || (p.name.contains(keyword)),

@@ -1,6 +1,6 @@
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ----------------------------------------------------------------------
 class StockController extends GetxController {
   var isLoading = true.obs;
-  var products = <Product>[].obs;
-  var filteredProducts = <Product>[].obs;
+  var products = <ProductResponse>[].obs;
+  var filteredProducts = <ProductResponse>[].obs;
   var selectedIndex = 0.obs;
 
   // Controller สำหรับช่องค้นหา เพื่อให้เราสั่งใส่ข้อความได้
@@ -39,7 +39,7 @@ class StockController extends GetxController {
       int shopId = prefs.getInt('shopId') ?? 0;
 
       if (shopId != 0) {
-        List<Product> list = await ApiProduct.getProductsByShop(shopId);
+        List<ProductResponse> list = await ApiProduct.getProductsByShop(shopId);
 
         // 🔥 กรองเอาเฉพาะสินค้าที่สถานะเป็น true (ไม่ได้ถูกซ่อน/ลบ) มาแสดง
         list = list.where((p) => p.status == true).toList();
@@ -223,7 +223,7 @@ class CheckStockScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCard(Product product, Color warningColor) {
+  Widget _buildProductCard(ProductResponse product, Color warningColor) {
     final bool isLowStock = product.stock <= 10;
     final bool isOutOfStock = product.stock == 0;
 

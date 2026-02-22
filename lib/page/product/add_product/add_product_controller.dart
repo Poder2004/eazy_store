@@ -3,7 +3,7 @@ import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_service_image.dart';
 import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/model/request/category_model.dart';
-import 'package:eazy_store/model/request/product_model.dart';
+import 'package:eazy_store/model/request/product_request.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -171,7 +171,7 @@ class AddProductController extends GetxController {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
-      Product newProduct = Product(
+      ProductRequest newProduct = ProductRequest(
         shopId: shopId,
         categoryId: selectedCategoryObject.value!.categoryId,
         name: nameController.text.trim(),
