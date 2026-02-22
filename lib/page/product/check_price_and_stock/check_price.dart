@@ -40,6 +40,10 @@ class PriceController extends GetxController {
 
       if (shopId != 0) {
         List<Product> list = await ApiProduct.getProductsByShop(shopId);
+
+        // 🔥 แก้ไขตรงนี้: กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true) มาแสดง
+        list = list.where((p) => p.status == true).toList();
+
         // เรียงตามชื่อสินค้าเพื่อให้หาเจอง่ายขึ้น
         list.sort((a, b) => a.name.compareTo(b.name));
 
@@ -150,12 +154,19 @@ class CheckPriceScreen extends StatelessWidget {
                     final product = controller.filteredProducts[index];
 
                     return InkWell(
-                      onTap: () {
-                        Get.to(
+                      onTap: () async {
+                        // ✨ 1. เติม async
+                        var result = await Get.to(
+                          // ✨ 2. ใส่ await รอรับค่า result
                           () => const ProductDetailScreen(),
                           arguments: product,
-                          transition: Transition.rightToLeft, // Animation สวยๆ
+                          transition: Transition.rightToLeft,
                         );
+
+                        // ✨ 3. ถ้า result ส่งกลับมาเป็น true (แปลว่าเพิ่งลบสินค้าไป) ให้รีเฟรชหน้าเช็คราคาใหม่
+                        if (result == true) {
+                          controller.fetchPriceData();
+                        }
                       },
                       borderRadius: BorderRadius.circular(15),
                       child: _buildPriceCard(product, primaryColor),
@@ -275,7 +286,7 @@ class CheckPriceScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${product.sellPrice.toStringAsFixed(0)}', // แสดงราคาจำนวนเต็ม (หรือ .2f ถ้าต้องการทศนิยม)
+                '${product.sellPrice.toStringAsFixed(0)}', // แสดงราคาจำนวนเต็ม
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,

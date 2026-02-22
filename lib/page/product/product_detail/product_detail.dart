@@ -1,55 +1,10 @@
+// ไฟล์: lib/page/product/product_detail_screen.dart
 import 'package:eazy_store/model/request/product_model.dart';
-import 'package:eazy_store/page/product/edit_product/edit_product_screen.dart';
-// ⚠️ อย่าลืม Import หน้าแก้ไขสินค้าที่คุณสร้างไว้
+import 'package:eazy_store/page/product/edit_product/edit_product_screen.dart'; // ตรวจสอบ Path ด้วยนะครับ
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'product_detail_controller.dart'; // ✅ Import Controller
 
-// ----------------------------------------------------------------------
-// 1. Controller: สำหรับจัดการสถานะในหน้ารายละเอียด
-// ----------------------------------------------------------------------
-class ProductDetailController extends GetxController {
-  late Rx<Product> product;
-  var isStatusLoading = false.obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-    // รับค่า Product มาจาก arguments
-    if (Get.arguments != null && Get.arguments is Product) {
-      product = (Get.arguments as Product).obs;
-    } else {
-      // กรณีไม่มีข้อมูลส่งมา ให้เด้งกลับเพื่อป้องกัน Error
-      Get.back();
-      Get.snackbar("Error", "ไม่พบข้อมูลสินค้า");
-    }
-  }
-
-  // ฟังก์ชันลบสินค้า (จำลอง)
-  Future<void> deleteProduct() async {
-    // TODO: เรียก API ลบสินค้าจริงๆ
-    Get.back(); // ปิด Dialog ยืนยัน
-    Get.back(); // กลับไปหน้ารายการสินค้า
-    Get.snackbar(
-      "สำเร็จ",
-      "ลบสินค้าเรียบร้อยแล้ว",
-      backgroundColor: Colors.red,
-      colorText: Colors.white,
-    );
-  }
-
-  // ฟังก์ชันเปิด-ปิดสถานะสินค้า
-  // void toggleStatus(bool value) {
-  //   // ในอนาคตต้องยิง API อัปเดต status ตรงนี้
-  //   product.update((val) {
-  //     val?.status = value; // ตัวอย่างการอัปเดตค่าใน Rx
-  //     // หมายเหตุ: ในฐานข้อมูลจริงต้องยิง API อัปเดตด้วย
-  //   });
-  // }
-}
-
-// ----------------------------------------------------------------------
-// 2. View: หน้าจอแสดงรายละเอียด
-// ----------------------------------------------------------------------
 class ProductDetailScreen extends StatelessWidget {
   const ProductDetailScreen({super.key});
 
@@ -64,34 +19,30 @@ class ProductDetailScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF7F7F7),
       body: CustomScrollView(
         slivers: [
-          // --- ส่วนหัว: รูปภาพสินค้าแบบขยายได้ (SliverAppBar) ---
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
             backgroundColor: primaryColor,
-            leading: CircleAvatar(
-              backgroundColor: Colors.black26,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Get.back(),
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CircleAvatar(
+                backgroundColor: Colors.black26,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Get.back(),
+                ),
               ),
             ),
-            // ... ภายใน SliverAppBar ...
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                color: Colors
-                    .white, // ✨ ใส่พื้นหลังสีขาว เพื่อให้ดูเหมือนถ่ายในสตูดิโอ
+                color: Colors.white,
                 child: Hero(
                   tag: 'product-${controller.product.value.productId}',
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      20.0,
-                    ), // ✨ เว้นช่องไฟรอบรูป ไม่ให้ชิดขอบเกินไป
+                    padding: const EdgeInsets.all(20.0),
                     child: Obx(
                       () => Image.network(
-                        // ✨ ใช้ Obx เผื่อรูปเปลี่ยน
                         controller.product.value.imgProduct,
-                        // ✨ เปลี่ยนจาก cover เป็น contain เพื่อให้เห็น "ครบทุกส่วน" ของสินค้า
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) => Container(
                           color: Colors.grey[200],
@@ -115,10 +66,8 @@ class ProductDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20.0),
               child: Obx(
                 () => Column(
-                  // ✨ ครอบ Obx เพื่อให้อัปเดตข้อมูลอัตโนมัติเมื่อกลับจากหน้าแก้ไข
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ชื่อสินค้าและรหัส
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -140,7 +89,7 @@ class ProductDetailScreen extends StatelessWidget {
                     ),
                     const Divider(height: 40),
 
-                    // ข้อมูลราคาและสต็อก (แสดงเป็น Grid ย่อยๆ)
+                    // ข้อมูลราคาและสต็อก
                     _buildInfoGrid(controller.product.value, primaryColor),
 
                     const SizedBox(height: 30),
@@ -151,11 +100,9 @@ class ProductDetailScreen extends StatelessWidget {
                       "บาร์โค้ด",
                       controller.product.value.barcode ?? "ไม่มีข้อมูล",
                     ),
-
                     _buildDetailRow(
                       Icons.category_outlined,
                       "หมวดหมู่",
-                      // ✨ เรียกใช้ชื่อหมวดหมู่ ถ้าไม่มีให้แสดง 'ทั่วไป'
                       controller.product.value.category?.name ?? "ทั่วไป",
                     ),
                     _buildDetailRow(
@@ -190,7 +137,7 @@ class ProductDetailScreen extends StatelessWidget {
         border: Border.all(color: status ? Colors.green : Colors.red),
       ),
       child: Text(
-        status ? "กำลังขาย" : "ปิดใช้งาน",
+        status ? "กำลังขาย" : "ถูกซ่อน", // เปลี่ยนข้อความให้สื่อความหมายมากขึ้น
         style: TextStyle(
           color: status ? Colors.green : Colors.red,
           fontWeight: FontWeight.bold,
@@ -281,17 +228,13 @@ class ProductDetailScreen extends StatelessWidget {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () async {
-                // 1. นำทางไปหน้าแก้ไข และ "รอ" (await) ผลลัพธ์ที่ส่งกลับมา
                 var result = await Get.to(
                   () => const EditProductScreen(),
                   arguments: controller.product.value,
-                  transition: Transition.rightToLeft, // Animation สไลด์มา
+                  transition: Transition.rightToLeft,
                 );
 
-                // 2. ถ้ามีข้อมูลส่งกลับมา (แปลว่าแก้ไขสำเร็จ)
                 if (result != null && result is Product) {
-                  // ✅ อัปเดตค่า product ใน Controller ทันที
-                  // หน้าจอจะเปลี่ยนเลขราคา/ชื่อสินค้า อัตโนมัติ เพราะเราใช้ Obx อยู่
                   controller.product.value = result;
                 }
               },
@@ -318,16 +261,86 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
+  // 🛡️ ปรับ Popup ยืนยันการลบให้สวยขึ้น
   void _confirmDelete(ProductDetailController controller) {
-    Get.defaultDialog(
-      title: "ยืนยันการลบ",
-      middleText:
-          "คุณต้องการลบสินค้า '${controller.product.value.name}' ออกจากร้านใช่หรือไม่?",
-      textCancel: "ยกเลิก",
-      textConfirm: "ยืนยันลบ",
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.red,
-      onConfirm: () => controller.deleteProduct(),
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 50,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "ยืนยันการลบ?",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "คุณต้องการลบสินค้า\n'${controller.product.value.name}'\nออกจากร้านใช่หรือไม่?",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+              const SizedBox(height: 25),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        "ยกเลิก",
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () =>
+                          controller.deleteProduct(), // เรียกฟังก์ชันลบ
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        "ยืนยันลบ",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

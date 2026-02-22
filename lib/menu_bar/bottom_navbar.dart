@@ -83,6 +83,10 @@ class BottomNavBar extends StatelessWidget {
 
               WidgetsBinding.instance.addPostFrameCallback((_) async {
                 await ctrl.checkShopAndLoadData();
+
+                // 🔥 เพิ่มบรรทัดนี้: ล้างความจำเก่าและดึงข้อมูลใหม่จาก Database ก่อนสแกนเสมอ
+                await ctrl.fetchFreshProducts();
+
                 ctrl.addProductByBarcode(barcode);
               });
 
@@ -137,7 +141,7 @@ class BottomNavBar extends StatelessWidget {
     if (index == 0) {
       Get.to(() => const HomePage());
     } else if (index == 1) {
-      // 🔥 แก้ไขตรงนี้: รีเซ็ตวันที่ให้กลับมาเป็น "ปัจจุบัน" ทุกครั้งที่กดเข้าหน้าบัญชี
+      // 🔥 รีเซ็ตวันที่ให้กลับมาเป็น "ปัจจุบัน" ทุกครั้งที่กดเข้าหน้าบัญชี
       if (Get.isRegistered<SalesAccountController>()) {
         final ctrl = Get.find<SalesAccountController>();
         ctrl.selectedView.value = 'วันนี้'; // กลับมาหน้าวัน
