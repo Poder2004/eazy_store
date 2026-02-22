@@ -30,14 +30,13 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
     setState(() => _isLoading = true);
     try {
       // เรียก API โดยส่ง ID ลูกหนี้ (แก้ _currentDebtor.debtorId ให้ตรงกับชื่อตัวแปรใน Model ของคุณ เช่น .id หรือ .debtorId)
-      final result = await ApiDebtor.getDebtorHistory(_currentDebtor.debtorId!); 
+      final result = await ApiDebtor.getDebtorHistory(_currentDebtor.debtorId!);
 
       if (result != null) {
-        
         // 1. (Optional) อัปเดตข้อมูลลูกหนี้ล่าสุด เผื่อมีการเปลี่ยนแปลงยอดหนี้จากหน้าอื่น
         setState(() {
-           // จำเป็นต้องสร้างเมธอด copyWith ใน DebtorResponse หรืออัปเดตค่าตรงๆ ถ้าทำได้
-           // _currentDebtor.currentDebt = double.parse(result['current_debt'].toString());
+          // จำเป็นต้องสร้างเมธอด copyWith ใน DebtorResponse หรืออัปเดตค่าตรงๆ ถ้าทำได้
+          // _currentDebtor.currentDebt = double.parse(result['current_debt'].toString());
         });
 
         // 2. ดึง List ประวัติบิลออกมา
@@ -45,28 +44,28 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
 
         // 3. แปลง JSON ให้กลายเป็น List<DebtorHistoryResponse>
         List<DebtorHistoryResponse> fetchedHistory = rawHistories.map((bill) {
-          
-          // แปลงรายการสินค้าในบิล
+          // แปลงรายการสินค้าในบิล (แก้ Key เป็น name, qty, price ตามที่ Go ส่งมา)
           List<dynamic> rawItems = bill['items'] ?? [];
           List<DebtorHistoryItem> itemsList = rawItems.map((item) {
             return DebtorHistoryItem(
-              name: item['product_name'] ?? 'ไม่ทราบชื่อ',
-              qty: item['amount'] ?? 0,
-              // ใช้ .toString() แล้ว parse ป้องกัน Error กรณี API ส่งมาเป็น int หรือ double
-              price: double.parse(item['total_price'].toString()), 
+              name: item['name'] ?? 'ไม่ทราบชื่อ',
+              qty: item['qty'] ?? 0,
+              unit: item['unit']?.toString() ?? '',
+              price: double.parse((item['price'] ?? 0).toString()),
             );
           }).toList();
 
-          // ประกอบร่างข้อมูลบิล 1 บิล
+          // ประกอบร่างข้อมูลบิล 1 บิล (แก้ Key เป็น order_id, date, total_amount, ฯลฯ)
           return DebtorHistoryResponse(
-            orderId: bill['sale_id'],
-            date: bill['created_at'],
-            totalAmount: double.parse(bill['net_price'].toString()),
-            paidAmount: double.parse(bill['paid'].toString()),
-            remainingAmount: double.parse(bill['remaining'].toString()),
+            orderId: bill['order_id'] ?? 0,
+            date: bill['date'] ?? '-', // ป้องกัน Error null ที่ทำให้จอแดง
+            totalAmount: double.parse((bill['total_amount'] ?? 0).toString()),
+            paidAmount: double.parse((bill['paid_amount'] ?? 0).toString()),
+            remainingAmount: double.parse(
+              (bill['remaining_amount'] ?? 0).toString(),
+            ),
             items: itemsList,
           );
-          
         }).toList();
 
         // 4. อัปเดต State เพื่อให้หน้าจอแสดงผล
@@ -74,7 +73,6 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
           _historyList = fetchedHistory;
           _isLoading = false;
         });
-
       } else {
         // กรณีเรียก API แล้วได้ค่า null (error)
         setState(() => _isLoading = false);
@@ -89,8 +87,12 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
   void _editDebtorInfo() {
     final nameController = TextEditingController(text: _currentDebtor.name);
     final phoneController = TextEditingController(text: _currentDebtor.phone);
-    final addressController = TextEditingController(text: _currentDebtor.address ?? "");
-    final creditController = TextEditingController(text: _currentDebtor.creditLimit.toStringAsFixed(0));
+    final addressController = TextEditingController(
+      text: _currentDebtor.address ?? "",
+    );
+    final creditController = TextEditingController(
+      text: _currentDebtor.creditLimit.toStringAsFixed(0),
+    );
 
     showDialog(
       context: context,
@@ -102,24 +104,36 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: "ชื่อ-นามสกุล", icon: Icon(Icons.person)),
+                decoration: const InputDecoration(
+                  labelText: "ชื่อ-นามสกุล",
+                  icon: Icon(Icons.person),
+                ),
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: phoneController,
-                decoration: const InputDecoration(labelText: "เบอร์โทรศัพท์", icon: Icon(Icons.phone)),
+                decoration: const InputDecoration(
+                  labelText: "เบอร์โทรศัพท์",
+                  icon: Icon(Icons.phone),
+                ),
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: addressController,
-                decoration: const InputDecoration(labelText: "ที่อยู่", icon: Icon(Icons.home)),
+                decoration: const InputDecoration(
+                  labelText: "ที่อยู่",
+                  icon: Icon(Icons.home),
+                ),
                 maxLines: 2, // ให้พิมพ์ได้หลายบรรทัด
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: creditController,
-                decoration: const InputDecoration(labelText: "วงเงินเครดิต (บาท)", icon: Icon(Icons.credit_card)),
+                decoration: const InputDecoration(
+                  labelText: "วงเงินเครดิต (บาท)",
+                  icon: Icon(Icons.credit_card),
+                ),
                 keyboardType: TextInputType.number,
               ),
             ],
@@ -136,7 +150,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
               setState(() {
                 // อัปเดตค่าในหน้าจอทันที (จำลอง)
                 // ในการใช้งานจริงต้องสร้าง Object ใหม่จาก Response ของ API
-                 /* _currentDebtor = DebtorResponse(
+                /* _currentDebtor = DebtorResponse(
                      id: _currentDebtor.id,
                      name: nameController.text,
                      phone: phoneController.text,
@@ -171,7 +185,10 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
             _buildProfileCard(),
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text("ประวัติการติดหนี้", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                "ประวัติการติดหนี้",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
             _buildHistoryList(),
           ],
@@ -182,12 +199,13 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
 
   Widget _buildProfileCard() {
     // คำนวณ % การใช้เครดิต
-    double percentUsed = _currentDebtor.creditLimit > 0 
-        ? (_currentDebtor.currentDebt / _currentDebtor.creditLimit) 
+    double percentUsed = _currentDebtor.creditLimit > 0
+        ? (_currentDebtor.currentDebt / _currentDebtor.creditLimit)
         : 1.0;
     if (percentUsed > 1.0) percentUsed = 1.0; // กันเกินหลอด
 
-    double availableCredit = _currentDebtor.creditLimit - _currentDebtor.currentDebt;
+    double availableCredit =
+        _currentDebtor.creditLimit - _currentDebtor.currentDebt;
 
     return Container(
       color: Colors.white,
@@ -208,25 +226,44 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_currentDebtor.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text(
+                      _currentDebtor.name,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         const Icon(Icons.phone, size: 16, color: Colors.grey),
                         const SizedBox(width: 5),
-                        Text(_currentDebtor.phone, style: TextStyle(color: Colors.grey[700], fontSize: 16)),
+                        Text(
+                          _currentDebtor.phone,
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const Icon(
+                          Icons.location_on,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
-                            _currentDebtor.address ?? "ไม่ระบุที่อยู่", 
-                            style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                            _currentDebtor.address ?? "ไม่ระบุที่อยู่",
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 14,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -239,10 +276,10 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
               IconButton(
                 icon: const Icon(Icons.edit_note, color: Colors.blue, size: 30),
                 onPressed: _editDebtorInfo,
-              )
+              ),
             ],
           ),
-          
+
           const Divider(height: 30),
 
           // ส่วนแสดงสถานะเครดิต
@@ -255,12 +292,16 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   const Text("ยอดหนี้ปัจจุบัน", style: TextStyle(fontSize: 16)),
                   Text(
                     "${_currentDebtor.currentDebt.toStringAsFixed(0)} บาท",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               // หลอดแสดงเปอร์เซ็นต์
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
@@ -269,19 +310,31 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   minHeight: 10,
                   backgroundColor: Colors.grey.shade200,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    percentUsed > 0.8 ? Colors.red : Colors.green, // ถ้าใช้เกิน 80% หลอดเป็นสีแดง
+                    percentUsed > 0.8
+                        ? Colors.red
+                        : Colors.green, // ถ้าใช้เกิน 80% หลอดเป็นสีแดง
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // รายละเอียดวงเงิน
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("วงเงิน: ${_currentDebtor.creditLimit.toStringAsFixed(0)}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                  Text("เครดิตคงเหลือ: ${availableCredit.toStringAsFixed(0)}", style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(
+                    "วงเงิน: ${_currentDebtor.creditLimit.toStringAsFixed(0)}",
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                  Text(
+                    "เครดิตคงเหลือ: ${availableCredit.toStringAsFixed(0)}",
+                    style: TextStyle(
+                      color: Colors.green[700],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -292,8 +345,20 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
   }
 
   Widget _buildHistoryList() {
-    if (_isLoading) return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
-    if (_historyList.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("ไม่พบประวัติการติดหนี้")));
+    if (_isLoading)
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    if (_historyList.isEmpty)
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Text("ไม่พบประวัติการติดหนี้"),
+        ),
+      );
 
     return ListView.builder(
       shrinkWrap: true,
@@ -303,27 +368,45 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
         final history = _historyList[index];
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: ExpansionTile(
-            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            title: Text(history.date, style: const TextStyle(fontWeight: FontWeight.bold)),
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            title: Text(
+              history.date,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
                 Text("ยอดบิล: ${history.totalAmount} บาท"),
                 if (history.paidAmount > 0)
-                  Text("จ่ายแล้ว: ${history.paidAmount} บาท", style: const TextStyle(color: Colors.green, fontSize: 12)),
+                  Text(
+                    "จ่ายแล้ว: ${history.paidAmount} บาท",
+                    style: const TextStyle(color: Colors.green, fontSize: 12),
+                  ),
               ],
             ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Text("คงเหลือ", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text(
+                  "คงเหลือ",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 Text(
-                  "${history.remainingAmount}", 
-                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
+                  "${history.remainingAmount}",
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ],
             ),
@@ -334,29 +417,129 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("รายการสินค้า", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    ...history.items.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("${item.name} จำนวน ${item.qty} "),
-                          Text("${item.price * item.qty}"),
-                        ],
+                    const Text(
+                      "รายการสินค้า",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
                       ),
-                    )),
+                    ),
+                    const SizedBox(height: 8),
+                    Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(
+                          3,
+                        ), // คอลัมน์ที่ 1 (ชื่อ) ให้พื้นที่เยอะสุด
+                        1: FlexColumnWidth(1.5), // คอลัมน์ที่ 2 (จำนวน)
+                        2: FlexColumnWidth(2.5), // คอลัมน์ที่ 3 (ราคาต่อชิ้น)
+                        3: FlexColumnWidth(2), // คอลัมน์ที่ 4 (ราคารวม)
+                      },
+                      children: [
+                        // 1. แถวหัวตาราง (Header)
+                        const TableRow(
+                          children: [
+                            Text(
+                              "ชื่อ",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              "จำนวน",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              "ราคา/ชิ้น",
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              "ราคารวม",
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // 2. แถวข้อมูลสินค้า (วนลูปตามจำนวนรายการ)
+                        ...history.items.map((item) {
+                          // คำนวณราคาต่อชิ้น
+                          double pricePerUnit = item.qty > 0
+                              ? (item.price / item.qty)
+                              : 0;
+
+                          return TableRow(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  item.name,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  "${item.qty}",
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  pricePerUnit.toStringAsFixed(0),
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  item.price.toStringAsFixed(0),
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text("รวมทั้งสิ้น", style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text("${history.totalAmount} บาท", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          "รวมทั้งสิ้น",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          "${history.totalAmount} บาท",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ],
-                    )
+                    ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         );
