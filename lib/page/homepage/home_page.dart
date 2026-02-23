@@ -3,8 +3,8 @@ import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
 
-import 'package:eazy_store/page/product/check_price_and_stock/check_price.dart';
-import 'package:eazy_store/page/product/check_price_and_stock/check_stock.dart';
+import 'package:eazy_store/page/product/check_price/check_price.dart';
+import 'package:eazy_store/page/product/checkStock/check_stock.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
