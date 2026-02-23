@@ -1,30 +1,31 @@
-import 'package:eazy_store/api/api_dashboad.dart'; // ✅ อย่าลืมเช็ค Path
+import 'package:eazy_store/api/api_dashboad.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
-
-import 'package:eazy_store/page/product/check_price/check_price.dart';
 import 'package:eazy_store/page/product/checkStock/check_stock.dart';
+import 'package:eazy_store/page/product/check_price/check_price.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/page/wait_coming/buy_products.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart'; // ✅ ต้องใช้ intl สำหรับจัด Format ตัวเลขและวันที่
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ----------------------------------------------------------------------
-// 1. Controller: จัดการข้อมูลร้านค้าและ Tab
+// 1. Controller: จัดการข้อมูลร้านค้าและยอดขายแยกประเภท
 // ----------------------------------------------------------------------
 class HomeController extends GetxController {
   var currentIndex = 0.obs;
   var shopName = "กำลังโหลด...".obs;
   var shopId = 0.obs;
 
-  // ตัวแปรสำหรับยอดขาย
-  var dailyTotal = "0".obs;
-  var isSalesLoading = true.obs; // เช็คสถานะตอนกำลังโหลด API
+  // ตัวแปรสำหรับยอดขาย (แยกประเภท)
+  var dailyTotal = "0".obs; // ยอดขายรวม (Revenue)
+  var actualPaid = "0".obs; // เงินที่ได้รับจริง (Cash/Transfer)
+  var debtAmount = "0".obs; // ค้างชำระเพิ่ม (New Debt)
+  var isSalesLoading = true.obs;
 
   @override
   void onInit() {
@@ -32,28 +33,19 @@ class HomeController extends GetxController {
     loadShopData();
   }
 
-  // ดึงข้อมูลร้านค้าที่ผู้ใช้เลือกมาจาก SharedPreferences
   void loadShopData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     shopId.value = prefs.getInt('shopId') ?? 0;
     shopName.value = prefs.getString('shopName') ?? "ยังไม่ได้เลือกร้าน";
-    print("🏠 ปัจจุบันจัดการร้าน: ${shopName.value} (ID: ${shopId.value})");
-
-    // โหลดข้อมูลร้านเสร็จแล้ว ให้เรียกยอดขายของร้านนี้ต่อเลย
-    if (shopId.value != 0) {
-      fetchTodaySales();
-    }
+    if (shopId.value != 0) fetchTodaySales();
   }
 
-  // ✨ ฟังก์ชันใหม่: ดึงยอดขายของ "วันนี้"
   Future<void> fetchTodaySales() async {
     isSalesLoading.value = true;
     try {
-      // หาวันที่วันนี้ในรูปแบบ yyyy-MM-dd
       DateTime now = DateTime.now();
       String todayStr = DateFormat('yyyy-MM-dd').format(now);
 
-      // เรียก API (ส่ง start_date และ end_date เป็นวันนี้ทั้งคู่)
       final summary = await ApiDashboad.getSalesSummary(
         shopId.value,
         todayStr,
@@ -61,14 +53,13 @@ class HomeController extends GetxController {
       );
 
       if (summary != null) {
-        // จัด Format ตัวเลขให้มีลูกน้ำ เช่น 12,450
-        dailyTotal.value = NumberFormat('#,##0').format(summary.sales);
-      } else {
-        dailyTotal.value = "0";
+        final f = NumberFormat('#,##0');
+        dailyTotal.value = f.format(summary.totalRevenue);
+        actualPaid.value = f.format(summary.actualPaid);
+        debtAmount.value = f.format(summary.debtAmount);
       }
     } catch (e) {
       print("Error fetching today sales: $e");
-      dailyTotal.value = "0";
     } finally {
       isSalesLoading.value = false;
     }
@@ -87,48 +78,38 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // กำหนดสีตามธีมพรีเมียมของคุณ
-    const Color headerBgColor = Color(0xFFE55D30); // ส้มเข้ม
-    const Color scaffoldBgColor = Color(0xFFF7F7F7); // พื้นหลังเทาอ่อน
-    const Color iconColor = Color(0xFF64DD17); // เขียวสดใส
+    const Color headerBgColor = Color(0xFFE55D30); // ส้มอิฐ
+    const Color scaffoldBgColor = Color(0xFFF8FAFC);
+    const Color iconColor = Color(0xFF10B981);
 
     final HomeController controller = Get.put(HomeController());
 
-    // 🔥 สั่งโหลดข้อมูลใหม่ทุกครั้งที่ผู้ใช้เข้าหน้านี้ (เผื่อเพิ่งขายของเสร็จแล้วกดกลับมาหน้าหลัก)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (controller.shopId.value != 0) {
-        controller.fetchTodaySales();
-      }
+      if (controller.shopId.value != 0) controller.fetchTodaySales();
     });
 
     return Scaffold(
       backgroundColor: scaffoldBgColor,
       body: RefreshIndicator(
-        // เลื่อนจอลงเพื่อดึงข้อมูลใหม่แบบ Manual
         onRefresh: () async => controller.fetchTodaySales(),
-        color: const Color.fromARGB(255, 229, 93, 48),
+        color: headerBgColor,
         child: SingleChildScrollView(
-          physics:
-              const AlwaysScrollableScrollPhysics(), // บังคับให้ Scroll ได้ตลอดเพื่อใช้ RefreshIndicator
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              // --- 1. ส่วน Header (ชื่อร้านที่ดึงมาจาก SharedPreferences) ---
-              _buildHeader(
-                context,
-                controller,
-                headerBgColor: const Color.fromARGB(255, 229, 93, 48),
-              ),
+              // --- 1. ส่วน Header และ Report Card ---
+              _buildHeader(context, controller, headerBgColor: headerBgColor),
 
               // --- 2. ส่วนเมนูรายการ ---
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 20,
+                  vertical: 10,
                 ),
                 child: Column(
                   children: [
                     _buildScanToSellCard(context),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 16),
                     _buildMenuTile(
                       icon: Icons.add_circle_outline,
                       iconColor: iconColor,
@@ -145,14 +126,14 @@ class HomePage extends StatelessWidget {
                     ),
                     _buildMenuTile(
                       icon: Icons.local_offer_outlined,
-                      iconColor: Colors.orange.shade700,
+                      iconColor: Colors.orange.shade600,
                       title: "เช็คราคาสินค้า",
                       subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
                       onTap: () => Get.to(() => const CheckPriceScreen()),
                     ),
                     _buildMenuTile(
                       icon: Icons.fact_check_outlined,
-                      iconColor: Colors.purple.shade600,
+                      iconColor: Colors.purple.shade500,
                       title: "เช็คสต็อกสินค้า",
                       subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
                       onTap: () => Get.to(() => const CheckStockScreen()),
@@ -167,11 +148,11 @@ class HomePage extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
-      // --- 3. Bottom Navigation Bar ---
       bottomNavigationBar: Obx(
         () => BottomNavBar(
           currentIndex: controller.currentIndex.value,
@@ -181,43 +162,50 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // --- Widget 1: Header (ใช้ Obx เพื่อแสดงชื่อร้านค้าแบบ Dynamic) ---
+  // ✨ ขยาย Header กลับไปกว้างและโปร่งสบายเหมือนเดิม
   Widget _buildHeader(
     BuildContext context,
     HomeController controller, {
     required Color headerBgColor,
   }) {
+    // 🔥 ปรับความสูงกลับมาเป็น 0.38 เพื่อให้กล่องส้มมีพื้นที่มากขึ้น
     final double topContainerHeight = MediaQuery.of(context).size.height * 0.38;
 
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: topContainerHeight,
-      decoration: BoxDecoration(
-        color: headerBgColor,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(40),
-          bottomRight: Radius.circular(40),
-        ),
-      ),
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
+          Container(
+            width: double.infinity,
+            height: topContainerHeight - 50,
+            decoration: BoxDecoration(
+              color: headerBgColor,
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(40),
+                bottomRight: Radius.circular(40),
+              ),
+            ),
+          ),
           Positioned(
             top: 60,
-            left: 30,
+            left: 24,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   "ยินดีต้อนรับเข้าสู่",
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 Obx(
                   () => Text(
                     controller.shopName.value,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 28, // ปรับให้ตัวใหญ่ขึ้นเล็กน้อย
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -227,7 +215,7 @@ class HomePage extends StatelessWidget {
           Positioned(
             left: 20,
             right: 20,
-            bottom: 20,
+            bottom: 0,
             child: _buildDailyReportCard(controller),
           ),
         ],
@@ -235,16 +223,16 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // --- Widget 2: Daily Report Card ---
+  // ✨ นำกราฟแท่งแบบดั้งเดิมที่สวยงามกลับมา พร้อมผสมกับข้อมูลแบบใหม่
   Widget _buildDailyReportCard(HomeController controller) {
     return Container(
-      padding: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(25), // Padding เดิมที่สวยพอดี
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(25), // รัศมีขอบโค้งเดิม
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -252,18 +240,21 @@ class HomePage extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // --- ส่วนบน: แบบดั้งเดิม (มีกราฟแท่ง) ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                "ยอดขายวันนี้",
+                "ยอดขายรวมวันนี้",
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
                   fontWeight: FontWeight.w500,
                 ),
               ),
+              // เอากลับมา: ไอคอนลูกศรสีแดงมุมขวาบน
               Icon(Icons.trending_up, color: Colors.red.shade400, size: 28),
             ],
           ),
@@ -271,49 +262,60 @@ class HomePage extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Obx(() {
-                // ถ้ากำลังโหลด API ให้โชว์วงกลมหมุนเล็กๆ แทนตัวเลขชั่วคราว
-                if (controller.isSalesLoading.value) {
-                  return const Padding(
-                    padding: EdgeInsets.only(bottom: 4.0),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFFE55D30),
-                      ),
-                    ),
-                  );
-                }
-
-                // โหลดเสร็จแล้วโชว์ตัวเลข
-                return Text(
+              Obx(
+                () => Text(
                   "฿ ${controller.dailyTotal.value}",
                   style: const TextStyle(
-                    fontSize: 32,
+                    fontSize: 32, // ตัวเลขใหญ่ชัดเจนแบบเก่า
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2D2D2D),
+                    letterSpacing: -0.5,
                   ),
-                );
-              }),
+                ),
+              ),
               const Spacer(),
+              // เอากลับมา: กราฟแท่ง 4 แท่ง สวยๆ
               _buildSmallBar(25, Colors.grey.shade200),
               _buildSmallBar(45, Colors.red.shade300),
               _buildSmallBar(60, Colors.red.shade600),
               _buildSmallBar(35, Colors.grey.shade200),
             ],
           ),
-          const SizedBox(height: 12),
-          const Text(
-            "อัปเดตล่าสุดเมื่อสักครู่",
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+
+          // --- ส่วนล่าง: ข้อมูลรับเงินจริงและค้างชำระ (เพิ่มเข้ามาใหม่แบบเนียนๆ) ---
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Divider(color: Color(0xFFF1F5F9), thickness: 1.5, height: 1),
+          ),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _buildSummaryItem(
+                  label: "รับเงินจริง",
+                  value: controller.actualPaid,
+                  color: const Color(0xFF10B981), // สีเขียว
+                  icon: Icons.check_circle_outline_rounded,
+                ),
+                const VerticalDivider(
+                  color: Color(0xFFF1F5F9),
+                  thickness: 1.5,
+                  width: 30,
+                ),
+                _buildSummaryItem(
+                  label: "ค้างชำระ",
+                  value: controller.debtAmount,
+                  color: const Color(0xFFF59E0B), // สีส้ม
+                  icon: Icons.info_outline_rounded,
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  // ✨ ฟังก์ชันกราฟแท่งเดิมที่เอามาใช้ใหม่
   Widget _buildSmallBar(double height, Color color) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -326,95 +328,112 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // ✨ Widget: ปุ่มสแกนเพื่อขาย (ดีไซน์ตามรูปภาพที่ส่งมา)
-  Widget _buildScanToSellCard(BuildContext context) {
-    // เรียก Controller มาใช้งานเพื่อสั่งเปลี่ยน Tab
-    final HomeController homeController = Get.find<HomeController>();
+  Widget _buildSummaryItem({
+    required String label,
+    required RxString value,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Obx(
+            () => Text(
+              "฿ ${value.value}",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  // ✨ ปุ่มสแกนเพื่อขาย (ปรับให้โค้งและมีแสงเงาสวยขึ้น)
+  Widget _buildScanToSellCard(BuildContext context) {
+    final HomeController homeController = Get.find<HomeController>();
     return InkWell(
       onTap: () async {
-        // 1. เปิดหน้าสแกน
         var barcode = await Get.to(() => const ScanBarcodePage());
-
         if (barcode != null && barcode is String) {
-          CheckoutController checkoutCtrl;
-          try {
-            checkoutCtrl = Get.find<CheckoutController>();
-          } catch (e) {
-            checkoutCtrl = Get.put(CheckoutController());
-          }
-
-          // 2. ไปที่หน้า Checkout
-          if (Get.currentRoute != '/CheckoutPage') {
-            Get.to(() => const CheckoutPage());
-          }
-
+          CheckoutController checkoutCtrl =
+              Get.isRegistered<CheckoutController>()
+              ? Get.find<CheckoutController>()
+              : Get.put(CheckoutController());
+          Get.to(() => const CheckoutPage());
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             await checkoutCtrl.checkShopAndLoadData();
             await checkoutCtrl.fetchFreshProducts();
             checkoutCtrl.addProductByBarcode(barcode);
-
-            // 3. เปลี่ยนสถานะ Index ใน Home ให้เป็นหน้าขาย (ปกติคือ Index 2)
             homeController.changeTab(2);
           });
         }
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 48, 148, 229), // สีส้มอิฐตามรูป
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF38BDF8), // สีฟ้าน้ำทะเล
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color.fromARGB(255, 48, 126, 229).withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
+              color: const Color(0xFF38BDF8).withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: Row(
           children: [
-            // ไอคอน QR Code ในกรอบสี่เหลี่ยมมนสว่างกว่าพื้นหลัง
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2), // สีส้มอ่อนกว่า
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Icon(
-                Icons.qr_code_scanner,
-                color: Colors.white,
-                size: 30,
-              ),
+            const Icon(
+              Icons.qr_code_scanner_rounded,
+              color: Colors.white,
+              size: 32,
             ),
-            const SizedBox(width: 20),
-            // ข้อความตรงกลาง
-            const Expanded(
+            const SizedBox(width: 16),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                children: const [
                   Text(
                     "สแกนเพื่อขาย",
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    "สแกนบาร์โค้ดเพื่อเริ่มการขายทันที",
-                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                    "เริ่มการขายด้วยบาร์โค้ดทันที",
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ],
               ),
             ),
-            // ไอคอนลูกศรด้านหลัง
             const Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white60,
-              size: 18,
+              Icons.chevron_right_rounded,
+              color: Colors.white70,
+              size: 24,
             ),
           ],
         ),
@@ -422,7 +441,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // --- Widget 3: Menu Tile (List Item Style) ---
+  // ✨ เมนูย่อยต่างๆ ปรับแสงเงาให้ดูเป็นระเบียบ
   Widget _buildMenuTile({
     required IconData icon,
     required Color iconColor,
@@ -431,13 +450,13 @@ class HomePage extends StatelessWidget {
     VoidCallback? onTap,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(0.02), // เงาบางมากๆ
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -445,33 +464,30 @@ class HomePage extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 12,
-          horizontal: 15,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: iconColor.withOpacity(0.1),
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: iconColor, size: 28),
+          child: Icon(icon, color: iconColor, size: 22),
         ),
         title: Text(
           title,
           style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2D2D2D),
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            color: Color(0xFF1E293B),
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
         trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
+          Icons.chevron_right_rounded,
+          size: 20,
           color: Colors.grey,
         ),
       ),

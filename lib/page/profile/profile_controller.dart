@@ -83,7 +83,7 @@ class ProfileController extends GetxController {
       );
 
       if (summary != null) {
-        todaySales.value = NumberFormat('#,##0').format(summary.sales);
+        todaySales.value = NumberFormat('#,##0').format(summary.actualPaid);
       } else {
         todaySales.value = "0";
       }

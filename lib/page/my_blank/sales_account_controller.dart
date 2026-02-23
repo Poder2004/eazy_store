@@ -44,12 +44,11 @@ class SalesAccountController extends GetxController {
         locale: const Locale('th', 'TH'),
       );
       if (picked != null) currentDate.value = picked;
-    } 
+    }
     // ✅ กรณีเลือก "เดือนนี้" - สร้าง Dialog รายชื่อเดือนเอง
     else if (selectedView.value == 'เดือนนี้') {
       _showMonthPicker(context);
-    } 
-    else {
+    } else {
       // เลือกปี - ใช้มาตรฐานเดิม
       final DateTime? picked = await showDatePicker(
         context: context,
@@ -66,8 +65,18 @@ class SalesAccountController extends GetxController {
   // 🗓️ ฟังก์ชันสร้างหน้าเลือกเดือนแบบรายชื่อ (ม.ค. - ธ.ค.)
   void _showMonthPicker(BuildContext context) {
     final List<String> months = [
-      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+      'มกราคม',
+      'กุมภาพันธ์',
+      'มีนาคม',
+      'เมษายน',
+      'พฤษภาคม',
+      'มิถุนายน',
+      'กรกฎาคม',
+      'สิงหาคม',
+      'กันยายน',
+      'ตุลาคม',
+      'พฤศจิกายน',
+      'ธันวาคม',
     ];
 
     Get.dialog(
@@ -93,20 +102,28 @@ class SalesAccountController extends GetxController {
               bool isSelected = currentDate.value.month == (index + 1);
               return GestureDetector(
                 onTap: () {
-                  currentDate.value = DateTime(currentDate.value.year, index + 1, 1);
+                  currentDate.value = DateTime(
+                    currentDate.value.year,
+                    index + 1,
+                    1,
+                  );
                   Get.back(); // เลือกเสร็จปิด Dialog
                 },
                 child: Container(
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF2563EB) : Colors.grey.shade100,
+                    color: isSelected
+                        ? const Color(0xFF2563EB)
+                        : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     months[index],
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: isSelected ? Colors.white : Colors.black87,
                     ),
                   ),
@@ -184,14 +201,14 @@ class SalesAccountController extends GetxController {
       ]);
 
       if (results[0] != null) {
-        totalSales.value = results[0]!.sales;
+        totalSales.value = results[0]!.totalRevenue;
         totalCost.value = results[0]!.cost;
         netProfit.value = results[0]!.profit;
         totalTransactions.value = results[0]!.transactions;
         if (results[1] != null) {
           salesTrend.value = _calculateTrend(
-            results[0]!.sales,
-            results[1]!.sales,
+            results[0]!.totalRevenue,
+            results[1]!.totalRevenue,
           );
           costTrend.value = _calculateTrend(results[0]!.cost, results[1]!.cost);
           profitTrend.value = _calculateTrend(
