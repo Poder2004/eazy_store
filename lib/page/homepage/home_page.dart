@@ -5,6 +5,9 @@ import 'package:eazy_store/page/product/add_stock/add_stock.dart';
 
 import 'package:eazy_store/page/product/check_price_and_stock/check_price.dart';
 import 'package:eazy_store/page/product/check_price_and_stock/check_stock.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
+import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/page/wait_coming/buy_products.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -103,14 +106,18 @@ class HomePage extends StatelessWidget {
       body: RefreshIndicator(
         // เลื่อนจอลงเพื่อดึงข้อมูลใหม่แบบ Manual
         onRefresh: () async => controller.fetchTodaySales(),
-        color: headerBgColor,
+        color: const Color.fromARGB(255, 229, 93, 48),
         child: SingleChildScrollView(
           physics:
               const AlwaysScrollableScrollPhysics(), // บังคับให้ Scroll ได้ตลอดเพื่อใช้ RefreshIndicator
           child: Column(
             children: [
               // --- 1. ส่วน Header (ชื่อร้านที่ดึงมาจาก SharedPreferences) ---
-              _buildHeader(context, controller, headerBgColor: headerBgColor),
+              _buildHeader(
+                context,
+                controller,
+                headerBgColor: const Color.fromARGB(255, 229, 93, 48),
+              ),
 
               // --- 2. ส่วนเมนูรายการ ---
               Container(
@@ -120,6 +127,8 @@ class HomePage extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
+                    _buildScanToSellCard(context),
+                    const SizedBox(height: 15),
                     _buildMenuTile(
                       icon: Icons.add_circle_outline,
                       iconColor: iconColor,
@@ -151,8 +160,8 @@ class HomePage extends StatelessWidget {
                     _buildMenuTile(
                       icon: Icons.receipt_long,
                       iconColor: Colors.teal.shade500,
-                      title: "สั่งซื้อสินค้า",
-                      subtitle: "รายการจัดซื้อและประวัติการสั่ง",
+                      title: "ทำใบสั่งสินค้า",
+                      subtitle: "เลือกสินค้าและส่งออกเป็นไฟล์ PDF",
                       onTap: () => Get.to(() => const BuyProductsScreen()),
                     ),
                   ],
@@ -313,6 +322,102 @@ class HomePage extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
+
+  // ✨ Widget: ปุ่มสแกนเพื่อขาย (ดีไซน์ตามรูปภาพที่ส่งมา)
+  Widget _buildScanToSellCard(BuildContext context) {
+    // เรียก Controller มาใช้งานเพื่อสั่งเปลี่ยน Tab
+    final HomeController homeController = Get.find<HomeController>();
+
+    return InkWell(
+      onTap: () async {
+        // 1. เปิดหน้าสแกน
+        var barcode = await Get.to(() => const ScanBarcodePage());
+
+        if (barcode != null && barcode is String) {
+          CheckoutController checkoutCtrl;
+          try {
+            checkoutCtrl = Get.find<CheckoutController>();
+          } catch (e) {
+            checkoutCtrl = Get.put(CheckoutController());
+          }
+
+          // 2. ไปที่หน้า Checkout
+          if (Get.currentRoute != '/CheckoutPage') {
+            Get.to(() => const CheckoutPage());
+          }
+
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            await checkoutCtrl.checkShopAndLoadData();
+            await checkoutCtrl.fetchFreshProducts();
+            checkoutCtrl.addProductByBarcode(barcode);
+
+            // 3. เปลี่ยนสถานะ Index ใน Home ให้เป็นหน้าขาย (ปกติคือ Index 2)
+            homeController.changeTab(2);
+          });
+        }
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 48, 148, 229), // สีส้มอิฐตามรูป
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color.fromARGB(255, 48, 126, 229).withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // ไอคอน QR Code ในกรอบสี่เหลี่ยมมนสว่างกว่าพื้นหลัง
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2), // สีส้มอ่อนกว่า
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const Icon(
+                Icons.qr_code_scanner,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 20),
+            // ข้อความตรงกลาง
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "สแกนเพื่อขาย",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    "สแกนบาร์โค้ดเพื่อเริ่มการขายทันที",
+                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                  ),
+                ],
+              ),
+            ),
+            // ไอคอนลูกศรด้านหลัง
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white60,
+              size: 18,
+            ),
+          ],
+        ),
       ),
     );
   }

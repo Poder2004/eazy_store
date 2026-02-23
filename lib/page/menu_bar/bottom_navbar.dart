@@ -50,8 +50,8 @@ class BottomNavBar extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
                 color: isActive ? activeColor : inactiveColor,
               ),
             ),
@@ -124,10 +124,10 @@ class BottomNavBar extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'สแกนชำระ',
+                'สแกนขาย',
                 style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
                   color: Colors.grey.shade500,
                 ),
               ),
