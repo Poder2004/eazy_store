@@ -8,7 +8,9 @@ import '../model/response/product_response.dart';
 
 class ApiProduct {
   // ฟังก์ชันสำหรับบันทึกสินค้าใหม่
-  static Future<Map<String, dynamic>> createProduct(ProductRequest product) async {
+  static Future<Map<String, dynamic>> createProduct(
+    ProductRequest product,
+  ) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products');
 
     try {
@@ -68,9 +70,25 @@ class ApiProduct {
     }
   }
 
-  static Future<List<ProductResponse>> getProductsByShop(int shopId) async {
-    // ส่ง shop_id ไปเป็น Query String
-    final url = Uri.parse('${AppConfig.baseUrl}/api/products?shop_id=$shopId');
+  // ปรับเป็น Future<dynamic> เพื่อให้รับได้ทั้ง List และ ProductPagedResponse
+  static Future<dynamic> getProductsByShop(
+    int shopId, {
+    int? page,
+    int? limit,
+    String? search,
+    int? categoryId,
+    String? sort,
+  }) async {
+    // 1. สร้าง URL พร้อมตรวจสอบว่ามี page และ limit หรือไม่
+    String urlString = '${AppConfig.baseUrl}/api/products?shop_id=$shopId';
+    if (page != null) urlString += '&page=$page';
+    if (limit != null) urlString += '&limit=$limit';
+    if (search != null && search.isNotEmpty) urlString += '&search=$search';
+    if (categoryId != null && categoryId != 0)
+      urlString += '&category_id=$categoryId';
+    if (sort != null) urlString += '&sort=$sort';
+
+    final url = Uri.parse(urlString);
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -85,21 +103,32 @@ class ApiProduct {
       );
 
       if (response.statusCode == 200) {
-        List<dynamic> body = jsonDecode(response.body);
-        // Map ข้อมูล JSON กลับเป็น List ของ Object Product
-        return body.map((item) => ProductResponse.fromJson(item)).toList();
-      } else {
+        var body = jsonDecode(response.body);
+
+        // 2. ตรวจสอบว่า body เป็น Map (Pagination) หรือ List (แบบปกติ)
+        if (body is Map<String, dynamic> && body.containsKey('items')) {
+          // ใช้ Class ใหม่ที่เราเขียนต่อท้ายไว้
+          return ProductPagedResponse.fromJson(body);
+        } else if (body is List) {
+          // ส่งกลับเป็น List แบบเดิม (Backward Compatibility)
+          return body.map((item) => ProductResponse.fromJson(item)).toList();
+        }
         return [];
+      } else {
+        return null; // หรือส่ง [] ตามความเหมาะสม
       }
     } catch (e) {
       print("Error fetching products: $e");
-      return [];
+      return null;
     }
   }
 
   // ค้นหาสินค้า (Search) ตาม Barcode หรือ Product Code
 
-  static Future<ProductResponse?> searchProduct(String keyword, int shopId) async {
+  static Future<ProductResponse?> searchProduct(
+    String keyword,
+    int shopId,
+  ) async {
     // รับ shopId
     final url = Uri.parse(
       '${AppConfig.baseUrl}/api/products/search?keyword=$keyword&shop_id=$shopId',
@@ -119,7 +148,9 @@ class ApiProduct {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return ProductResponse.fromJson(data); // <--- เรียกใช้ Model ที่คุณเพิ่งเขียน
+        return ProductResponse.fromJson(
+          data,
+        ); // <--- เรียกใช้ Model ที่คุณเพิ่งเขียน
       } else {
         print("Product not found: ${response.body}");
         return null;

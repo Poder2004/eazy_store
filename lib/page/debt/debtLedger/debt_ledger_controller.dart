@@ -22,6 +22,11 @@ class DebtLedgerController extends GetxController {
   var isSearching = false.obs;
   var showDropdown = false.obs;
   var currentShopId = 1.obs;
+
+  var currentPage = 1.obs;
+  var totalPages = 1.obs;
+  var itemsPerPage = 10.obs;
+  var totalItems = 0.obs;
   
   Timer? _debounce;
 
@@ -48,9 +53,24 @@ class DebtLedgerController extends GetxController {
   Future<void> fetchAllDebtors() async {
     isLoading.value = true;
     try {
-      final result = await ApiDebtor.getDebtorsByShop(currentShopId.value);
-      originalDebtors.assignAll(result); 
-      allDebtors.assignAll(result); 
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      currentShopId.value = prefs.getInt('shopId') ?? 1;
+
+      // ส่งค่า page, limit และ search ไปที่ API
+      var result = await ApiDebtor.getDebtorsByShop(
+        currentShopId.value,
+        page: currentPage.value,
+        limit: itemsPerPage.value,
+        search: searchController.text, 
+      );
+
+      if (result is DebtorPagedResponse) {
+        allDebtors.assignAll(result.items);
+        totalPages.value = result.totalPages;
+        totalItems.value = result.totalItems;
+      } else if (result is List<DebtorResponse>) {
+        allDebtors.assignAll(result);
+      }
     } catch (e) {
       print("Error loading debtors: $e");
     } finally {
@@ -68,30 +88,27 @@ class DebtLedgerController extends GetxController {
     }
   }
 
+  void changePage(int page) {
+    if (page >= 1 && page <= totalPages.value) {
+      currentPage.value = page;
+      fetchAllDebtors();
+    }
+  }
+
+  void updateLimit(int limit) {
+    itemsPerPage.value = limit;
+    currentPage.value = 1; // รีเซ็ตไปหน้าแรก
+    fetchAllDebtors();
+  }
+
   // --- ฟังก์ชันค้นหา (Search) ---
   void onSearchChanged(String keyword) {
-     isSearchEmpty.value = keyword.isEmpty;
-    if (keyword.isEmpty) {
-      searchResults.clear();
-      showDropdown.value = false;
-      allDebtors.assignAll(originalDebtors); 
-      return;
-    }
-
+    isSearchEmpty.value = keyword.isEmpty;
+    
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
-      isSearching.value = true;
-      try {
-        final results = await ApiDebtor.searchDebtor(keyword);
-        searchResults.assignAll(results);
-        showDropdown.value = true;
-      } catch (e) {
-        print("Error searching: $e");
-        searchResults.clear();
-      } finally {
-        isSearching.value = false;
-      }
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      currentPage.value = 1; // เริ่มค้นหาจากหน้าแรกเสมอ
+      fetchAllDebtors();
     });
   }
 

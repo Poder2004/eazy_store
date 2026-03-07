@@ -11,7 +11,6 @@ class CheckStockScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // เรียกใช้ Controller ผ่าน Get.put
     final StockController controller = Get.put(StockController());
 
     const Color primaryColor = Color(0xFF6B8E23);
@@ -27,60 +26,65 @@ class CheckStockScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Column(
-          children: [
-            _buildSearchBar(controller, primaryColor),
-            const SizedBox(height: 15),
-            _buildFilterAndSortRow(controller),
-            const SizedBox(height: 15),
-
-            // 📦 รายการสินค้า
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: primaryColor),
-                  );
-                }
-                if (controller.filteredProducts.isEmpty) {
-                  return const Center(child: Text("ไม่พบข้อมูลสินค้า"));
-                }
-
-                return RefreshIndicator(
-                  color: primaryColor,
-                  onRefresh: () =>
-                      controller.fetchStockData(), // ดึงข้อมูลใหม่เมื่อรูดลง
-                  child: ListView.builder(
-                    physics:
-                        const AlwaysScrollableScrollPhysics(), // ต้องใส่เพื่อให้รูดได้แม้รายการจะน้อย
-                    itemCount: controller.filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = controller.filteredProducts[index];
-                      return InkWell(
-                        onTap: () async {
-                          var result = await Get.to(
-                            () => const ProductDetailScreen(),
-                            arguments: product,
-                            transition: Transition.rightToLeft,
-                          );
-                          if (result == true) {
-                            controller.fetchStockData();
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(15),
-                        child: _buildProductCard(product, warningColor),
-                      );
-                    },
-                  ),
-                );
-              }),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              children: [
+                _buildSearchBar(controller, primaryColor),
+                const SizedBox(height: 15),
+                _buildFilterAndSortRow(controller),
+                const SizedBox(height: 10),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          // 📦 รายการสินค้า
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value && controller.products.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(color: primaryColor),
+                );
+              }
+              if (controller.filteredProducts.isEmpty) {
+                return const Center(child: Text("ไม่พบข้อมูลสินค้า"));
+              }
+
+              return RefreshIndicator(
+                color: primaryColor,
+                onRefresh: () => controller.fetchStockData(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: controller.filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = controller.filteredProducts[index];
+                    return InkWell(
+                      onTap: () async {
+                        var result = await Get.to(
+                          () => const ProductDetailScreen(),
+                          arguments: product,
+                          transition: Transition.rightToLeft,
+                        );
+                        if (result == true) {
+                          controller.fetchStockData();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(15),
+                      child: _buildProductCard(product, warningColor),
+                    );
+                  },
+                ),
+              );
+            }),
+          ),
+
+          // ✨ ส่วนควบคุมการแบ่งหน้า (Pagination Bar)
+          _buildPaginationControls(controller, primaryColor),
+        ],
       ),
       bottomNavigationBar: Obx(
         () => BottomNavBar(
@@ -91,120 +95,232 @@ class CheckStockScreen extends StatelessWidget {
     );
   }
 
-  // --- UI Components ที่ดึงค่ามาจาก controller ---
-
-  Widget _buildFilterAndSortRow(StockController controller) {
-    // สีเขียวหลักจากหน้าแอปของคุณ
-    const Color themeGreen = Color(0xFF6B8E23);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Obx(
-              () => Container(
-                height: 42,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25), // มนสวยแบบในรูป
-                  border: Border.all(
-                    color: themeGreen.withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int>(
-                    value: controller.selectedCategoryId.value,
-                    isExpanded: true,
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down,
-                      color: themeGreen,
-                    ),
-                    style: const TextStyle(
-                      color: themeGreen,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    onChanged: (val) => controller.filterByCategory(val),
-                    items: [
-                      const DropdownMenuItem(value: 0, child: Text("หมวดหมู่")),
-                      ...controller.categories.map(
-                        (cat) => DropdownMenuItem(
-                          value: cat.categoryId,
-                          child: Text(
-                            cat.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          const Row(
-            children: [
-              Icon(Icons.sort, size: 20, color: Colors.grey),
-              SizedBox(width: 4),
-              Text(
-                "เรียงโดย:",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 12),
-
-          // 3. ปุ่มสลับ น้อย-มาก (สไตล์เดียวกับ Dropdown)
-          Expanded(
-            flex: 2,
-            child: InkWell(
-              onTap: controller.toggleSort,
-              borderRadius: BorderRadius.circular(25),
-              child: Obx(
-                () => Container(
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(
-                      color: themeGreen.withOpacity(0.3),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        controller.isAscending.value
-                            ? "น้อย → มาก"
-                            : "มาก → น้อย",
-                        style: const TextStyle(
-                          color: themeGreen,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.swap_vert, size: 18, color: themeGreen),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+  // --- เพิ่ม Widget สำหรับคุมหน้าหน้าสินค้า ---
+  Widget _buildPaginationControls(
+    StockController controller,
+    Color primaryColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
           ),
         ],
       ),
+      child: SafeArea(
+        // เพิ่มเพื่อป้องกันการทับซ้อนกับแถบนำทางของระบบในบางรุ่น
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // --- ส่วนที่ 1: เลือกจำนวนรายการต่อหน้า (Limit) ---
+            Row(
+              children: [
+                const Text(
+                  "แสดง: ",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(width: 5),
+                Container(
+                  width: 45,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Obx(
+                    () => TextField(
+                      controller:
+                          TextEditingController(
+                              text: controller.itemsPerPage.value.toString(),
+                            )
+                            ..selection = TextSelection.collapsed(
+                              offset: controller.itemsPerPage.value
+                                  .toString()
+                                  .length,
+                            ),
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onSubmitted: (val) {
+                        int? limit = int.tryParse(val);
+                        if (limit != null && limit > 0) {
+                          controller.updateLimit(limit);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                PopupMenuButton<int>(
+                  icon: const Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 60),
+                  onSelected: (int value) => controller.updateLimit(value),
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
+                    const PopupMenuItem<int>(value: 10, child: Text('10')),
+                    const PopupMenuItem<int>(value: 20, child: Text('20')),
+                    const PopupMenuItem<int>(value: 30, child: Text('30')),
+                    const PopupMenuItem<int>(value: 50, child: Text('50')),
+                  ],
+                ),
+                const Text(
+                  "รายการ",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+
+            // --- ส่วนที่ 2: ปุ่มเลื่อนหน้า (ย้อนกลับ - ถัดไป) ---
+            // ย้าย Obx มาคลุมทั้ง Row เพื่อให้ปุ่มอัปเดตสถานะ (onPressed null/not null)
+            Obx(
+              () => Row(
+                children: [
+                  IconButton(
+                    onPressed: controller.currentPage.value > 1
+                        ? () => controller.changePage(
+                            controller.currentPage.value - 1,
+                          )
+                        : null,
+                    icon: Icon(
+                      Icons.arrow_back_ios,
+                      size: 16,
+                      color: controller.currentPage.value > 1
+                          ? primaryColor
+                          : Colors.grey,
+                    ),
+                  ),
+                  Text(
+                    "${controller.currentPage.value} / ${controller.totalPages.value}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed:
+                        controller.currentPage.value <
+                            controller.totalPages.value
+                        ? () => controller.changePage(
+                            controller.currentPage.value + 1,
+                          )
+                        : null,
+                    icon: Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color:
+                          controller.currentPage.value <
+                              controller.totalPages.value
+                          ? primaryColor
+                          : Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- UI Components อื่นๆ เหมือนเดิม ---
+
+  Widget _buildFilterAndSortRow(StockController controller) {
+    const Color themeGreen = Color(0xFF6B8E23);
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Obx(
+            () => Container(
+              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: themeGreen.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: controller.selectedCategoryId.value,
+                  isExpanded: true,
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: themeGreen,
+                  ),
+                  style: const TextStyle(
+                    color: themeGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  onChanged: (val) => controller.filterByCategory(val),
+                  items: [
+                    const DropdownMenuItem(value: 0, child: Text("หมวดหมู่")),
+                    ...controller.categories.map(
+                      (cat) => DropdownMenuItem(
+                        value: cat.categoryId,
+                        child: Text(cat.name, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        InkWell(
+          onTap: controller.toggleSort,
+          borderRadius: BorderRadius.circular(25),
+          child: Obx(
+            () => Container(
+              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: themeGreen.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    controller.isAscending.value ? "น้อย → มาก" : "มาก → น้อย",
+                    style: const TextStyle(
+                      color: themeGreen,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.swap_vert, size: 18, color: themeGreen),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -220,7 +336,9 @@ class CheckStockScreen extends StatelessWidget {
       ),
       child: TextField(
         controller: controller.searchCtrl,
-        onChanged: controller.searchProduct,
+        onSubmitted: (val) => controller.searchProduct(
+          val,
+        ), // แก้เป็นค้นหาเมื่อกด Enter หรือปุ่มค้นหา
         decoration: InputDecoration(
           hintText: 'ค้นหาชื่อสินค้า หรือ บาร์โค้ด...',
           prefixIcon: const Icon(Icons.search, color: Colors.grey),

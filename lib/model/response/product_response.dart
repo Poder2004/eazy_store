@@ -69,3 +69,30 @@ class ProductResponse {
     );
   }
 }
+
+// --- คลาสสำหรับรับข้อมูลแบบแบ่งหน้า (Pagination) ---
+class ProductPagedResponse {
+  final List<ProductResponse> items;
+  final int totalItems;
+  final int totalPages;
+  final int currentPage;
+
+  ProductPagedResponse({
+    required this.items,
+    required this.totalItems,
+    required this.totalPages,
+    required this.currentPage,
+  });
+
+  factory ProductPagedResponse.fromJson(Map<String, dynamic> json) {
+    return ProductPagedResponse(
+      // นำรายการใน 'items' มาวนลูปสร้างเป็น List ของ ProductResponse
+      items: (json['items'] as List?)
+              ?.map((i) => ProductResponse.fromJson(i))
+              .toList() ?? [],
+      totalItems: json['total_items'] ?? 0,
+      totalPages: json['total_pages'] ?? 0,
+      currentPage: json['current_page'] ?? 1,
+    );
+  }
+}

@@ -31,7 +31,6 @@ class DebtLedgerScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(10.0),
         border: Border.all(color: Colors.grey.shade300, width: 1.0),
       ),
-      // ✅ ถอด Obx ออกจากตรงนี้ แล้วใช้ TextField เพียวๆ
       child: TextField(
         controller: controller.searchController,
         onChanged: controller.onSearchChanged,
@@ -44,20 +43,132 @@ class DebtLedgerScreen extends StatelessWidget {
             horizontal: 12.0,
           ),
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
-
-          // ✅ เอา Obx มาครอบแค่ตรง Icon เพื่อให้มันซ่อน/โชว์ แบบ Real-time
           suffixIcon: Obx(
             () => controller.isSearchEmpty.value
-                ? const SizedBox.shrink() // ถ้าว่างเปล่า ไม่ต้องแสดงปุ่ม
+                ? const SizedBox.shrink()
                 : IconButton(
                     icon: const Icon(Icons.clear, color: Colors.grey),
                     onPressed: controller.clearSearch,
                   ),
           ),
-
           filled: true,
           fillColor: Colors.transparent,
           border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaginationControls() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // ส่วนเลือกจำนวนรายการต่อหน้า
+            Row(
+              children: [
+                const Text(
+                  "แสดง: ",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                Container(
+                  width: 45,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Obx(
+                    () => TextField(
+                      controller:
+                          TextEditingController(
+                              text: controller.itemsPerPage.value.toString(),
+                            )
+                            ..selection = TextSelection.collapsed(
+                              offset: controller.itemsPerPage.value
+                                  .toString()
+                                  .length,
+                            ),
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onSubmitted: (val) {
+                        int? limit = int.tryParse(val);
+                        if (limit != null && limit > 0)
+                          controller.updateLimit(limit);
+                      },
+                    ),
+                  ),
+                ),
+                PopupMenuButton<int>(
+                  icon: const Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                  onSelected: (int value) => controller.updateLimit(value),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 10, child: Text('10')),
+                    const PopupMenuItem(value: 20, child: Text('20')),
+                    const PopupMenuItem(value: 50, child: Text('50')),
+                  ],
+                  
+                ),
+                const Text(
+                  "รายการ",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            // ปุ่มเลื่อนหน้า
+            Obx(
+              () => Row(
+                children: [
+                  IconButton(
+                    onPressed: controller.currentPage.value > 1
+                        ? () => controller.changePage(
+                            controller.currentPage.value - 1,
+                          )
+                        : null,
+                    icon: const Icon(Icons.arrow_back_ios, size: 16),
+                  ),
+                  Text(
+                    "${controller.currentPage.value} / ${controller.totalPages.value}",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    onPressed:
+                        controller.currentPage.value <
+                            controller.totalPages.value
+                        ? () => controller.changePage(
+                            controller.currentPage.value + 1,
+                          )
+                        : null,
+                    icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -246,69 +357,46 @@ class DebtLedgerScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'บัญชีคนค้างชำระ',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: Colors.black87,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
         ),
         centerTitle: true,
         backgroundColor: _kBackgroundColor,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
-      body: RefreshIndicator(
-        onRefresh: controller.fetchAllDebtors,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Stack(
-            children: [
-              // --- Layer ล่าง: เนื้อหาหลัก ---
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 70), // เว้นที่ให้ Search Bar
-                  const Text(
-                    'รายชื่อทั้งหมด',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  Expanded(
-                    child: Obx(() {
-                      if (controller.isLoading.value) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (controller.allDebtors.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            "ยังไม่มีรายการค้างชำระ (หรือค้นหาไม่เจอ)",
-                          ),
-                        );
-                      }
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(top: 5, bottom: 20),
-                        itemCount: controller.allDebtors.length,
-                        itemBuilder: (context, index) {
-                          return _buildDebtorCard(controller.allDebtors[index]);
-                        },
-                      );
-                    }),
-                  ),
-                ],
-              ),
-
-              // --- Layer บน: Search Bar และ Dropdown ---
-              Column(
-                children: [_buildSearchBar(), _buildSearchResultsDropdown()],
-              ),
-            ],
+      body: Column(
+        children: [
+          // 1. ส่วน Search Bar วางถาวรด้านบน
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
+            child: _buildSearchBar(),
           ),
-        ),
+
+          // 2. เนื้อหารายการลูกหนี้
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: controller.fetchAllDebtors,
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (controller.allDebtors.isEmpty) {
+                  return const Center(child: Text("ไม่พบข้อมูลลูกหนี้"));
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  itemCount: controller.allDebtors.length,
+                  itemBuilder: (context, index) {
+                    return _buildDebtorCard(controller.allDebtors[index]);
+                  },
+                );
+              }),
+            ),
+          ),
+
+          // 3. ส่วน Pagination Controls วางไว้ล่างสุดเหนือ Navbar
+          _buildPaginationControls(),
+        ],
       ),
       bottomNavigationBar: Obx(
         () => BottomNavBar(

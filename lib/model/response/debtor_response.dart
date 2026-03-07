@@ -29,3 +29,26 @@ class DebtorResponse {
     );
   }
 }
+
+class DebtorPagedResponse {
+  final List<DebtorResponse> items;
+  final int totalItems;
+  final int totalPages;
+  final int currentPage;
+
+  DebtorPagedResponse({
+    required this.items,
+    required this.totalItems,
+    required this.totalPages,
+    required this.currentPage,
+  });
+
+  factory DebtorPagedResponse.fromJson(Map<String, dynamic> json) {
+    return DebtorPagedResponse(
+      items: (json['items'] as List).map((i) => DebtorResponse.fromJson(i)).toList(),
+      totalItems: json['total_items'] ?? 0,
+      totalPages: json['total_pages'] ?? 1,
+      currentPage: json['current_page'] ?? 1,
+    );
+  }
+}
