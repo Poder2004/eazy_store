@@ -1,9 +1,11 @@
 import 'package:eazy_store/api/api_dashboad.dart';
 import 'package:eazy_store/api/api_shop.dart';
+import 'package:eazy_store/api/api_user.dart'; // ✨ เพิ่ม Import ApiUser
 import 'package:eazy_store/model/response/shop_response.dart';
 import 'package:eazy_store/page/auth/login.dart';
+import 'package:eazy_store/page/edit_profile/edit_profile_page.dart';
+
 import 'package:eazy_store/page/shop/editShop/edit_shop.dart';
-import 'package:eazy_store/page/shop/editShop/edit_shop_controller.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -42,7 +44,7 @@ class ProfileController extends GetxController {
   Future<void> loadProfileData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    // 1. โหลดข้อมูลผู้ใช้
+    // 1. โหลดข้อมูลผู้ใช้ (อ่านจาก SharedPreferences เพื่อให้แสดงผลไวที่สุดตอนเปิดหน้า)
     String name =
         prefs.getString('name') ?? prefs.getString('username') ?? "ผู้ใช้งาน";
     userName.value = name;
@@ -67,6 +69,9 @@ class ProfileController extends GetxController {
     } else {
       isSalesLoading.value = false;
     }
+
+    // ✨ เสริม: ดึงข้อมูลโปรไฟล์ล่าสุดจาก API เผื่อมีการแก้ไขจากเครื่องอื่น
+    reloadProfileDataAfterEdit();
   }
 
   // ดึง API ยอดขายวันนี้
@@ -108,9 +113,45 @@ class ProfileController extends GetxController {
 
   // ---------------- ฟังก์ชัน นำทาง (Navigation) ----------------
 
-  void goToEditProfile() {
+  // ✨ อัปเดตฟังก์ชัน goToEditProfile ให้รอรับค่า
+  void goToEditProfile() async {
     print("ไปยังหน้า Edit Profile");
-    // Get.to(() => const EditProfileScreen());
+
+    // เอาคอมเมนต์ออกแล้วเรียกใช้ EditProfilePage ที่เราสร้างไว้
+    var result = await Get.to(() => const EditProfilePage());
+
+    // ถ้าหน้า Edit ส่งค่า true กลับมา แปลว่ามีการบันทึกสำเร็จ ให้ดึงข้อมูลใหม่
+    if (result == true) {
+      await reloadProfileDataAfterEdit();
+    }
+  }
+
+  // ✨ ฟังก์ชันสำหรับอัปเดตหน้าจอหลังจากแก้ไขโปรไฟล์เสร็จ โดยดึงจาก API
+  Future<void> reloadProfileDataAfterEdit() async {
+    try {
+      final profileData = await ApiUser.getUserProfile();
+
+      if (profileData != null && profileData['user'] != null) {
+        final user = profileData['user'];
+
+        // 1. เซฟทับลงเครื่อง
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('username', user['username']);
+        await prefs.setString('email', user['email']);
+        await prefs.setString('phone', user['phone']);
+
+        // 2. อัปเดตตัวแปร UI บนหน้าจอให้เปลี่ยนทันที
+        String name = user['username'];
+        userName.value = name;
+        userInitials.value = _getInitials(name);
+
+        print(
+          "🔄 อัปเดตหน้า Profile เป็นข้อมูลผู้ใช้ใหม่ (จาก API) เรียบร้อย!",
+        );
+      }
+    } catch (e) {
+      print("Error reloading profile data: $e");
+    }
   }
 
   void switchStore() {
@@ -138,12 +179,9 @@ class ProfileController extends GetxController {
       }
 
       if (currentShop != null) {
-        // 🔥 1. รอรับค่าผลลัพธ์ (result) จาก Get.back(result: true) ของหน้า Edit
         var result = await Get.to(() => EditShopScreen(shop: currentShop));
 
-        // 🔥 2. ถ้า Edit ส่ง true กลับมา แปลว่ามีการ Save ข้อมูล
         if (result == true) {
-          // ให้ดึงข้อมูลร้านใหม่มาทับหน้าจอ Profile
           await reloadShopDataAfterEdit();
         }
       } else {
@@ -165,23 +203,20 @@ class ProfileController extends GetxController {
     }
   }
 
-  // ฟังก์ชันสำหรับดึงข้อมูลร้านที่เพิ่งแก้เสร็จหมาดๆ มาอัปเดตหน้าจอ Profile
   Future<void> reloadShopDataAfterEdit() async {
     ShopResponse? freshShop = await ApiShop().getCurrentShop();
 
     if (freshShop != null) {
-      // 1. อัปเดตตัวแปร UI บนหน้า Profile ทันที
       shopName.value = freshShop.name;
       shopAddress.value = freshShop.address ?? "ไม่มีข้อมูลที่อยู่";
       shopImage.value = freshShop.imgShop;
 
-      // 2. เซฟข้อมูลใหม่ลงเครื่อง เผื่อปิดแอปเปิดใหม่
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('shopName', freshShop.name);
       await prefs.setString('shopAddress', freshShop.address ?? "");
       await prefs.setString('shop_image', freshShop.imgShop);
 
-      print("🔄 อัปเดตหน้า Profile เป็นข้อมูลใหม่เรียบร้อย!");
+      print("🔄 อัปเดตหน้า Profile เป็นข้อมูลร้านค้าใหม่เรียบร้อย!");
     }
   }
 
@@ -206,7 +241,6 @@ class ProfileController extends GetxController {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle Bar ด้านบน
             Container(
               width: 40,
               height: 4,
@@ -216,8 +250,6 @@ class ProfileController extends GetxController {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Icon วงกลมสีแดงแบบ Subtle
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -231,7 +263,6 @@ class ProfileController extends GetxController {
               ),
             ),
             const SizedBox(height: 16),
-
             const Text(
               "ออกจากระบบ",
               style: TextStyle(
@@ -247,8 +278,6 @@ class ProfileController extends GetxController {
               style: TextStyle(fontSize: 14, color: Colors.blueGrey.shade400),
             ),
             const SizedBox(height: 32),
-
-            // ปุ่มกดยืนยัน/ยกเลิก แบบ Stacked (ระบบใหญ่ๆ นิยมแบบนี้)
             Row(
               children: [
                 Expanded(
@@ -274,7 +303,6 @@ class ProfileController extends GetxController {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      // Logic Logout ของคุณ
                       SharedPreferences prefs =
                           await SharedPreferences.getInstance();
                       await prefs.clear();
