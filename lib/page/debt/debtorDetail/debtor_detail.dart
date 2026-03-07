@@ -223,27 +223,76 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("รายละเอียดลูกหนี้"),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        foregroundColor: Colors.black,
-      ),
-      backgroundColor: const Color(0xFFF7F7F7),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return DefaultTabController(
+      length: 2, // มี 2 แท็บ: หนี้ค้าง กับ ประวัติจ่ายเงิน
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("รายละเอียดลูกหนี้"),
+          backgroundColor: Colors.white,
+          elevation: 1,
+          foregroundColor: Colors.black,
+          // ✨ เพิ่ม TabBar ตรงนี้
+          bottom: const TabBar(
+            labelColor: Colors.blue,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.blue,
+            tabs: [
+              Tab(text: "หนี้ค้างชำระ"),
+              Tab(text: "ประวัติการคืนเงิน"),
+            ],
+          ),
+        ),
+        backgroundColor: const Color(0xFFF7F7F7),
+        body: Column(
           children: [
-            _buildProfileCard(),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text(
-                "ประวัติการติดหนี้",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            _buildProfileCard(), // ส่วนหัวแสดงชื่อและ Credit Bar
+            // ✨ ใช้ Expanded ครอบ TabBarView เพื่อให้รายการเลื่อนได้
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // แท็บที่ 1: หนี้ค้างชำระ
+                  RefreshIndicator(
+                    onRefresh: () => _controller.fetchAllData(),
+                    child: ListView(
+                      // ใช้ ListView เพื่อให้ Scroll ได้และรองรับ RefreshIndicator
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text(
+                            "ประวัติการติดหนี้",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        _buildHistoryList(),
+                      ],
+                    ),
+                  ),
+
+                  // แท็บที่ 2: ประวัติการคืนเงิน
+                  RefreshIndicator(
+                    onRefresh: () => _controller.fetchAllData(),
+                    child: ListView(
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text(
+                            "ประวัติการจ่ายหนี้",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        _buildPaymentHistoryList(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            _buildHistoryList(),
           ],
         ),
       ),
@@ -587,6 +636,76 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentHistoryList() {
+    if (_controller.isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_controller.paymentList.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: Text(
+            "ยังไม่มีประวัติการคืนเงิน",
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(), // เพราะอยู่ภายใต้ SingleChildScrollView ใน TabBarView
+      itemCount: _controller.paymentList.length,
+      itemBuilder: (context, index) {
+        final pay = _controller.paymentList[index];
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFE8F5E9),
+              child: Icon(Icons.arrow_downward, color: Colors.green),
+            ),
+            title: Text(
+              "ชำระเงินคืน ${pay.amountPaid} บาท",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            subtitle: Text("วันที่: ${pay.date}\nวิธีจ่าย: ${pay.method}"),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  "หนี้คงเหลือ",
+                  style: TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+                Text(
+                  "${pay.remainingDebt}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

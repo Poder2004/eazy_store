@@ -175,11 +175,11 @@ class SalesAccountScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: Obx(
-        () => BottomNavBar(
-          currentIndex: controller.currentNavIndex.value,
-          onTap: (index) => controller.currentNavIndex.value = index,
-        ),
+     bottomNavigationBar: BottomNavBar(
+        currentIndex: 1, // ล็อคให้เป็นสีแดงที่หน้าหลักเสมอเมื่ออยู่หน้านี้
+        onTap: (index) {
+          controller.changeTab(index);
+        },
       ),
     );
   }

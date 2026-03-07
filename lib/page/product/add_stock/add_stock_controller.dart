@@ -3,6 +3,7 @@ import 'package:eazy_store/model/response/product_response.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class AddStockController extends GetxController {
   // ---------------- State Variables ----------------
@@ -10,6 +11,7 @@ class AddStockController extends GetxController {
   var isSearching = false.obs;
   Rx<ProductResponse?> foundProduct = Rx<ProductResponse?>(null);
   var calculatedTotal = 0.obs;
+  Timer? _debounce;
 
   // ---------------- Controllers ----------------
   final searchController = TextEditingController();
@@ -24,7 +26,11 @@ class AddStockController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // 🧮 ฟังชั่นคำนวณยอดรวมทันทีที่พิมพ์ตัวเลข
+
+    searchController.addListener(() {
+      onSearchChanged(searchController.text);
+    });
+
     addAmountController.addListener(() {
       if (foundProduct.value != null) {
         int current = int.tryParse(currentStockController.text) ?? 0;
@@ -36,6 +42,7 @@ class AddStockController extends GetxController {
 
   @override
   void onClose() {
+    _debounce?.cancel();
     searchController.dispose();
     nameController.dispose();
     costController.dispose();
@@ -47,59 +54,64 @@ class AddStockController extends GetxController {
     super.onClose();
   }
 
+  void onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (query.isNotEmpty) {
+        handleSearch(query);
+      } else {
+        handleClear();
+      }
+    });
+  }
   // ---------------- Functions ----------------
 
   // 🔍 ค้นหาสินค้า
-  Future<void> handleSearch() async {
-    String keyword = searchController.text.trim();
-    if (keyword.isEmpty) return;
+  // 🔍 ค้นหาสินค้า (เปลี่ยนมาใช้ API Search โดยตรง)
+  Future<void> handleSearch([String? query]) async {
+    String keyword = query ?? searchController.text.trim();
+    if (keyword.isEmpty) {
+      handleClear();
+      return;
+    }
 
     isSearching.value = true;
-
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
-      List<ProductResponse> allProducts = await ApiProduct.getProductsByShop(shopId);
-
-      var match = allProducts.firstWhereOrNull(
-        (p) => (p.barcode == keyword) || (p.name.contains(keyword)),
-      );
+      // ✅ เปลี่ยนจากดึงทั้งหมด มาเป็นการยิง Search API รายตัว
+      ProductResponse? match = await ApiProduct.searchProduct(keyword, shopId);
 
       if (match != null) {
         foundProduct.value = match;
+
+        // อัปเดตข้อมูลลง Controller
         nameController.text = match.name;
-        costController.text = match.costPrice.toStringAsFixed(2);
-        salePriceController.text = match.sellPrice.toStringAsFixed(2);
-        currentStockController.text = match.stock.toString();
-        unitController.text = match.unit;
+        // ป้องกัน Error ถ้าค่าเป็น Null (ใช้ ?. และ ?? เหมือนเดิม)
+        costController.text = (match.costPrice ?? 0).toStringAsFixed(2);
+        salePriceController.text = (match.sellPrice ?? 0).toStringAsFixed(2);
+        currentStockController.text = (match.stock ?? 0).toString();
+        unitController.text = match.unit ?? '';
         categoryController.text = match.category?.name ?? 'ทั่วไป';
 
-        addAmountController.clear();
-        calculatedTotal.value = match.stock;
-
-        Get.snackbar(
-          "สำเร็จ",
-          "พบสินค้า: ${match.name}",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-        );
+        calculatedTotal.value = match.stock ?? 0;
       } else {
-        handleClear();
-        Get.snackbar(
-          "ไม่พบข้อมูล",
-          "ไม่มีสินค้ารหัส/ชื่อนี้ในระบบ",
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-        );
+        // ถ้าไม่เจอสินค้า ให้ล้างค่า แต่ไม่ต้องแจ้งเตือน Snack เดี๋ยวมันเด้งรัวๆ ตอนพิมพ์
+        foundProduct.value = null;
       }
     } catch (e) {
-      print(e);
+      print("Search Error: $e");
     } finally {
       isSearching.value = false;
     }
+  }
+
+  Future<void> refreshCurrentProduct() async {
+    if (searchController.text.isNotEmpty) {
+      await handleSearch(searchController.text);
+    }
+    return Future.value();
   }
 
   // 🧹 ล้างหน้าจอ

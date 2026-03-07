@@ -131,7 +131,6 @@ class DebtLedgerScreen extends StatelessWidget {
                     const PopupMenuItem(value: 20, child: Text('20')),
                     const PopupMenuItem(value: 50, child: Text('50')),
                   ],
-                  
                 ),
                 const Text(
                   "รายการ",
@@ -398,11 +397,11 @@ class DebtLedgerScreen extends StatelessWidget {
           _buildPaginationControls(),
         ],
       ),
-      bottomNavigationBar: Obx(
-        () => BottomNavBar(
-          currentIndex: controller.selectedIndex.value,
-          onTap: controller.onItemTapped,
-        ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 3, // ล็อคให้เป็นสีแดงที่หน้าหลักเสมอเมื่ออยู่หน้านี้
+        onTap: (index) {
+          controller.changeTab(index);
+        },
       ),
     );
   }

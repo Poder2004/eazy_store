@@ -27,6 +27,8 @@ class DebtLedgerController extends GetxController {
   var totalPages = 1.obs;
   var itemsPerPage = 10.obs;
   var totalItems = 0.obs;
+
+   var currentIndex = 0.obs;
   
   Timer? _debounce;
 
@@ -127,5 +129,9 @@ class DebtLedgerController extends GetxController {
 
   void onItemTapped(int index) {
     selectedIndex.value = index;
+  }
+
+  void changeTab(int index) {
+    currentIndex.value = index;
   }
 }

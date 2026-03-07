@@ -35,68 +35,68 @@ class AddStockScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: _kBackgroundColor,
         elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: controller.handleClear,
-            icon: const Icon(Icons.refresh, color: Color.fromARGB(255, 147, 192, 43)),
-         
+      ),
+      body: RefreshIndicator(
+        onRefresh: () => controller.refreshCurrentProduct(),
+        color: _kPrimaryColor,
+        child: SingleChildScrollView(
+          // ต้องกำหนด AlwaysScrollable เพื่อให้รูดได้แม้เนื้อหาน้อย
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              _buildSearchSection(controller),
+              const SizedBox(height: 20),
+
+              Obx(() {
+                if (controller.foundProduct.value != null) {
+                  return Column(
+                    children: [
+                      _buildProductCard(controller),
+                      const SizedBox(height: 20),
+                      _buildStockInputSection(controller),
+                      const SizedBox(height: 30),
+                      _buildActionButtons(controller),
+                    ],
+                  );
+                } else if (controller.isSearching.value && controller.searchController.text.length > 2) {
+                   // โชว์ Loading เฉพาะตอนค้นหาคำยาวๆ
+                  return const Padding(
+                    padding: EdgeInsets.only(top: 50),
+                    child: CircularProgressIndicator(color: _kPrimaryColor),
+                  );
+                } else {
+                  return _buildEmptyState();
+                }
+              }),
+              // เพิ่มพื้นที่ด้านล่างเพื่อให้ Scroll ได้สะดวกขึ้น
+              const SizedBox(height: 100), 
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
+        onTap: (index) {
+          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
+          print("Tab tapped: $index");
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 50),
+      child: Column(
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey[300]),
+          const SizedBox(height: 10),
+          Text(
+            "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด",
+            style: TextStyle(color: Colors.grey[400], fontSize: 16),
           ),
         ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // 🔎 ช่องค้นหา + ปุ่มสแกน
-            _buildSearchSection(controller),
-
-            const SizedBox(height: 20),
-
-            // 📦 แสดงรายละเอียดสินค้า (ใช้ Obx ครอบเพราะ UI เปลี่ยนตาม State)
-            Obx(() {
-              if (controller.foundProduct.value != null) {
-                return Column(
-                  children: [
-                    _buildProductCard(controller),
-                    const SizedBox(height: 20),
-                    _buildStockInputSection(controller),
-                    const SizedBox(height: 30),
-                    _buildActionButtons(controller),
-                  ],
-                );
-              } else if (controller.isSearching.value) {
-                return const Padding(
-                  padding: EdgeInsets.only(top: 50),
-                  child: CircularProgressIndicator(color: _kPrimaryColor),
-                );
-              } else {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 50),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 80,
-                        color: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        "ค้นหาสินค้าเพื่อเพิ่มสต็อก",
-                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            }),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Obx(
-        () => BottomNavBar(
-          currentIndex: controller.selectedIndex.value,
-          onTap: (i) => controller.selectedIndex.value = i,
-        ),
       ),
     );
   }

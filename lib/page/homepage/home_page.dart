@@ -1,4 +1,4 @@
-import 'package:eazy_store/api/api_dashboad.dart';
+import 'package:eazy_store/page/homepage/home_controller.dart'; // import ไฟล์ controller ที่สร้างด้านบน
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
@@ -7,86 +7,21 @@ import 'package:eazy_store/page/product/check_price/check_price.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
-import 'package:eazy_store/page/wait_coming/buy_products.dart';
+import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-// ----------------------------------------------------------------------
-// 1. Controller: จัดการข้อมูลร้านค้าและยอดขายแยกประเภท
-// ----------------------------------------------------------------------
-class HomeController extends GetxController {
-  var currentIndex = 0.obs;
-  var shopName = "กำลังโหลด...".obs;
-  var shopId = 0.obs;
-
-  // ตัวแปรสำหรับยอดขาย (แยกประเภท)
-  var dailyTotal = "0".obs; // ยอดขายรวม (Revenue)
-  var actualPaid = "0".obs; // เงินที่ได้รับจริง (Cash/Transfer)
-  var debtAmount = "0".obs; // ค้างชำระเพิ่ม (New Debt)
-  var isSalesLoading = true.obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadShopData();
-  }
-
-  void loadShopData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    shopId.value = prefs.getInt('shopId') ?? 0;
-    shopName.value = prefs.getString('shopName') ?? "ยังไม่ได้เลือกร้าน";
-    if (shopId.value != 0) fetchTodaySales();
-  }
-
-  Future<void> fetchTodaySales() async {
-    isSalesLoading.value = true;
-    try {
-      DateTime now = DateTime.now();
-      String todayStr = DateFormat('yyyy-MM-dd').format(now);
-
-      final summary = await ApiDashboad.getSalesSummary(
-        shopId.value,
-        todayStr,
-        todayStr,
-      );
-
-      if (summary != null) {
-        final f = NumberFormat('#,##0');
-        dailyTotal.value = f.format(summary.totalRevenue);
-        actualPaid.value = f.format(summary.actualPaid);
-        debtAmount.value = f.format(summary.debtAmount);
-      }
-    } catch (e) {
-      print("Error fetching today sales: $e");
-    } finally {
-      isSalesLoading.value = false;
-    }
-  }
-
-  void changeTab(int index) {
-    currentIndex.value = index;
-  }
-}
-
-// ----------------------------------------------------------------------
-// 2. The View: หน้าจอหลัก (HomePage)
-// ----------------------------------------------------------------------
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const Color headerBgColor = Color(0xFFE55D30); // ส้มอิฐ
+    const Color headerBgColor = Color(0xFFE55D30);
     const Color scaffoldBgColor = Color(0xFFF8FAFC);
     const Color iconColor = Color(0xFF10B981);
 
+    // เรียกใช้ Controller
     final HomeController controller = Get.put(HomeController());
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (controller.shopId.value != 0) controller.fetchTodaySales();
-    });
 
     return Scaffold(
       backgroundColor: scaffoldBgColor,
@@ -97,19 +32,13 @@ class HomePage extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              // --- 1. ส่วน Header และ Report Card ---
               _buildHeader(context, controller, headerBgColor: headerBgColor),
-
-              // --- 2. ส่วนเมนูรายการ ---
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 25),
                 child: Column(
                   children: [
                     _buildScanToSellCard(context),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 25),
                     _buildMenuTile(
                       icon: Icons.add_circle_outline,
                       iconColor: iconColor,
@@ -153,23 +82,21 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: Obx(
-        () => BottomNavBar(
-          currentIndex: controller.currentIndex.value,
-          onTap: controller.changeTab,
-        ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 0, // ล็อคให้เป็นสีแดงที่หน้าหลักเสมอเมื่ออยู่หน้านี้
+        onTap: (index) {
+          controller.changeTab(index);
+        },
       ),
     );
   }
 
-  // ✨ ขยาย Header กลับไปกว้างและโปร่งสบายเหมือนเดิม
   Widget _buildHeader(
     BuildContext context,
     HomeController controller, {
     required Color headerBgColor,
   }) {
-    // 🔥 ปรับความสูงกลับมาเป็น 0.38 เพื่อให้กล่องส้มมีพื้นที่มากขึ้น
-    final double topContainerHeight = MediaQuery.of(context).size.height * 0.38;
+    final double topContainerHeight = MediaQuery.of(context).size.height * 0.44;
 
     return SizedBox(
       width: double.infinity,
@@ -179,12 +106,12 @@ class HomePage extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            height: topContainerHeight - 50,
+            height: topContainerHeight - 23,
             decoration: BoxDecoration(
               color: headerBgColor,
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
+                bottomLeft: Radius.circular(15),
+                bottomRight: Radius.circular(15),
               ),
             ),
           ),
@@ -198,26 +125,35 @@ class HomePage extends StatelessWidget {
                   "ยินดีต้อนรับเข้าสู่",
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
-                Obx(
-                  () => Text(
-                    controller.shopName.value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28, // ปรับให้ตัวใหญ่ขึ้นเล็กน้อย
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Obx(
+                      () => Text(
+                        controller.shopName.value,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      "เฮง เฮง เฮง รวยๆ",
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                  ],
                 ),
-                  
               ],
             ),
           ),
           Positioned(
             left: 20,
             right: 20,
-            bottom: -5,
-            
+            top: 135,
             child: _buildDailyReportCard(controller),
           ),
         ],
@@ -225,13 +161,12 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // ✨ นำกราฟแท่งแบบดั้งเดิมที่สวยงามกลับมา พร้อมผสมกับข้อมูลแบบใหม่
   Widget _buildDailyReportCard(HomeController controller) {
     return Container(
-      padding: const EdgeInsets.all(25), // Padding เดิมที่สวยพอดี
+      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(25), // รัศมีขอบโค้งเดิม
+        borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -242,9 +177,7 @@ class HomePage extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // --- ส่วนบน: แบบดั้งเดิม (มีกราฟแท่ง) ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -256,8 +189,18 @@ class HomePage extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              // เอากลับมา: ไอคอนลูกศรสีแดงมุมขวาบน
-              Icon(Icons.trending_up, color: Colors.red.shade400, size: 28),
+              // 🔥 เปลี่ยนสีไอคอนตาม Trend
+              Obx(
+                () => Icon(
+                  controller.isTrendUp.value
+                      ? Icons.trending_up
+                      : Icons.trending_down,
+                  color: controller.isTrendUp.value
+                      ? Colors.green.shade500
+                      : Colors.red.shade400,
+                  size: 28,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -266,25 +209,31 @@ class HomePage extends StatelessWidget {
             children: [
               Obx(
                 () => Text(
-                  "฿ ${controller.dailyTotal.value}",
+                  "฿ ${controller.formattedTotal}",
                   style: const TextStyle(
-                    fontSize: 32, // ตัวเลขใหญ่ชัดเจนแบบเก่า
+                    fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF2D2D2D),
-                    letterSpacing: -0.5,
                   ),
                 ),
               ),
               const Spacer(),
-              // เอากลับมา: กราฟแท่ง 4 แท่ง สวยๆ
-              _buildSmallBar(25, Colors.grey.shade200),
-              _buildSmallBar(45, Colors.red.shade300),
-              _buildSmallBar(60, Colors.red.shade600),
-              _buildSmallBar(35, Colors.grey.shade200),
+              // 🔥 กราฟเปลี่ยนสีตาม Trend
+              Obx(() {
+                final color = controller.isTrendUp.value
+                    ? Colors.green.shade400
+                    : Colors.red.shade400;
+                return Row(
+                  children: [
+                    _buildSmallBar(25, Colors.grey.shade200),
+                    _buildSmallBar(45, color.withOpacity(0.4)),
+                    _buildSmallBar(60, color),
+                    _buildSmallBar(35, Colors.grey.shade200),
+                  ],
+                );
+              }),
             ],
           ),
-
-          // --- ส่วนล่าง: ข้อมูลรับเงินจริงและค้างชำระ (เพิ่มเข้ามาใหม่แบบเนียนๆ) ---
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 18),
             child: Divider(color: Color(0xFFF1F5F9), thickness: 1.5, height: 1),
@@ -295,7 +244,7 @@ class HomePage extends StatelessWidget {
                 _buildSummaryItem(
                   label: "รับเงินจริง",
                   value: controller.actualPaid,
-                  color: const Color(0xFF10B981), // สีเขียว
+                  color: const Color(0xFF10B981),
                   icon: Icons.check_circle_outline_rounded,
                 ),
                 const VerticalDivider(
@@ -306,7 +255,7 @@ class HomePage extends StatelessWidget {
                 _buildSummaryItem(
                   label: "ค้างชำระ",
                   value: controller.debtAmount,
-                  color: const Color(0xFFF59E0B), // สีส้ม
+                  color: const Color(0xFFF59E0B),
                   icon: Icons.info_outline_rounded,
                 ),
               ],
@@ -317,7 +266,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // ✨ ฟังก์ชันกราฟแท่งเดิมที่เอามาใช้ใหม่
   Widget _buildSmallBar(double height, Color color) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -338,7 +286,6 @@ class HomePage extends StatelessWidget {
   }) {
     return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -347,11 +294,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
@@ -371,7 +314,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // ✨ ปุ่มสแกนเพื่อขาย (ปรับให้โค้งและมีแสงเงาสวยขึ้น)
   Widget _buildScanToSellCard(BuildContext context) {
     final HomeController homeController = Get.find<HomeController>();
     return InkWell(
@@ -380,7 +322,7 @@ class HomePage extends StatelessWidget {
         if (barcode != null && barcode is String) {
           CheckoutController checkoutCtrl =
               Get.isRegistered<CheckoutController>()
-              ? Get.find<CheckoutController>()
+              ? Get.find()
               : Get.put(CheckoutController());
           Get.to(() => const CheckoutPage());
           WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -395,7 +337,7 @@ class HomePage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF38BDF8), // สีฟ้าน้ำทะเล
+          color: const Color(0xFF38BDF8),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -443,7 +385,6 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // ✨ เมนูย่อยต่างๆ ปรับแสงเงาให้ดูเป็นระเบียบ
   Widget _buildMenuTile({
     required IconData icon,
     required Color iconColor,
@@ -458,7 +399,7 @@ class HomePage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02), // เงาบางมากๆ
+            color: Colors.black.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -466,7 +407,6 @@ class HomePage extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(

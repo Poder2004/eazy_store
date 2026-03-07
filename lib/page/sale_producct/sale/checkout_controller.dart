@@ -128,7 +128,9 @@ class CheckoutController extends GetxController {
   Future<void> _loadAllProducts() async {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
-        List<ProductResponse> list = await ApiProduct.getProductsByShop(loadedShopId!);
+        List<ProductResponse> list = await ApiProduct.getProductsByShop(
+          loadedShopId!,
+        );
         // 🔥 แก้ไขตรงนี้: กรองเอาเฉพาะสินค้าที่ status == true (ไม่ได้ถูกซ่อน) มาแสดงเท่านั้น
         allProducts = list.where((p) => p.status == true).toList();
       }
@@ -148,27 +150,57 @@ class CheckoutController extends GetxController {
     }
   }
 
-  void onSearchChanged(String query) {
+  void onSearchChanged(String query) async {
     if (query.isEmpty) {
       isSearching.value = false;
       searchResults.clear();
       return;
     }
+
     isSearching.value = true;
-    searchResults.value = allProducts.where((p) {
-      String name = p.name.toLowerCase();
-      String barcode = (p.barcode ?? "").toLowerCase();
-      String input = query.toLowerCase();
-      return name.contains(input) || barcode.contains(input);
-    }).toList();
+
+    try {
+      // ดึง shopId ปัจจุบัน
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int currentShopId = prefs.getInt('shopId') ?? 0;
+
+      // ✨ เรียกใช้ ApiProduct.searchProduct
+      // หมายเหตุ: หาก API คืนค่าเป็นตัวเดียว ให้ใส่ใน List เพื่อแสดงผลใน UI
+      ProductResponse? product = await ApiProduct.searchProduct(
+        query,
+        currentShopId,
+      );
+
+      if (product != null && product.status == true) {
+        searchResults.assignAll([product]);
+      } else {
+        // หากไม่เจอแบบ Exact Match (บาร์โค้ด)
+        // อาจจะยังคงใช้การค้นหาจากชื่อใน allProducts (Local) เสริมได้ถ้าต้องการ
+        var localMatches = allProducts.where((p) {
+          return p.name.toLowerCase().contains(query.toLowerCase());
+        }).toList();
+
+        searchResults.assignAll(localMatches);
+      }
+    } catch (e) {
+      print("Search API Error: $e");
+      searchResults.clear();
+    }
   }
 
   void selectProductToAdd(ProductResponse product) {
     _addToCart(product);
+    
+    // เคลียร์สถานะการค้นหา
     searchController.clear();
     isSearching.value = false;
     searchResults.clear();
+    
+    // ซ่อนคีย์บอร์ด
     FocusManager.instance.primaryFocus?.unfocus();
+    
+    // อัปเดตข้อมูลสินค้าล่าสุด (เผื่อสต็อกเปลี่ยน)
+    fetchFreshProducts(); 
   }
 
   Future<void> openInternalScanner() async {
@@ -329,7 +361,7 @@ class CheckoutController extends GetxController {
   }
 
   void goToDebtPaymentPage() {
-    Get.to(() =>  DebtSalePage());
+    Get.to(() => DebtSalePage());
   }
 
   // ✅ ฟังก์ชันแสดง Popup ยืนยันการชำระเงิน (ก่อนเรียก API)
@@ -562,7 +594,7 @@ class CheckoutController extends GetxController {
       Get.back();
 
       if (result != null) {
-        Get.back(); 
+        Get.back();
         Get.snackbar(
           "สำเร็จ",
           "บันทึกการขายเรียบร้อย",

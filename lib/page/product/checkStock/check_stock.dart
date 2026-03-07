@@ -11,7 +11,7 @@ class CheckStockScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final StockController controller = Get.put(StockController());
+    final CheckStockController controller = Get.put(CheckStockController());
 
     const Color primaryColor = Color(0xFF6B8E23);
     const Color warningColor = Color(0xFFFFCC00);
@@ -86,18 +86,19 @@ class CheckStockScreen extends StatelessWidget {
           _buildPaginationControls(controller, primaryColor),
         ],
       ),
-      bottomNavigationBar: Obx(
-        () => BottomNavBar(
-          currentIndex: controller.selectedIndex.value,
-          onTap: controller.changeTab,
-        ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
+        onTap: (index) {
+          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
+          print("Tab tapped: $index");
+        },
       ),
     );
   }
 
   // --- เพิ่ม Widget สำหรับคุมหน้าหน้าสินค้า ---
   Widget _buildPaginationControls(
-    StockController controller,
+    CheckStockController controller,
     Color primaryColor,
   ) {
     return Container(
@@ -241,7 +242,7 @@ class CheckStockScreen extends StatelessWidget {
 
   // --- UI Components อื่นๆ เหมือนเดิม ---
 
-  Widget _buildFilterAndSortRow(StockController controller) {
+  Widget _buildFilterAndSortRow(CheckStockController controller) {
     const Color themeGreen = Color(0xFF6B8E23);
     return Row(
       children: [
@@ -324,7 +325,7 @@ class CheckStockScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchBar(StockController controller, Color primaryColor) {
+  Widget _buildSearchBar(CheckStockController controller, Color primaryColor) {
     return Container(
       height: 50,
       decoration: BoxDecoration(

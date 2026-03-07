@@ -135,11 +135,12 @@ class AddProductScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: Obx(
-        () => BottomNavBar(
-          currentIndex: controller.selectedIndex.value,
-          onTap: (i) => controller.selectedIndex.value = i,
-        ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
+        onTap: (index) {
+          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
+          print("Tab tapped: $index");
+        },
       ),
     );
   }

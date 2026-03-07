@@ -23,6 +23,8 @@ class SalesAccountController extends GetxController {
   var profitTrend = 0.0.obs;
   var transTrend = 0.0.obs;
 
+  var currentIndex = 0.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -36,12 +38,33 @@ class SalesAccountController extends GetxController {
   // ฟังก์ชันเลือกวันที่/เดือน/ปี
   Future<void> selectDate(BuildContext context) async {
     if (selectedView.value == 'วันนี้') {
+      // 1. ดึงปีปัจจุบันมาเตรียมไว้
+      final int currentYear = DateTime.now().year;
+
+      // 2. เรียกใช้ Picker มาตรฐาน แต่กำหนดช่วงแบบ Dynamic
       final DateTime? picked = await showDatePicker(
         context: context,
         initialDate: currentDate.value,
-        firstDate: DateTime(2020),
-        lastDate: DateTime(2100),
+        // เอาปีปัจจุบัน - 1 (ปีที่แล้ว)
+        firstDate: DateTime(currentYear - 1),
+        // เอาปีปัจจุบัน (ปีนี้)
+        lastDate: DateTime(currentYear),
         locale: const Locale('th', 'TH'),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: Color(0xFF2563EB), // สีหลัก (ปุ่ม/ส่วนหัว)
+                onPrimary: Colors.white,
+                surface: Colors.white, // พื้นหลัง Dialog
+                onSurface: Colors.black, // สีตัวอักษร
+              ),
+              // ปิดสีม่วงสะท้อน (Surface Tint)
+              dialogBackgroundColor: Colors.white,
+            ),
+            child: child!,
+          );
+        },
       );
       if (picked != null) currentDate.value = picked;
     }
@@ -49,16 +72,43 @@ class SalesAccountController extends GetxController {
     else if (selectedView.value == 'เดือนนี้') {
       _showMonthPicker(context);
     } else {
-      // เลือกปี - ใช้มาตรฐานเดิม
+      final int currentYear = DateTime.now().year;
+
       final DateTime? picked = await showDatePicker(
         context: context,
         initialDate: currentDate.value,
-        firstDate: DateTime(2020),
-        lastDate: DateTime(2100),
+        firstDate: DateTime(currentYear - 1), // ปีที่แล้ว
+        lastDate: DateTime(currentYear), // ปีนี้
         initialDatePickerMode: DatePickerMode.year,
         locale: const Locale('th', 'TH'),
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: Color(0xFF2563EB),
+                onPrimary: Colors.white,
+                surface: Colors.white,
+                onSurface: Colors.black,
+              ),
+              // ✅ เปลี่ยนจาก DialogTheme เป็น DialogThemeData
+              dialogTheme: const DialogThemeData(
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+              ),
+              // ✅ ส่วนนี้ใช้ DatePickerThemeData ถูกต้องแล้ว
+              datePickerTheme: const DatePickerThemeData(
+                headerBackgroundColor: Color.fromARGB(255, 255, 255, 255),
+                surfaceTintColor: Colors.transparent,
+              ),
+            ),
+            child: child!,
+          );
+        },
       );
-      if (picked != null) currentDate.value = DateTime(picked.year, 1, 1);
+
+      if (picked != null) {
+        currentDate.value = DateTime(picked.year, 1, 1);
+      }
     }
   }
 
@@ -81,6 +131,9 @@ class SalesAccountController extends GetxController {
 
     Get.dialog(
       AlertDialog(
+        backgroundColor: Colors.white, // 🎨 กำหนดให้เป็นสีขาว
+        surfaceTintColor: Colors.white,
+
         title: Center(
           child: Text(
             'เลือกเดือน (พ.ศ. ${currentDate.value.year + 543})',
@@ -135,7 +188,10 @@ class SalesAccountController extends GetxController {
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+            child: const Text(
+              'ยกเลิก',
+              style: TextStyle(color: Color.fromARGB(255, 10, 92, 185)),
+            ),
           ),
         ],
       ),
@@ -265,5 +321,9 @@ class SalesAccountController extends GetxController {
   double _calculateTrend(double current, double previous) {
     if (previous == 0) return current > 0 ? 100.0 : 0.0;
     return ((current - previous) / previous) * 100;
+  }
+
+   void changeTab(int index) {
+    currentIndex.value = index;
   }
 }

@@ -39,4 +39,31 @@ class ApiPayment {
       return {"error": "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้"};
     }
   }
+
+  static Future<List<dynamic>?> getPaymentHistory(int debtorId) async {
+  final Uri url = Uri.parse('${AppConfig.baseUrl}/api/payments/$debtorId');
+
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body); // ส่ง List กลับไป
+    } else {
+      print("API Error (Payments): ${response.statusCode}");
+      return null;
+    }
+  } catch (e) {
+    print("Exception in getPaymentHistory: $e");
+    return null;
+  }
+}
 }

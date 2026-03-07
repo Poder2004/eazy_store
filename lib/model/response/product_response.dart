@@ -19,6 +19,7 @@ class ProductResponse {
 
   // ✅ ตัวแปรนี้สำคัญ เอาไว้โชว์ใน Text Field
   final String? categoryName;
+  bool isSelected;
 
   ProductResponse({
     this.productId,
@@ -35,6 +36,7 @@ class ProductResponse {
     this.status = true,
     this.category, 
     this.categoryName, 
+    this.isSelected = false,
   });
 
   factory ProductResponse.fromJson(Map<String, dynamic> json) {
