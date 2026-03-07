@@ -10,14 +10,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AddProductController extends GetxController {
-  // ---------------- State Variables ----------------
   var selectedIndex = 0.obs;
-  Rx<File?> imageFile = Rx<File?>(null);
   final _picker = ImagePicker();
-  var isSaving = false.obs;
-
   var categoryList = <CategoryModel>[].obs;
-  Rx<CategoryModel?> selectedCategoryObject = Rx<CategoryModel?>(null);
 
   final List<String> unitOptions = [
     'ชิ้น',
@@ -29,13 +24,16 @@ class AddProductController extends GetxController {
     'แพ็ค',
   ];
 
-  // ---------------- Controllers ----------------
   final nameController = TextEditingController();
   final costController = TextEditingController();
   final salePriceController = TextEditingController();
   final stockController = TextEditingController();
   final unitController = TextEditingController();
   final idController = TextEditingController();
+
+  Rx<File?> imageFile = Rx<File?>(null);
+  Rx<CategoryModel?> selectedCategoryObject = Rx<CategoryModel?>(null);
+  var isSaving = false.obs;
 
   @override
   void onInit() {

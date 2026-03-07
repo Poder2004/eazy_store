@@ -209,13 +209,15 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
                 ),
+                  
               ],
             ),
           ),
           Positioned(
             left: 20,
             right: 20,
-            bottom: 0,
+            bottom: -5,
+            
             child: _buildDailyReportCard(controller),
           ),
         ],

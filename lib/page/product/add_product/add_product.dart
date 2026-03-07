@@ -25,7 +25,7 @@ class AddProductScreen extends StatelessWidget {
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'เพิ่มสินค้าใหม่',
+          'เพิ่มสินค้า',
           style: GoogleFonts.prompt(
             fontWeight: FontWeight.bold,
             fontSize: 22,

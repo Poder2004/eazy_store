@@ -180,13 +180,10 @@ class CheckoutController extends GetxController {
 
   Future<void> addProductByBarcode(String barcode) async {
     await checkShopAndLoadData();
-
     if (allProducts.isEmpty) {
       await _loadAllProducts();
     }
-
     var match = allProducts.firstWhereOrNull((p) => p.barcode == barcode);
-
     if (match != null) {
       _addToCart(match);
     } else {
@@ -194,18 +191,14 @@ class CheckoutController extends GetxController {
         const Center(child: CircularProgressIndicator()),
         barrierDismissible: false,
       );
-
       try {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         int currentShopId = prefs.getInt('shopId') ?? 0;
-
         ProductResponse? product = await ApiProduct.searchProduct(
           barcode,
           currentShopId,
         );
-
         Get.back();
-
         if (product != null) {
           _addToCart(product);
           allProducts.add(product);
@@ -520,7 +513,7 @@ class CheckoutController extends GetxController {
   }
 
   // ✅ ฟังก์ชันยิง API บันทึกการขาย (ทำงานหลังจากกดยืนยันใน Popup)
-  Future<void> processPaymentAPI() async {
+  Future<void> processPayment() async {
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
       barrierDismissible: false,
@@ -531,10 +524,7 @@ class CheckoutController extends GetxController {
       int shopId = prefs.getInt('shopId') ?? 0;
       double received = double.tryParse(receivedAmountController.text) ?? 0;
 
-      String userName =
-          prefs.getString('name') ??
-          prefs.getString('username') ??
-          "พนักงานขาย";
+      String userName = prefs.getString('username') ?? "พนักงานขาย";
 
       final Map<int, SaleItemRequest> groupedItems = {};
       for (var item in cartItems) {
@@ -569,10 +559,10 @@ class CheckoutController extends GetxController {
       );
 
       final result = await ApiSale.createSale(saleRequest);
-      Get.back(); // ปิด Loading
+      Get.back();
 
       if (result != null) {
-        Get.back(); // ปิดหน้าต่าง BottomSheet ลงไป
+        Get.back(); 
         Get.snackbar(
           "สำเร็จ",
           "บันทึกการขายเรียบร้อย",
@@ -583,7 +573,6 @@ class CheckoutController extends GetxController {
         clearAll();
         noteController.clear();
         receivedAmountController.clear();
-        // 🔥 เพิ่มบรรทัดนี้: โหลดสินค้าใหม่จาก API เพื่ออัปเดตตัวเลขสต็อกบนหน้าจอทันที
         await _loadAllProducts();
       } else {
         Get.snackbar(

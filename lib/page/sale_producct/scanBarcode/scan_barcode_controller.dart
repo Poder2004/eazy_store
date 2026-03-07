@@ -26,7 +26,7 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
       detectionSpeed: DetectionSpeed.noDuplicates,
       facing: CameraFacing.back,
       torchEnabled: false,
-      returnImage: false, // เพิ่ม: ไม่ต้องประมวลผลรูปภาพ ช่วยลดภาระเครื่อง
+      returnImage: false, 
     );
   }
 
@@ -75,8 +75,7 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
       if (barcode.rawValue != null) {
         isScanned.value = true;
         print('สแกนเจอแล้ว: ${barcode.rawValue}');
-
-        // ส่งค่ากลับ
+        
         Get.back(result: barcode.rawValue);
         break;
       }

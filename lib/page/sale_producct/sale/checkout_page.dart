@@ -703,7 +703,7 @@ class _PaymentBottomSheet extends StatelessWidget {
           height: 60,
           child: ElevatedButton(
             onPressed: () => controller.confirmPayment(
-              controller.processPaymentAPI,
+              controller.processPayment,
             ), // ส่ง function ไป execute เมื่อกด ยืนยัน
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.black87,
