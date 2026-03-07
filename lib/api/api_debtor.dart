@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
-import '../model/request/debtor_request.dart';    
-import '../model/response/debtor_response.dart';  
+import '../model/request/debtor_request.dart';
+import '../model/response/debtor_response.dart';
 
 class ApiDebtor {
-  static Future<Map<String, dynamic>> createDebtor(DebtorRequest debtorData) async {
+  static Future<Map<String, dynamic>> createDebtor(
+    DebtorRequest debtorData,
+  ) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/debtors');
 
     try {
@@ -28,12 +30,14 @@ class ApiDebtor {
         return {
           "success": true,
           "message": responseData['message'],
-          "data": DebtorResponse.fromJson(responseData['data']) // ใช้ fromJson จาก Response Model
+          "data": DebtorResponse.fromJson(
+            responseData['data'],
+          ), // ใช้ fromJson จาก Response Model
         };
       } else {
         return {
           "success": false,
-          "message": responseData['error'] ?? "เกิดข้อผิดพลาด"
+          "message": responseData['error'] ?? "เกิดข้อผิดพลาด",
         };
       }
     } catch (e) {
@@ -42,7 +46,7 @@ class ApiDebtor {
   }
 
   // --- เพิ่มฟังก์ชันค้นหาลูกหนี้ ---
- static Future<List<DebtorResponse>> searchDebtor(String keyword) async {
+  static Future<List<DebtorResponse>> searchDebtor(String keyword) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
@@ -52,17 +56,19 @@ class ApiDebtor {
       if (token == null || shopId == null) {
         // ถ้าไม่มี shopId ไม่ควรยิง request ไป เพราะ backend จะด่าว่า 400 Bad Request
         print("Error: Token or ShopID is missing");
-        return []; 
+        return [];
       }
 
       // สร้าง URL พร้อม Query Parameters
       final uri = Uri.parse('${AppConfig.baseUrl}/api/debtors/search');
-      
+
       // ✅ ต้องใช้ key ว่า 'keyword' และ 'shop_id' ให้ตรงกับ c.Query() ใน Go
-      final url = uri.replace(queryParameters: {
-        'keyword': keyword,         // ตรงกับ c.Query("keyword")
-        'shop_id': shopId.toString(), // ตรงกับ c.Query("shop_id")
-      });
+      final url = uri.replace(
+        queryParameters: {
+          'keyword': keyword, // ตรงกับ c.Query("keyword")
+          'shop_id': shopId.toString(), // ตรงกับ c.Query("shop_id")
+        },
+      );
 
       print("Calling API: $url"); // Log ดู URL ที่ยิงออกไป
 
@@ -78,11 +84,9 @@ class ApiDebtor {
         // กรณีเจอข้อมูล
         List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => DebtorResponse.fromJson(json)).toList();
-        
       } else if (response.statusCode == 404) {
         // กรณี Backend ตอบว่า "ไม่พบข้อมูลลูกหนี้"
         return [];
-        
       } else {
         // กรณี Error อื่นๆ เช่น 400 (ลืมส่ง shop_id) หรือ 500
         print("API Error: ${response.statusCode} - ${response.body}");
@@ -94,10 +98,11 @@ class ApiDebtor {
     }
   }
 
- static Future<List<DebtorResponse>> getDebtorsByShop(int shopId) async {
+  static Future<List<DebtorResponse>> getDebtorsByShop(int shopId) async {
     // สร้าง URL: /api/debtor?shop_id=1
-    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtors?shop_id=$shopId');
-  
+    final Uri url = Uri.parse(
+      '${AppConfig.baseUrl}/api/debtors?shop_id=$shopId',
+    );
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -107,14 +112,14 @@ class ApiDebtor {
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', 
+          'Authorization': 'Bearer $token',
         },
       );
 
       if (response.statusCode == 200) {
         // API ส่งกลับมาเป็น List (Array) []
         List<dynamic> jsonList = jsonDecode(response.body);
-        
+
         // แปลง jsonList เป็น List<DebtorResponse>
         return jsonList.map((item) => DebtorResponse.fromJson(item)).toList();
       } else if (response.statusCode == 404) {
@@ -131,7 +136,9 @@ class ApiDebtor {
 
   static Future<Map<String, dynamic>?> getDebtorHistory(int debtorId) async {
     // สร้าง URL: /api/debtor/{id}/history
-    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/debtors/$debtorId/history');
+    final Uri url = Uri.parse(
+      '${AppConfig.baseUrl}/api/debtors/$debtorId/history',
+    );
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -159,6 +166,45 @@ class ApiDebtor {
     } catch (e) {
       print("Exception in getDebtorHistory: $e");
       return null;
+    }
+  }
+
+  // ✅ ฟังก์ชันอัปเดตข้อมูลลูกหนี้ (PUT)
+  static Future<Map<String, dynamic>> updateDebtor(
+    int debtorId,
+    Map<String, dynamic> updateData,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/debtors/$debtorId');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(updateData), // ส่งเฉพาะฟิลด์ที่มีการแก้ไข
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": responseData['message'],
+          "data": DebtorResponse.fromJson(responseData['data']),
+        };
+      } else {
+        return {
+          "success": false,
+          "message": responseData['error'] ?? "เกิดข้อผิดพลาดในการอัปเดต",
+        };
+      }
+    } catch (e) {
+      return {"success": false, "message": "เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว: $e"};
     }
   }
 }

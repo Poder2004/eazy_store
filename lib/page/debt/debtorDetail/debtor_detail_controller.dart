@@ -1,23 +1,28 @@
+import 'dart:io'; // ✨ นำเข้า File
+import 'package:eazy_store/api/api_service_image.dart';
 import 'package:flutter/material.dart';
 import '../../../model/response/debtor_response.dart';
 import '../../../model/request/debtor_history_model.dart';
 import '../../../api/api_debtor.dart';
+// ✨ อย่าลืม import ImageUploadService ของคุณให้ตรง Path นะครับ
+// import '../../../services/image_upload_service.dart';
 
 class DebtorDetailController extends ChangeNotifier {
   late DebtorResponse currentDebtor;
   List<DebtorHistoryResponse> historyList = [];
   bool isLoading = true;
 
-  // ฟังก์ชันเริ่มต้น (เรียกตอนเปิดหน้าจอ)
+  // ✨ เพิ่มตัวแปรเช็คสถานะตอนกดบันทึก
+  bool isUpdating = false;
+
   void init(DebtorResponse debtor) {
     currentDebtor = debtor;
     fetchHistory();
   }
 
-  // ฟังก์ชันดึงประวัติบิล (Logic การเรียก API และจัดการ JSON อยู่ที่นี่หมด)
   Future<void> fetchHistory() async {
     isLoading = true;
-    notifyListeners(); // สั่งให้อัปเดตหน้าจอ
+    notifyListeners();
 
     try {
       final result = await ApiDebtor.getDebtorHistory(currentDebtor.debtorId!);
@@ -41,7 +46,9 @@ class DebtorDetailController extends ChangeNotifier {
             date: bill['date'] ?? '-',
             totalAmount: double.parse((bill['total_amount'] ?? 0).toString()),
             paidAmount: double.parse((bill['paid_amount'] ?? 0).toString()),
-            remainingAmount: double.parse((bill['remaining_amount'] ?? 0).toString()),
+            remainingAmount: double.parse(
+              (bill['remaining_amount'] ?? 0).toString(),
+            ),
             items: itemsList,
           );
         }).toList();
@@ -52,21 +59,62 @@ class DebtorDetailController extends ChangeNotifier {
       print("Error fetching history: $e");
     } finally {
       isLoading = false;
-      notifyListeners(); // โหลดเสร็จแล้ว สั่งอัปเดตหน้าจออีกรอบ
+      notifyListeners();
     }
   }
 
-  // ฟังก์ชันอัปเดตข้อมูลลูกหนี้หลังกดแก้ไข
-  void updateDebtorData({required String name, required String phone, required String address, required double creditLimit}) {
-    // TODO: เรียก API Update ข้อมูลไปยัง Backend
-    // await ApiDebtor.updateDebtor(...);
+  // ✨ แก้ไขฟังก์ชันนี้ให้รองรับการอัปโหลดรูปภาพ และเรียก API
+  Future<bool> updateDebtorData({
+    required String name,
+    required String phone,
+    required String address,
+    required double creditLimit,
+    File? imageFile, // ✨ รับไฟล์รูปมาด้วย
+  }) async {
+    isUpdating = true;
+    notifyListeners(); // ให้หน้าจอโชว์ Loading (ถ้ามีการดักไว้)
 
-    // จำลองการอัปเดตค่าในหน้าจอทันที (ถ้า Model ของคุณอนุญาตให้แก้ไขค่าได้)
-    // currentDebtor.name = name;
-    // currentDebtor.phone = phone;
-    // currentDebtor.address = address;
-    // currentDebtor.creditLimit = creditLimit;
-    
-    notifyListeners();
+    try {
+      String? newImageUrl;
+
+      // 1. ถ้ามีการเลือกรูปใหม่ ให้อัปโหลดขึ้น Cloudinary ก่อน
+      if (imageFile != null) {
+        newImageUrl = await ImageUploadService().uploadImage(imageFile);
+      }
+
+      // 2. เตรียมข้อมูล (Partial Update)
+      Map<String, dynamic> updateData = {
+        "name": name,
+        "phone": phone,
+        "address": address,
+        "credit_limit": creditLimit,
+      };
+
+      // 3. ถ้ารูปอัปโหลดสำเร็จ ค่อยแนบ URL ใหม่ไปกับ Data
+      if (newImageUrl != null) {
+        updateData["img_debtor"] = newImageUrl;
+      }
+
+      // 4. ยิง API บันทึกข้อมูล
+      final result = await ApiDebtor.updateDebtor(
+        currentDebtor.debtorId!,
+        updateData,
+      );
+
+      if (result['success'] == true) {
+        // เอาข้อมูลล่าสุดที่ API ตอบกลับมา ทับของเดิม
+        currentDebtor = result['data'];
+        return true;
+      } else {
+        print("Update Failed: ${result['message']}");
+        return false;
+      }
+    } catch (e) {
+      print("Error: $e");
+      return false;
+    } finally {
+      isUpdating = false;
+      notifyListeners(); // โหลดเสร็จสั่งให้หน้าจออัปเดตโชว์ข้อมูลใหม่
+    }
   }
 }

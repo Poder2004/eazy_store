@@ -426,17 +426,9 @@ class ProfilePage extends StatelessWidget {
           _buildMenuTile(
             icon: Icons.store_rounded,
             title: 'Manage Stores',
-            subtitle: 'แก้ไขข้อมูลหรือเพิ่มสาขาใหม่',
+            subtitle: 'แก้ไขข้อมูลร้าค้า',
             iconColor: const Color(0xFF6366F1),
             onTap: controller.goToManageStores,
-          ),
-          _buildDivider(),
-          _buildMenuTile(
-            icon: Icons.shield_moon_rounded,
-            title: 'Security & Password',
-            subtitle: 'ความปลอดภัยและสิทธิ์การเข้าถึง',
-            iconColor: const Color(0xFFF59E0B),
-            onTap: controller.goToSecurity,
           ),
           _buildDivider(),
           _buildMenuTile(
