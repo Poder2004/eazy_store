@@ -100,16 +100,15 @@ class ApiDebtor {
 
   static Future<dynamic> getDebtorsByShop(
     int shopId, {
-  int? page,
-  int? limit,
-  String? search,
-}) async {
-  String urlString = '${AppConfig.baseUrl}/api/debtors?shop_id=$shopId';
-  if (page != null) urlString += '&page=$page';
-  if (limit != null) urlString += '&limit=$limit';
-  if (search != null && search.isNotEmpty) urlString += '&search=$search';
+    int page = 1,
+    int limit = 10,
+    String search = "",
+  }) async {
+    String urlStr =
+        '${AppConfig.baseUrl}/api/debtors?shop_id=$shopId&page=$page&limit=$limit';
+    if (search.isNotEmpty) urlStr += '&search=$search';
 
-  final url = Uri.parse(urlString);
+    final Uri url = Uri.parse(urlStr);
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
@@ -167,6 +166,45 @@ class ApiDebtor {
     } catch (e) {
       print("Exception in getDebtorHistory: $e");
       return null;
+    }
+  }
+
+  // ✅ ฟังก์ชันอัปเดตข้อมูลลูกหนี้ (PUT)
+  static Future<Map<String, dynamic>> updateDebtor(
+    int debtorId,
+    Map<String, dynamic> updateData,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/debtors/$debtorId');
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(updateData), // ส่งเฉพาะฟิลด์ที่มีการแก้ไข
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": responseData['message'],
+          "data": DebtorResponse.fromJson(responseData['data']),
+        };
+      } else {
+        return {
+          "success": false,
+          "message": responseData['error'] ?? "เกิดข้อผิดพลาดในการอัปเดต",
+        };
+      }
+    } catch (e) {
+      return {"success": false, "message": "เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว: $e"};
     }
   }
 }
