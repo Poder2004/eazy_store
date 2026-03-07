@@ -58,10 +58,9 @@ class ApiAuth {
     }
   }
 
-  // ฟังก์ชัน Register (เพิ่มใหม่)
-  // ---------------------------------------------------------
+
   static Future<RegisterResponse> register(RegisterRequest request) async {
-    // URL ปลายทาง (ระวังเรื่อง IP Address ถ้าใช้ Emulator/เครื่องจริง)
+   
     final url = Uri.parse('${AppConfig.baseUrl}/api/auth/register');
 
     try {
@@ -77,17 +76,15 @@ class ApiAuth {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        // สำเร็จ (200 OK)
+       
         return RegisterResponse.fromJson(responseData);
       } else {
-        // ไม่สำเร็จ (เช่น 400, 500) มี Error กลับมา
         return RegisterResponse(
           message: "Error",
           error: responseData['error'] ?? "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
         );
       }
     } catch (e) {
-      // เชื่อมต่อไม่ได้
       return RegisterResponse(
         message: "Error",
         error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: $e",

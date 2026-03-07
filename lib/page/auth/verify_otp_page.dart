@@ -63,9 +63,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   // ฟังก์ชันขอส่งรหัส OTP อีกครั้ง
   void _handleResendOTP() async {
     setState(() => _isLoading = true);
-    final response = await ApiAuth.requestResetOTP(
-      ResetRequest(email: _email),
-    );
+    final response = await ApiAuth.requestResetOTP(ResetRequest(email: _email));
     setState(() => _isLoading = false);
 
     if (response.error == null) {
@@ -103,8 +101,8 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         icon: Icons.verified_user_rounded,
         color: Colors.green,
         onConfirm: () {
-          Get.back(); // ปิด Popup
-          // ✨ แก้บรรทัดนี้เพื่อส่งข้อมูลไปยังหน้าตั้งรหัสผ่านใหม่
+          Get.back();
+
           Get.to(
             () => const ResetPasswordPage(),
             arguments: {

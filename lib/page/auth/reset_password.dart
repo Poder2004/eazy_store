@@ -31,7 +31,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   }
 
   void _handleResetPassword() async {
-    // 1. ตรวจสอบความถูกต้องเบื้องต้น
+  
     if (_passController.text.isEmpty || _confirmPassController.text.isEmpty) {
       _showPopup(
         title: "เตือน",

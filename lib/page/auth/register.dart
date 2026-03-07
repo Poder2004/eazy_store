@@ -66,9 +66,7 @@ class SignupController extends GetxController {
     final response = await ApiAuth.register(request);
     isLoading.value = false;
 
-    // 🔥 การจัดการ Response ตามเงื่อนไขที่คุณต้องการ
     if (response.error == null) {
-      // ✅ เคสที่ 1: สมัครใหม่สำเร็จ หรือ เป็นผู้ใช้เดิมที่ยังไม่ยืนยัน (Backend อัปเดตข้อมูลให้แล้ว)
       _showSuccessPopup(
         "สำเร็จ",
         response.message ?? "ระบบได้ส่งรหัส OTP ไปยังอีเมลของท่านแล้ว",
@@ -76,8 +74,6 @@ class SignupController extends GetxController {
         name,
       );
     } else {
-      // ❌ เคสที่ 2: มี Error กลับมา
-      // เช็คว่า Error คือ "Username หรือ เบอร์โทรนี้ถูกใช้งานแล้ว" (กรณีที่ยืนยันตัวตนไปแล้ว)
       if (response.error!.contains("ถูกใช้งานแล้ว")) {
         _showError(
           "สมัครไม่สำเร็จ",
