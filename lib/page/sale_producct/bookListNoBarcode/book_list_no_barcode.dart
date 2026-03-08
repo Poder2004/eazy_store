@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-// ✅ Import Controller ตัวที่เพิ่งแยกออกไป
-import 'book_list_no_barcode_controller.dart'; 
+import 'package:eazy_store/model/request/baskets_model.dart';
+import 'book_list_no_barcode_controller.dart';
 
 // ----------------------------------------------------------------------
 // 3. View (UI คงเดิม)
@@ -72,7 +71,7 @@ class ManualListPage extends StatelessWidget {
     ManualListController controller,
   ) {
     return GestureDetector(
-      onTap: () => controller.toggleSelection(product),
+      onTap: () => controller.toggleSelection(product.id),
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(12),
@@ -93,7 +92,7 @@ class ManualListPage extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Image.network(
-                product.imgProduct,
+                product.imagePath,
                 width: 70,
                 height: 70,
                 fit: BoxFit.cover,
@@ -119,7 +118,7 @@ class ManualListPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    "${product.sellPrice.toStringAsFixed(0)} บาท",
+                    "${product.price.toStringAsFixed(0)} บาท",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -129,27 +128,24 @@ class ManualListPage extends StatelessWidget {
                 ],
               ),
             ),
-            Obx(
-              () => Container(
+            Obx(() {
+              final isSelected = controller.selectedIds.contains(product.id);
+              return Container(
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: product.isSelected.value
-                      ? activeColor
-                      : Colors.transparent,
+                  color: isSelected ? activeColor : Colors.transparent,
                   border: Border.all(
-                    color: product.isSelected.value
-                        ? activeColor
-                        : Colors.grey.shade300,
+                    color: isSelected ? activeColor : Colors.grey.shade300,
                     width: 2,
                   ),
                 ),
-                child: product.isSelected.value
+                child: isSelected
                     ? const Icon(Icons.check, size: 16, color: Colors.white)
                     : null,
-              ),
-            ),
+              );
+            }),
           ],
         ),
       ),
@@ -197,8 +193,9 @@ class ManualListPage extends StatelessWidget {
                               DropdownMenuItem(value: val, child: Text(val)),
                         )
                         .toList(),
-                    onChanged: (val) =>
-                        controller.selectedCategory.value = val!,
+                    onChanged: (val) {
+                      if (val != null) controller.selectedCategory.value = val;
+                    },
                   ),
                 ),
               ),
@@ -224,12 +221,16 @@ class ManualListPage extends StatelessWidget {
             ),
           ),
           icon: const Icon(Icons.add_shopping_cart, color: Colors.white),
-          label: const Text(
-            "เพิ่มลงรายการขาย",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          label: Obx(
+            () => Text(
+              controller.selectedIds.isEmpty
+                  ? "เพิ่มลงรายการขาย"
+                  : "เพิ่มลงรายการขาย (${controller.selectedIds.length})",
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ),

@@ -5,36 +5,19 @@ import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 
-// ----------------------------------------------------------------------
-// 1. Model
-// ----------------------------------------------------------------------
-class ProductItem {
-  final String id;
-  final String name;
-  final double sellPrice;
-  final String category;
-  final int categoryId;
-  final String imgProduct;
-  RxBool isSelected;
+// 🛒 Import ตัว Model กลางมาใช้ เพื่อให้เป็น Type เดียวกับในตะกร้า
+import 'package:eazy_store/model/request/baskets_model.dart'; 
 
-  ProductItem({
-    required this.id,
-    required this.name,
-    required this.sellPrice,
-    required this.category,
-    required this.categoryId,
-    required this.imgProduct,
-    bool selected = false,
-  }) : isSelected = selected.obs;
-}
-
-// ----------------------------------------------------------------------
-// 2. Controller
-// ----------------------------------------------------------------------
 class ManualListController extends GetxController {
   var isLoading = true.obs;
+  
+  // ใช้ ProductItem จาก baskets_model.dart
   var allProducts = <ProductItem>[].obs;
   var filteredProducts = <ProductItem>[].obs;
+  
+  // เก็บสถานะการเลือกแยกไว้ (เพราะ ProductItem ใน basket ไม่มี isSelected)
+  var selectedIds = <String>{}.obs; 
+
   var categories = <String>["หมวดหมู่"].obs;
   var searchQuery = "".obs;
   var selectedCategory = "หมวดหมู่".obs;
@@ -49,7 +32,6 @@ class ManualListController extends GetxController {
       refreshProducts(categoryId);
     });
     debounce(searchQuery, (_) => filterProducts(), time: 300.milliseconds);
-    ever(selectedCategory, (_) => filterProducts());
   }
 
   Future<void> fetchInitialData() async {
@@ -81,36 +63,22 @@ class ManualListController extends GetxController {
     }
   }
 
+  Future<void> fetchProducts(int shopId) async {
+    try {
+      final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(shopId);
+      _mapDataToProducts(data);
+    } catch (e) {
+      print("Fetch Products Error: $e");
+    }
+  }
+
   Future<void> refreshProducts(int? categoryId) async {
     try {
       isLoading(true);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 1;
-
-      final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(
-        shopId,
-        categoryId: categoryId,
-      );
-
-      var products = data
-          .where(
-            (item) => item['status'] == true,
-          ) // 🔥 กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true)
-          .map(
-            (item) => ProductItem(
-              id: (item['product_id'] ?? "").toString(),
-              name: item['name'] ?? "",
-              sellPrice:
-                  double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
-              category: item['category_name'] ?? "",
-              categoryId: item['category_id'] ?? 0,
-              imgProduct: item['img_product'] ?? "",
-            ),
-          )
-          .toList();
-
-      allProducts.assignAll(products);
-      filterProducts();
+      final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(shopId, categoryId: categoryId);
+      _mapDataToProducts(data);
     } catch (e) {
       print("Refresh Products Error: $e");
     } finally {
@@ -118,94 +86,75 @@ class ManualListController extends GetxController {
     }
   }
 
-  Future<void> fetchProducts(int shopId) async {
-    try {
-      final List<dynamic> data = await ApiProduct.getNullBarcodeProducts(
-        shopId,
-      );
-
-      var products = data
-          .where(
-            (item) => item['status'] == true,
-          ) // 🔥 กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true)
-          .map((item) {
-            return ProductItem(
-              id: (item['product_id'] ?? item['id'] ?? "").toString(),
-              name: item['name'] ?? "ไม่มีชื่อสินค้า",
-              sellPrice:
-                  double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
-              category: item['category_name'] ?? "อื่นๆ",
-              categoryId: item['category_id'] ?? 0,
-              imgProduct: item['img_product'] ?? item['image'] ?? "",
-            );
-          })
-          .toList();
-
-      allProducts.assignAll(products);
-      filterProducts();
-    } catch (e) {
-      print("Fetch Products Error: $e");
-    }
+  void _mapDataToProducts(List<dynamic> data) {
+    var products = data
+        .where((item) => item['status'] == true)
+        .map((item) {
+          return ProductItem(
+            id: (item['product_id'] ?? item['id'] ?? "").toString(),
+            name: item['name'] ?? "ไม่มีชื่อสินค้า",
+            price: double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
+            category: item['category_name'] ?? "อื่นๆ",
+            imagePath: item['img_product'] ?? item['image'] ?? "",
+            maxStock: item['stock'] ?? 999, // ดึง stock จาก API มาใส่
+          );
+        })
+        .toList();
+    allProducts.assignAll(products);
+    filterProducts();
   }
 
   void filterProducts() {
     int? selectedId = categoryMap[selectedCategory.value];
     var results = allProducts.where((product) {
-      final matchesSearch = product.name.toLowerCase().contains(
-        searchQuery.value.toLowerCase(),
-      );
-      final matchesCategory =
-          selectedCategory.value == "หมวดหมู่" ||
-          product.categoryId == selectedId;
+      final matchesSearch = product.name.toLowerCase().contains(searchQuery.value.toLowerCase());
+      // หมายเหตุ: ใน baskets_model ไม่มี categoryId ดังนั้นอาจต้องเช็คจากชื่อหมวดหมู่แทนถ้าต้องการกรองละเอียด
+      final matchesCategory = selectedCategory.value == "หมวดหมู่" || product.category == selectedCategory.value;
       return matchesSearch && matchesCategory;
     }).toList();
     filteredProducts.assignAll(results);
   }
 
-  void toggleSelection(ProductItem product) {
-    product.isSelected.value = !product.isSelected.value;
+  // ปรับการ Toggle โดยเช็คจาก ID
+  void toggleSelection(String id) {
+    if (selectedIds.contains(id)) {
+      selectedIds.remove(id);
+    } else {
+      selectedIds.add(id);
+    }
   }
 
   void goToCheckout() {
-    final List<String> selectedIds = allProducts
-        .where((p) => p.isSelected.value)
-        .map((p) => p.id)
-        .toList();
-
     if (selectedIds.isEmpty) {
-      Get.snackbar(
-        "แจ้งเตือน",
-        "กรุณาเลือกสินค้าอย่างน้อย 1 ชิ้น",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
+      Get.snackbar("แจ้งเตือน", "กรุณาเลือกสินค้าอย่างน้อย 1 ชิ้น", backgroundColor: Colors.orange, colorText: Colors.white);
       return;
     }
 
+    final List<String> idsToSend = selectedIds.toList();
+
     if (Get.isRegistered<CheckoutController>()) {
       final checkoutCtrl = Get.find<CheckoutController>();
-
-      checkoutCtrl.addItemsByIds(selectedIds);
+      
+      // ✅ ส่ง ID ไปให้ CheckoutController ตัวจริงจัดการ
+      checkoutCtrl.addItemsByIds(idsToSend);
+      
+      // อัปเดต Nav Index เพื่อให้ Tab Bar แสดงสีแดงที่เมนูขาย (Index 2)
       checkoutCtrl.currentNavIndex.value = 2;
 
+      // จัดการหน้าจอ
       if (Get.previousRoute.contains('CheckoutPage')) {
-        Get.close(2);
+        Get.back();
       } else {
-        Get.until((route) => route.isFirst);
+        Get.to(() => const CheckoutPage());
       }
     } else {
-      Get.offAll(
-        () => const CheckoutPage(),
-        arguments: {'selectedIds': selectedIds},
-      );
+      // กรณีเปิดแอปมาแล้วเข้าหน้านี้เลยโดยไม่มี CheckoutController (กันพลาด)
+      Get.offAll(() => const CheckoutPage(), arguments: {'selectedIds': idsToSend});
     }
 
-    Get.snackbar(
-      "สำเร็จ",
-      "เพิ่มสินค้าลงตะกร้าแล้ว",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 1),
-    );
+    // ล้างค่าที่เลือกไว้เพื่อให้กลับมาเลือกใหม่ได้สะอาดๆ
+    selectedIds.clear();
+
+    Get.snackbar("สำเร็จ", "เพิ่มสินค้าลงตะกร้าแล้ว", backgroundColor: Colors.green, colorText: Colors.white, duration: const Duration(seconds: 1));
   }
 }
