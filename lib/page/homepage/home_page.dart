@@ -117,6 +117,32 @@ class HomePage extends StatelessWidget {
           ),
           Positioned(
             top: 60,
+            right: 20,
+            child: InkWell(
+              onTap: () => Get.to(() => const CheckoutPage()),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Colors.white, // วงกลมสีขาว
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.shopping_basket, // ไอคอนตะกร้า
+                  color: Color.fromARGB(255, 38, 219, 14), // สีเขียว
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 60,
             left: 24,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
