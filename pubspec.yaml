@@ -40,6 +40,7 @@ dependencies:
   intl: ^0.20.2
   flutter_localizations:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1  
 
 
 dev_dependencies:
@@ -64,3 +65,11 @@ flutter:
   assets:
     - assets/image/
     - assets/data_address/
+
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/image/playstore-icon.png"
+  adaptive_icon_foreground: "assets/image/playstore-icon.png"
+  adaptive_icon_background: "assets/image/playstore-icon.png"
