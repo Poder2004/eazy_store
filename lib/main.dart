@@ -1,4 +1,5 @@
 import 'package:eazy_store/page/auth/login.dart';
+import 'package:eazy_store/page/checkToken/splash_screen.dart';
 import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -32,7 +33,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Eazy Store',
       theme: ThemeData(fontFamily: 'AbhayaLibre', useMaterial3: true),
-      home: const LoginPage(),
+      home: const SplashScreen(),
     );
   }
 }
