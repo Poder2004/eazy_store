@@ -98,6 +98,12 @@ class HomePage extends StatelessWidget {
   }) {
     final double topContainerHeight = MediaQuery.of(context).size.height * 0.44;
 
+    // เรียกใช้ CheckoutController เพื่อดึงจำนวนสินค้าในตะกร้า
+    final CheckoutController checkoutCtrl =
+        Get.isRegistered<CheckoutController>()
+        ? Get.find<CheckoutController>()
+        : Get.put(CheckoutController());
+
     return SizedBox(
       width: double.infinity,
       height: topContainerHeight,
@@ -120,24 +126,70 @@ class HomePage extends StatelessWidget {
             right: 20,
             child: InkWell(
               onTap: () => Get.to(() => const CheckoutPage()),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Colors.white, // วงกลมสีขาว
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
+              child: Stack(
+                clipBehavior: Clip.none, // ยอมให้ Badge ล้นออกมานอกวงกลมได้
+                children: [
+                  // วงกลมสีขาวหลัก
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.shopping_basket, // ไอคอนตะกร้า
-                  color: Color.fromARGB(255, 38, 219, 14), // สีเขียว
-                  size: 28,
-                ),
+                    child: const Icon(
+                      Icons.shopping_basket,
+                      color: Color(0xFF10B981),
+                      size: 28,
+                    ),
+                  ),
+
+                  // 🔴 ตัวเลขสีแดง (Badge)
+                  Obx(() {
+                    // สมมติว่าใน CheckoutController คุณมีตัวแปร cartItems หรือรายการสินค้า
+                    // ให้ใช้ .length เพื่อดูว่ามีของกี่อย่าง
+                    int itemCount = checkoutCtrl.cartItems.length;
+
+                    if (itemCount == 0)
+                      return const SizedBox.shrink(); // ถ้าไม่มีของไม่ต้องโชว์เลข
+
+                    return Positioned(
+                      right: -2,
+                      top: -7,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red, // สีพื้นหลังตัวเลข
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          ), // ขอบขาวตัดกับสีแดง
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 10,
+                          minHeight: 10,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '$itemCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
           ),
