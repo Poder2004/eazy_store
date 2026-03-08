@@ -62,86 +62,149 @@ class EditShopController extends GetxController {
   }
 
   Future<void> saveShop() async {
-    // 1. เช็คความถูกต้องข้อมูลพื้นฐาน
-    if (nameController.text.isEmpty || phoneController.text.isEmpty) {
-      Get.snackbar(
-        "แจ้งเตือน",
-        "กรุณากรอกชื่อร้านและเบอร์โทร",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
+    String phone = phoneController.text.trim();
+    // 1. เช็คข้อมูลว่าง
+    if (nameController.text.isEmpty ||
+        phone.isEmpty ||
+        addressController.text.isEmpty) {
+      _showWarningDialog("ข้อมูลไม่ครบถ้วน", "กรุณากรอกข้อมูลให้ครบทุกช่อง");
+      return;
+    }
+
+    // 🔥 2. เช็คเบอร์โทรศัพท์ (ตัวเลข 10 หลัก)
+    if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
+      _showWarningDialog(
+        "เบอร์โทรศัพท์ไม่ถูกต้อง",
+        "กรุณากรอกเป็นตัวเลขให้ครบ 10 หลัก",
       );
       return;
     }
 
     isLoading.value = true;
     try {
-      // 2. เตรียม URL รูปภาพ
-      String imageUrl =
-          shop.imgShop; // ค่าเริ่มต้นคือรูปเดิม (กรณีไม่ได้เปลี่ยนรูป)
+      String imageUrl = shop.imgShop;
 
-      // ✅ 3. ถ้ามีการเลือกรูปใหม่ ให้ทำการอัปโหลดขึ้น Cloudinary
+      // 3. จัดการอัปโหลดรูปภาพ
       if (selectedImage.value != null) {
         String? uploadedUrl = await _uploadService.uploadImage(
           selectedImage.value!,
         );
-
         if (uploadedUrl != null) {
-          imageUrl = uploadedUrl; // ถ้าอัปโหลดสำเร็จ เอา URL ใหม่ไปใช้
+          imageUrl = uploadedUrl;
         } else {
-          // ถ้าอัปโหลดรูปไม่สำเร็จ ให้หยุดการทำงานแล้วแจ้งเตือน
           isLoading.value = false;
-          Get.snackbar(
+          _showWarningDialog(
             "อัปโหลดล้มเหลว",
-            "ไม่สามารถอัปโหลดรูปร้านค้าได้ กรุณาลองใหม่",
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
+            "ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่",
           );
           return;
         }
       }
 
-      // 4. เตรียมข้อมูล (Map) เพื่อส่งเป็น JSON ให้ Backend
+      // 4. เตรียมข้อมูล
       Map<String, dynamic> data = {
         "name": nameController.text,
-        "phone": phoneController.text,
+        "phone": phone,
         "address": addressController.text,
         "pin_code": pinCodeController.text,
-        "img_shop":
-            imageUrl, // ✅ ส่ง URL รูปล่าสุด (ไม่ว่าจะเป็นรูปเก่าหรือใหม่)
+        "img_shop": imageUrl,
         "img_qrcode": shop.imgQrcode,
       };
 
-      // 5. เรียก API UpdateShop
+      // 5. เรียก API Update
       bool success = await _apiShop.updateShop(shop.shopId, data);
 
       if (success) {
-        Get.back(
-          result: true,
-        ); // ปิดหน้าและส่งค่า true กลับไปให้หน้า Profile ดึงข้อมูลใหม่
-        Get.snackbar(
-          "สำเร็จ",
-          "แก้ไขข้อมูลร้านค้าเรียบร้อย",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+        // ✅ แสดง Dialog สีเขียวเมื่อสำเร็จ
+        _showSuccessDialog("สำเร็จ", "แก้ไขข้อมูลร้านค้าเรียบร้อยแล้ว");
       } else {
-        Get.snackbar(
+        _showWarningDialog(
           "ผิดพลาด",
-          "ไม่สามารถแก้ไขข้อมูลได้",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
+          "ไม่สามารถแก้ไขข้อมูลได้ กรุณาลองใหม่ภายหลัง",
         );
       }
     } catch (e) {
       print("Error SaveShop: $e");
-      Get.snackbar(
-        "Error",
-        "เกิดข้อผิดพลาด: $e",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showWarningDialog("Error", "เกิดข้อผิดพลาด: $e");
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // ✅ ฟังก์ชันแจ้งเตือน (สีส้ม)
+  void _showWarningDialog(String title, String message) {
+    _buildDialog(title, message, Colors.orange, Icons.warning_amber_rounded);
+  }
+
+  // ✅ ฟังก์ชันสำเร็จ (สีเขียว)
+  void _showSuccessDialog(String title, String message) {
+    _buildDialog(
+      title,
+      message,
+      Colors.green,
+      Icons.check_circle_outline_rounded,
+    );
+  }
+
+  // ฟังก์ชันกลางสำหรับสร้าง UI Dialog
+  void _buildDialog(String title, String message, Color color, IconData icon) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 60),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    Get.back();
+                    // ถ้าเป็นเคสสำเร็จ (สีเขียว) ให้ปิดหน้า Edit ไปด้วยเลย
+                    if (color == Colors.green) {
+                      Get.back(result: true);
+                    }
+                  },
+                  child: const Text(
+                    "ตกลง",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
   }
 }
