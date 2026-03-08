@@ -252,11 +252,9 @@ class CheckoutController extends GetxController {
           _addToCart(product);
           allProducts.add(product);
         } else {
-          Get.snackbar(
+          _showWarningDialog(
             "ไม่พบสินค้า",
-            "รหัส $barcode ไม่มีในร้านนี้",
-            backgroundColor: Colors.orange,
-            colorText: Colors.white,
+            "รหัสบาร์โค้ดนี้ไม่มีในระบบของร้านค้า",
           );
         }
       } catch (e) {
@@ -390,17 +388,18 @@ class CheckoutController extends GetxController {
 
   // ✅ ฟังก์ชันแสดง Popup ยืนยันการชำระเงิน (ก่อนเรียก API)
   void confirmPayment(VoidCallback processPayment) {
-    if (cartItems.isEmpty) return;
+    if (cartItems.isEmpty) {
+      _showWarningDialog("ตะกร้าว่าง", "กรุณาเลือกสินค้าก่อนทำรายการ");
+      return;
+    }
 
     double received = double.tryParse(receivedAmountController.text) ?? 0;
 
     // เช็คยอดเงินรับมาเฉพาะเงินสด
     if (paymentMethod.value == "จ่ายเงินสด" && received < totalPrice) {
-      Get.snackbar(
-        "แจ้งเตือน",
-        "ยอดเงินที่รับมาไม่เพียงพอ",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+      _showWarningDialog(
+        "ยอดเงินไม่พอ",
+        "จำนวนเงินที่รับมาน้อยกว่าราคาสินค้ารวม",
       );
       return;
     }
@@ -618,29 +617,22 @@ class CheckoutController extends GetxController {
       Get.back();
 
       if (result != null) {
-        Get.back();
-        Get.snackbar(
-          "สำเร็จ",
-          "บันทึกการขายเรียบร้อย",
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          snackPosition: SnackPosition.TOP,
-        );
+        Get.back(); // ปิดหน้าชำระเงิน
+        _showSuccessDialog("ชำระเงินสำเร็จ", "บันทึกข้อมูลการขายเรียบร้อยแล้ว");
+
         clearAll();
         noteController.clear();
         receivedAmountController.clear();
         await _loadAllProducts();
       } else {
-        Get.snackbar(
-          "ผิดพลาด",
-          "ไม่สามารถบันทึกข้อมูลการขายได้ กรุณาลองใหม่",
-          backgroundColor: Colors.redAccent,
-          colorText: Colors.white,
+        _showErrorDialog(
+          "เกิดข้อผิดพลาด",
+          "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้",
         );
       }
     } catch (e) {
       Get.back();
-      print("Process Payment Exception: $e");
+      _showErrorDialog("ข้อผิดพลาดระบบ", "พบปัญหา: ${e.toString()}");
     }
   }
 
@@ -652,5 +644,88 @@ class CheckoutController extends GetxController {
     searchController.dispose();
     noteController.dispose();
     super.onClose();
+  }
+
+  // ✅ ฟังก์ชันแจ้งเตือนทั่วไป (สีส้ม)
+  void _showWarningDialog(String title, String message) {
+    _buildStatusDialog(
+      title,
+      message,
+      Colors.orange,
+      Icons.warning_amber_rounded,
+    );
+  }
+
+  // ✅ ฟังก์ชันแจ้งเตือนข้อผิดพลาด (สีแดง)
+  void _showErrorDialog(String title, String message) {
+    _buildStatusDialog(title, message, Colors.red, Icons.error_outline_rounded);
+  }
+
+  // ✅ ฟังก์ชันสำเร็จ (สีเขียว)
+  void _showSuccessDialog(String title, String message) {
+    _buildStatusDialog(
+      title,
+      message,
+      const Color(0xFF00C853),
+      Icons.check_circle_outline_rounded,
+    );
+  }
+
+  void _buildStatusDialog(
+    String title,
+    String message,
+    Color color,
+    IconData icon,
+  ) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 60),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => Get.back(),
+                  child: const Text(
+                    "ตกลง",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
