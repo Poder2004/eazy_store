@@ -109,33 +109,50 @@ class CheckoutController extends GetxController {
       int shopId = prefs.getInt('shopId') ?? 0;
 
       if (shopId != 0) {
-        // ดึงข้อมูลใหม่จาก API
-        List<ProductResponse> list = await ApiProduct.getProductsByShop(shopId);
+        var response = await ApiProduct.getProductsByShop(shopId);
+        List<ProductResponse> list = [];
 
-        // กรองเอาเฉพาะสินค้าที่ไม่ได้ถูกซ่อน (status == true) มาใส่ในหน่วยความจำใหม่
+        if (response is List<ProductResponse>) {
+          list = response;
+        } else if (response is ProductPagedResponse) {
+          // ✅ แก้ไขตรงนี้: ใช้ .items ให้ตรงกับ Model
+          list = response.items;
+        }
+
         allProducts = list.where((p) => p.status == true).toList();
 
-        // ถ้าผู้ใช้พิมพ์ข้อความค้นหาค้างไว้ ให้มันอัปเดตผลลัพธ์ด้วย
         if (searchController.text.isNotEmpty) {
           onSearchChanged(searchController.text);
         }
       }
     } catch (e) {
-      print("Error fetching fresh products: $e");
+      print("❌ Error fetching fresh products: $e");
     }
   }
 
   Future<void> _loadAllProducts() async {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
-        List<ProductResponse> list = await ApiProduct.getProductsByShop(
-          loadedShopId!,
-        );
-        // 🔥 แก้ไขตรงนี้: กรองเอาเฉพาะสินค้าที่ status == true (ไม่ได้ถูกซ่อน) มาแสดงเท่านั้น
+        // 1. เรียก API
+        var response = await ApiProduct.getProductsByShop(loadedShopId!);
+
+        List<ProductResponse> list = [];
+
+        // 2. ตรวจสอบเงื่อนไข Type ของ Response
+        if (response is List<ProductResponse>) {
+          list = response;
+        } else if (response is ProductPagedResponse) {
+          // ✅ แก้ไขตรงนี้: ใช้ .items ตามที่นิยามไว้ใน Model
+          list = response.items;
+        }
+
+        // 3. กรองเฉพาะสินค้าที่สถานะเป็น true
         allProducts = list.where((p) => p.status == true).toList();
+
+        print("✅ โหลดสินค้าสำเร็จ: ${allProducts.length} รายการ");
       }
     } catch (e) {
-      print("Error loading products: $e");
+      print("❌ Error loading products: $e");
     }
   }
 
@@ -190,17 +207,17 @@ class CheckoutController extends GetxController {
 
   void selectProductToAdd(ProductResponse product) {
     _addToCart(product);
-    
+
     // เคลียร์สถานะการค้นหา
     searchController.clear();
     isSearching.value = false;
     searchResults.clear();
-    
+
     // ซ่อนคีย์บอร์ด
     FocusManager.instance.primaryFocus?.unfocus();
-    
+
     // อัปเดตข้อมูลสินค้าล่าสุด (เผื่อสต็อกเปลี่ยน)
-    fetchFreshProducts(); 
+    fetchFreshProducts();
   }
 
   Future<void> openInternalScanner() async {
@@ -249,9 +266,13 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> addItemsByIds(List<String> productIds) async {
+    // มั่นใจว่ามีข้อมูลสินค้าก่อนหา
     if (allProducts.isEmpty) {
       await _loadAllProducts();
     }
+
+    print("📦 Attempting to add items: $productIds");
+    print("🛒 Current store items: ${allProducts.length}");
 
     for (var id in productIds) {
       var match = allProducts.firstWhereOrNull(
@@ -259,9 +280,12 @@ class CheckoutController extends GetxController {
       );
       if (match != null) {
         _addToCart(match);
+        print("➕ Added: ${match.name}");
+      } else {
+        print("❌ Not found product ID: $id");
       }
     }
-    update();
+    // ไม่ต้องเรียก update(); เพราะ cartItems เป็น .obs อยู่แล้ว GetX จัดการให้เอง
   }
 
   void _addToCart(ProductResponse product) {
