@@ -52,6 +52,63 @@ class MyShopController extends GetxController {
     }
   }
 
+  Future<void> confirmAndDeleteShop(ShopResponse shop) async {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.delete_forever, color: Colors.red, size: 60),
+              const SizedBox(height: 16),
+              const Text("ยืนยันการลบ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Text("คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่? ข้อมูลนี้ไม่สามารถกู้คืนได้", 
+                style: const TextStyle(fontSize: 16, color: Colors.black54), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      child: const Text("ยกเลิก"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      onPressed: () async {
+                        Get.back(); // ปิด Dialog ยืนยัน
+                        _processDelete(shop.shopId);
+                      },
+                      child: const Text("ลบเลย", style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _processDelete(int shopId) async {
+    isLoading.value = true;
+    bool success = await _apiShop.deleteShop(shopId);
+    isLoading.value = false;
+    
+    if (success) {
+      shops.removeWhere((item) => item.shopId == shopId);
+      _showCustomDialog(title: "สำเร็จ", message: "ลบร้านค้าเรียบร้อยแล้ว", color: Colors.green, icon: Icons.check_circle);
+    } else {
+      _showCustomDialog(title: "ผิดพลาด", message: "ไม่สามารถลบร้านค้าได้", color: Colors.orange, icon: Icons.warning);
+    }
+  }
+
   Future<void> deleteShop(int shopId) async {
     bool success = await _apiShop.deleteShop(shopId);
     if (success) {
@@ -100,4 +157,36 @@ class MyShopController extends GetxController {
     Get.offAll(() => const HomePage());
     print("เลือกใช้งานร้าน: ${shop.name} (ID: ${shop.shopId})");
   }
+
+  void _showCustomDialog({required String title, required String message, required Color color, required IconData icon}) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 60),
+              const SizedBox(height: 16),
+              Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Text(message, style: const TextStyle(fontSize: 16, color: Colors.black54), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  onPressed: () => Get.back(),
+                  child: const Text("ตกลง", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 }

@@ -140,29 +140,86 @@ class CreateShopController extends GetxController {
   String firstPin = "";           // PIN รอบแรก
 
   // 1. ฟังก์ชัน Validate ก่อนไปหน้า PIN
-  void validateAndGoToPin() {
+ void validateAndGoToPin() {
+    // ดึงค่าเบอร์โทรออกมาเช็ค
+    String phone = shopPhoneController.text.trim();
+
+    // เช็คว่ากรอกครบทุกช่องไหม
     if (shopNameController.text.isEmpty ||
-        shopPhoneController.text.isEmpty ||
+        phone.isEmpty ||
         addressController.text.isEmpty ||
         selectedProvince.value == null ||
         profileImage.value == null || 
         qrImage.value == null) {
       
-      Get.snackbar(
-        "ข้อมูลไม่ครบถ้วน",
-        "กรุณากรอกข้อมูลและอัปโหลดรูปภาพให้ครบ",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      _showErrorSnackbar("ข้อมูลไม่ครบถ้วน", "กรุณากรอกข้อมูลและอัปโหลดรูปภาพให้ครบ");
+      return;
+    }
+
+    // 🔥 เช็คเงื่อนไขเบอร์โทรศัพท์: ต้องเป็นตัวเลขเท่านั้น และต้องครบ 10 หลัก
+    // ใช้ RegExp(r'^[0-9]+$') เพื่อเช็คว่าเป็นตัวเลข 0-9 เท่านั้น
+    if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
+      _showErrorSnackbar("เบอร์โทรศัพท์ไม่ถูกต้อง", "กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก");
       return;
     }
     
-    // เคลียร์ค่า PIN เก่า และไปหน้า SetShopPinPage
+    // ถ้าผ่านเงื่อนไขทั้งหมด -> ไปหน้า PIN
     currentPin.value = "";
     firstPin = "";
     isConfirmPinStep.value = false;
     Get.to(() => const SetShopPinPage());
+  }
+
+  // ฟังก์ชันเสริมสำหรับแสดง Snackbar แจ้งเตือน (ช่วยให้ Code สะอาดขึ้น)
+  void _showErrorSnackbar(String title, String message) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // ให้ขนาดพอดีกับเนื้อหา
+            children: [
+              // ไอคอนเตือนสีส้ม/เหลือง
+              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 60),
+              const SizedBox(height: 16),
+              
+              Text(
+                title,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              
+              Text(
+                message,
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // ปุ่มตกลง
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Get.back(), // ปิด Dialog
+                  child: const Text(
+                    "ตกลง",
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: true, // คลิกพื้นที่ว่างรอบๆ เพื่อปิดได้
+    );
   }
 
   // 2. Logic Numpad

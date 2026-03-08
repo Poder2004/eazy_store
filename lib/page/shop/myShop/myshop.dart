@@ -110,37 +110,8 @@ class MyShopPage extends StatelessWidget {
                                   // ปุ่มลบ
                                   SlidableAction(
                                     onPressed: (context) {
-                                      // แสดง Dialog ยืนยันก่อนลบ
-                                      showDialog(
-                                        context: context,
-                                        builder: (ctx) => AlertDialog(
-                                          title: const Text("ยืนยันการลบ"),
-                                          content: Text(
-                                            "คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่?",
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(ctx),
-                                              child: const Text("ยกเลิก"),
-                                            ),
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(ctx); // ปิด Dialog
-                                                controller.deleteShop(
-                                                  shop.shopId,
-                                                ); // แจ้ง Controller ให้ลบ
-                                              },
-                                              child: const Text(
-                                                "ลบ",
-                                                style: TextStyle(
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
+                                      // เรียกใช้ฟังก์ชันที่เราเตรียมไว้ใน Controller ตัวเดียวจบ
+                                      controller.confirmAndDeleteShop(shop);
                                     },
                                     backgroundColor: Colors.red,
                                     foregroundColor: Colors.white,
