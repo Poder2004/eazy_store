@@ -157,7 +157,7 @@ class OrderListScreen extends StatelessWidget {
           children: [
             _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () => Get.to(() => const BuyProductsScreen())),
             const SizedBox(height: 10),
-           // _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
+            _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
             const SizedBox(height: 10),
           ],
         ),
