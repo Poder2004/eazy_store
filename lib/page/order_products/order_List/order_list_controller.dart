@@ -93,8 +93,8 @@ class OrderListController extends GetxController {
         barrierDismissible: false,
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      final int shopId = prefs.getInt('shop_id') ?? 0;
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
 
       // 2. เตรียมข้อมูลส่งไป Backend
       final Map<String, dynamic> requestData = {
@@ -116,13 +116,20 @@ class OrderListController extends GetxController {
 
       Get.back(); // ปิด Loading
 
-      if (bytes != null) {
-        // 4. บันทึกไฟล์ลงในเครื่อง
+      if (bytes != null && bytes.isNotEmpty) {
         final directory = await getApplicationDocumentsDirectory();
         final String filePath =
             '${directory.path}/order_${DateTime.now().millisecondsSinceEpoch}.pdf';
         final file = File(filePath);
-        await file.writeAsBytes(bytes);
+
+        // เขียนข้อมูลลงไฟล์และรอให้เสร็จจริงๆ
+        await file.writeAsBytes(bytes, flush: true);
+
+        // ตรวจสอบขนาดไฟล์ ถ้าขนาดไฟล์ < 100 bytes แสดงว่าข้อมูลที่ส่งมาผิดปกติ
+        if (await file.length() < 100) {
+          Get.snackbar("Error", "ไฟล์ PDF ไม่สมบูรณ์");
+          return;
+        }
 
         // 5. เปิดไฟล์ PDF
         await OpenFile.open(filePath);
