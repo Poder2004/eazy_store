@@ -8,6 +8,7 @@ import 'package:eazy_store/model/request/category_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../widgets/image_picker_sheet.dart';
 
 class EditProductController extends GetxController {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -90,15 +91,27 @@ class EditProductController extends GetxController {
     }
   }
 
-  Future<void> pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(
-      source: source,
-      imageQuality: 80,
+  void showImagePickerOptions() {
+    ImagePickerSheet.show(
+      title: "เปลี่ยนรูปสินค้า",
+      onImagePicked: (source) {
+        pickImage(source);
+      },
     );
-    if (image != null) {
-      selectedImage.value = File(image.path);
+  }
+
+  Future<void> pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+      if (image != null) {
+        selectedImage.value = File(image.path);
+      }
+    } catch (e) {
+      print("Error picking image: $e");
     }
-    Get.back(); // ปิด BottomSheet หลังจากเลือกรูปเสร็จ
   }
 
   // แสดง Dialog ยืนยันก่อนบันทึก

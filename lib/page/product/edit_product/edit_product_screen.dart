@@ -67,7 +67,7 @@ class EditProductScreen extends StatelessWidget {
                 child: Stack(
                   children: [
                     GestureDetector(
-                      onTap: () => _showImagePickerOptions(context, controller),
+                     onTap: () => controller.showImagePickerOptions(),
                       child: Obx(() {
                         ImageProvider imageProvider;
                         if (controller.selectedImage.value != null) {
@@ -110,8 +110,7 @@ class EditProductScreen extends StatelessWidget {
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: () =>
-                            _showImagePickerOptions(context, controller),
+                        onTap: () => controller.showImagePickerOptions(),
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: const BoxDecoration(

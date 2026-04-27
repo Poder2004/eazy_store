@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../widgets/image_picker_sheet.dart';
 
 class AddProductController extends GetxController {
   var selectedIndex = 0.obs;
@@ -59,66 +60,11 @@ class AddProductController extends GetxController {
   }
 
   void showImagePickerOptions() {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-        ),
-        child: Wrap(
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Center(
-              child: Text(
-                "อัปโหลดรูปสินค้า",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.photo_library, color: Colors.blue),
-              ),
-              title: const Text('เลือกจากคลังภาพ'),
-              onTap: () {
-                Get.back();
-                pickImage(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.camera_alt, color: Colors.green),
-              ),
-              title: const Text('ถ่ายภาพใหม่'),
-              onTap: () {
-                Get.back();
-                pickImage(ImageSource.camera);
-              },
-            ),
-          ],
-        ),
-      ),
+    ImagePickerSheet.show(
+      title: "อัปโหลดรูปสินค้า",
+      onImagePicked: (source) {
+        pickImage(source);
+      },
     );
   }
 

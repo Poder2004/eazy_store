@@ -5,11 +5,11 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 // --- Imports ไฟล์ของคุณ (ตรวจสอบ Path ให้ตรงกับโปรเจกต์ของคุณด้วยนะครับ) ---
 import '../../../api/api_debtor.dart';
 import '../../../api/api_service_image.dart';
 import '../../../model/request/debtor_request.dart';
+import '../../../widgets/image_picker_sheet.dart';
 
 class DebtRegisterController extends GetxController {
   // --- Controllers สำหรับ TextFields ---
@@ -89,6 +89,15 @@ class DebtRegisterController extends GetxController {
     final selectedDistrictData = rawDistricts.firstWhere((d) => d['name_th'] == newValue);
     final List<dynamic>? rawSubs = selectedDistrictData['sub_districts'] as List<dynamic>?;
     subdistricts.value = rawSubs?.map((s) => s['name_th'] as String).toList() ?? [];
+  }
+
+  void showImagePickerOptions() {
+    ImagePickerSheet.show(
+      title: "เลือกรูปภาพลูกหนี้",
+      onImagePicked: (source) {
+        pickImage(source);
+      },
+    );
   }
 
   // 📌 3. Logic เลือกรูปภาพ

@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'add_product_controller.dart'; // ✅ นำเข้า Controller ที่แยกไว้
 
+
 // 🎨 Theme Constants
 const Color _kPrimaryColor = Color(0xFF6B8E23);
 const Color _kBackgroundColor = Color(0xFFF2F4F7);

@@ -3,7 +3,7 @@ import 'package:eazy_store/api/api_service_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-
+import '../../../widgets/image_picker_sheet.dart';
 // Import Model, API และ Service
 import '../../../model/response/shop_response.dart';
 import '../../../api/api_shop.dart';
@@ -45,6 +45,15 @@ class EditShopController extends GetxController {
     addressController.dispose();
     pinCodeController.dispose();
     super.onClose();
+  }
+
+  void showImagePickerOptions() {
+    ImagePickerSheet.show(
+      title: "เปลี่ยนรูปภาพร้านค้า",
+      onImagePicked: (source) {
+        pickImage(source);
+      },
+    );
   }
 
   Future<void> pickImage(ImageSource source) async {

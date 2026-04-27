@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../model/response/shop_response.dart';
 
 // Import Controller ที่เพิ่งแยกออกไป
-import 'edit_shop_controller.dart'; 
+import 'edit_shop_controller.dart';
 
 class EditShopScreen extends StatelessWidget {
   final ShopResponse shop;
@@ -23,7 +23,10 @@ class EditShopScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("แก้ไขร้านค้า", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "แก้ไขร้านค้า",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
@@ -37,7 +40,6 @@ class EditShopScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
               // --- ส่วนรูปภาพ ---
               Center(
                 child: Stack(
@@ -45,7 +47,9 @@ class EditShopScreen extends StatelessWidget {
                     Obx(() {
                       ImageProvider? imageProvider;
                       if (controller.selectedImage.value != null) {
-                        imageProvider = FileImage(controller.selectedImage.value!);
+                        imageProvider = FileImage(
+                          controller.selectedImage.value!,
+                        );
                       } else if (shop.imgShop.isNotEmpty) {
                         imageProvider = NetworkImage(shop.imgShop);
                       }
@@ -56,47 +60,33 @@ class EditShopScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade300, width: 2),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 2,
+                          ),
                           image: imageProvider != null
-                              ? DecorationImage(image: imageProvider, fit: BoxFit.cover)
+                              ? DecorationImage(
+                                  image: imageProvider,
+                                  fit: BoxFit.cover,
+                                )
                               : null,
                         ),
                         child: imageProvider == null
-                            ? Icon(Icons.store, size: 60, color: Colors.grey[400])
+                            ? Icon(
+                                Icons.store,
+                                size: 60,
+                                color: Colors.grey[400],
+                              )
                             : null,
                       );
                     }),
-                    
+
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
                         onTap: () {
-                          Get.bottomSheet(
-                            Container(
-                              color: Colors.white,
-                              child: Wrap(
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.camera_alt),
-                                    title: const Text('ถ่ายรูป'),
-                                    onTap: () {
-                                      Get.back();
-                                      controller.pickImage(ImageSource.camera);
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.photo_library),
-                                    title: const Text('เลือกจากอัลบั้ม'),
-                                    onTap: () {
-                                      Get.back();
-                                      controller.pickImage(ImageSource.gallery);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
+                          controller.showImagePickerOptions();
                         },
                         child: Container(
                           padding: const EdgeInsets.all(8),
@@ -105,14 +95,18 @@ class EditShopScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
-                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 30),
 
               // --- ฟอร์มข้อมูล ---
@@ -122,29 +116,29 @@ class EditShopScreen extends StatelessWidget {
 
               _buildLabel("เบอร์โทรศัพท์"),
               _buildTextField(
-                controller.phoneController, 
-                Icons.phone, 
-                inputType: TextInputType.phone
+                controller.phoneController,
+                Icons.phone,
+                inputType: TextInputType.phone,
               ),
               const SizedBox(height: 15),
 
               _buildLabel("ที่อยู่ร้านค้า"),
               _buildTextField(
-                controller.addressController, 
-                Icons.location_on, 
-                maxLines: 3, 
-                hint: "กรอกที่อยู่ร้านค้า"
+                controller.addressController,
+                Icons.location_on,
+                maxLines: 3,
+                hint: "กรอกที่อยู่ร้านค้า",
               ),
               const SizedBox(height: 15),
 
               _buildLabel("รหัส Pin Code (สำหรับยืนยัน)"),
               _buildTextField(
-                controller.pinCodeController, 
-                Icons.lock, 
-                inputType: TextInputType.number, 
-                isPassword: true, 
+                controller.pinCodeController,
+                Icons.lock,
+                inputType: TextInputType.number,
+                isPassword: true,
                 maxLength: 6,
-                isNumberOnly: true, 
+                isNumberOnly: true,
               ),
 
               const SizedBox(height: 40),
@@ -153,23 +147,37 @@ class EditShopScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 height: 50,
-                child: Obx(() => ElevatedButton(
-                  onPressed: controller.isLoading.value ? null : () => controller.saveShop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryGreen,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
+                child: Obx(
+                  () => ElevatedButton(
+                    onPressed: controller.isLoading.value
+                        ? null
+                        : () => controller.saveShop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
+                    child: controller.isLoading.value
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "บันทึกการเปลี่ยนแปลง",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
-                  child: controller.isLoading.value
-                      ? const SizedBox(
-                          width: 20, height: 20, 
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                        )
-                      : const Text("บันทึกการเปลี่ยนแปลง", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                )),
+                ),
               ),
             ],
           ),
@@ -183,31 +191,33 @@ class EditShopScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8.0, left: 5),
       child: Text(
         text,
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[700]),
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[700],
+        ),
       ),
     );
   }
 
   Widget _buildTextField(
-    TextEditingController controller, 
-    IconData icon, 
-    {
-      TextInputType inputType = TextInputType.text, 
-      bool isPassword = false, 
-      int maxLines = 1, 
-      int? maxLength, 
-      String? hint,
-      bool isNumberOnly = false, 
-    }
-  ) {
+    TextEditingController controller,
+    IconData icon, {
+    TextInputType inputType = TextInputType.text,
+    bool isPassword = false,
+    int maxLines = 1,
+    int? maxLength,
+    String? hint,
+    bool isNumberOnly = false,
+  }) {
     return TextField(
       controller: controller,
       keyboardType: inputType,
       obscureText: isPassword,
       maxLines: maxLines,
       maxLength: maxLength,
-      inputFormatters: isNumberOnly 
-          ? [FilteringTextInputFormatter.digitsOnly] 
+      inputFormatters: isNumberOnly
+          ? [FilteringTextInputFormatter.digitsOnly]
           : [],
       decoration: InputDecoration(
         filled: true,
@@ -227,7 +237,10 @@ class EditShopScreen extends StatelessWidget {
           borderSide: const BorderSide(color: Color(0xFF00C853)),
         ),
         counterText: "",
-        contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 15,
+          horizontal: 15,
+        ),
       ),
     );
   }
