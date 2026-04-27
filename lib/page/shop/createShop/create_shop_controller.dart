@@ -5,9 +5,10 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Imports ของโปรเจกต์ (เช็ค path ให้ตรงกับของคุณนะครับ)
-import 'package:eazy_store/page/homepage/home_page.dart'; 
+import 'package:eazy_store/page/homepage/home_page.dart';
 import '../../../model/response/shop_response.dart';
 import '../../../api/api_shop.dart';
 import '../set_shop_pin_page.dart';
@@ -19,7 +20,7 @@ class CreateShopController extends GetxController {
   final shopPhoneController = TextEditingController();
   final addressController = TextEditingController();
   final zipCodeController = TextEditingController();
-  
+
   var isLoading = false.obs;
 
   // --- Image Picker ---
@@ -29,10 +30,28 @@ class CreateShopController extends GetxController {
 
   Future<void> pickImage(ImageSource source, {required bool isProfile}) async {
     try {
+      // --- เพิ่มส่วนนี้เพื่อขออนุญาตก่อน ---
+      if (source == ImageSource.camera) {
+        var status = await Permission.camera.request();
+        if (status.isDenied) {
+          Get.snackbar("สิทธิ์ถูกปฏิเสธ", "คุณต้องอนุญาตให้เข้าถึงกล้องก่อน");
+          return;
+        }
+      } else {
+        // สำหรับ Gallery (เช็คตามเวอร์ชัน Android)
+        var status = await Permission.photos.request();
+        if (status.isDenied) {
+          // บางรุ่นใช้ storage
+          await Permission.storage.request();
+        }
+      }
+      // ---------------------------------
+
       final XFile? image = await _picker.pickImage(
         source: source,
         imageQuality: 80,
       );
+
       if (image != null) {
         if (isProfile) {
           profileImage.value = File(image.path);
@@ -41,7 +60,10 @@ class CreateShopController extends GetxController {
         }
       }
     } catch (e) {
-      Get.snackbar("เกิดข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้");
+      print(
+        "Error picking image: $e",
+      ); // ปริ้นออกมาดูใน Console ว่า Error จริงๆ คืออะไร
+      Get.snackbar("เกิดข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้: $e");
     }
   }
 
@@ -62,12 +84,14 @@ class CreateShopController extends GetxController {
 
   Future<void> _loadAddressData() async {
     try {
-      const assetPath = 'assets/data_address/province_with_district_and_sub_district.json';
+      const assetPath =
+          'assets/data_address/province_with_district_and_sub_district.json';
       final String response = await rootBundle.loadString(assetPath);
       final List<dynamic> rawData = jsonDecode(response);
       final Map<String, dynamic> structuredData = {};
       for (var province in rawData) {
-        String provinceName = province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
+        String provinceName =
+            province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
         structuredData[provinceName] = province;
       }
       _fullAddressData = structuredData;
@@ -97,36 +121,46 @@ class CreateShopController extends GetxController {
     selectedProvince.value = newValue;
     _resetDistrictAndSubdistrict();
     final provinceData = _fullAddressData![newValue];
-    final List<dynamic>? rawDistricts = provinceData?['districts'] as List<dynamic>?;
+    final List<dynamic>? rawDistricts =
+        provinceData?['districts'] as List<dynamic>?;
     if (rawDistricts != null) {
       districts.value = rawDistricts
           .map((district) => district['name_th'] as String? ?? '')
-          .whereType<String>().toList();
+          .whereType<String>()
+          .toList();
     }
   }
 
   void onDistrictChanged(String? newValue) {
-    if (newValue == null || selectedProvince.value == null || _fullAddressData == null) {
+    if (newValue == null ||
+        selectedProvince.value == null ||
+        _fullAddressData == null) {
       _resetSubdistrict();
       return;
     }
     selectedDistrict.value = newValue;
     _resetSubdistrict();
     final provinceData = _fullAddressData![selectedProvince.value!];
-    final List<dynamic>? rawDistricts = provinceData?['districts'] as List<dynamic>?;
+    final List<dynamic>? rawDistricts =
+        provinceData?['districts'] as List<dynamic>?;
     if (rawDistricts != null) {
-      final selectedDistrictData = rawDistricts.firstWhere((d) => d['name_th'] == newValue, orElse: () => null);
+      final selectedDistrictData = rawDistricts.firstWhere(
+        (d) => d['name_th'] == newValue,
+        orElse: () => null,
+      );
       if (selectedDistrictData != null) {
-        final List<dynamic>? rawSubdistricts = selectedDistrictData['sub_districts'] as List<dynamic>?;
+        final List<dynamic>? rawSubdistricts =
+            selectedDistrictData['sub_districts'] as List<dynamic>?;
         if (rawSubdistricts != null) {
           subdistricts.value = rawSubdistricts
               .map((sub) => sub['name_th'] as String? ?? '')
-              .whereType<String>().toList();
+              .whereType<String>()
+              .toList();
         }
       }
     }
   }
-  
+
   void onSubDistrictChanged(String? newValue) {
     selectedSubDistrict.value = newValue;
   }
@@ -135,12 +169,12 @@ class CreateShopController extends GetxController {
   // 🔥 ส่วนที่เพิ่มใหม่: Logic การจัดการ PIN และ Validate
   // =========================================================
 
-  var currentPin = "".obs;        // PIN ที่กำลังพิมพ์
+  var currentPin = "".obs; // PIN ที่กำลังพิมพ์
   var isConfirmPinStep = false.obs; // อยู่หน้ายืนยันไหม?
-  String firstPin = "";           // PIN รอบแรก
+  String firstPin = ""; // PIN รอบแรก
 
   // 1. ฟังก์ชัน Validate ก่อนไปหน้า PIN
- void validateAndGoToPin() {
+  void validateAndGoToPin() {
     // ดึงค่าเบอร์โทรออกมาเช็ค
     String phone = shopPhoneController.text.trim();
 
@@ -149,20 +183,25 @@ class CreateShopController extends GetxController {
         phone.isEmpty ||
         addressController.text.isEmpty ||
         selectedProvince.value == null ||
-        profileImage.value == null || 
+        profileImage.value == null ||
         qrImage.value == null) {
-      
-      _showErrorSnackbar("ข้อมูลไม่ครบถ้วน", "กรุณากรอกข้อมูลและอัปโหลดรูปภาพให้ครบ");
+      _showErrorSnackbar(
+        "ข้อมูลไม่ครบถ้วน",
+        "กรุณากรอกข้อมูลและอัปโหลดรูปภาพให้ครบ",
+      );
       return;
     }
 
     // 🔥 เช็คเงื่อนไขเบอร์โทรศัพท์: ต้องเป็นตัวเลขเท่านั้น และต้องครบ 10 หลัก
     // ใช้ RegExp(r'^[0-9]+$') เพื่อเช็คว่าเป็นตัวเลข 0-9 เท่านั้น
     if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
-      _showErrorSnackbar("เบอร์โทรศัพท์ไม่ถูกต้อง", "กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก");
+      _showErrorSnackbar(
+        "เบอร์โทรศัพท์ไม่ถูกต้อง",
+        "กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก",
+      );
       return;
     }
-    
+
     // ถ้าผ่านเงื่อนไขทั้งหมด -> ไปหน้า PIN
     currentPin.value = "";
     firstPin = "";
@@ -181,23 +220,30 @@ class CreateShopController extends GetxController {
             mainAxisSize: MainAxisSize.min, // ให้ขนาดพอดีกับเนื้อหา
             children: [
               // ไอคอนเตือนสีส้ม/เหลือง
-              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 60),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 60,
+              ),
               const SizedBox(height: 16),
-              
+
               Text(
                 title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              
+
               Text(
                 message,
                 style: const TextStyle(fontSize: 16, color: Colors.black54),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              
+
               // ปุ่มตกลง
               SizedBox(
                 width: double.infinity,
@@ -205,12 +251,18 @@ class CreateShopController extends GetxController {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   onPressed: () => Get.back(), // ปิด Dialog
                   child: const Text(
                     "ตกลง",
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -231,7 +283,10 @@ class CreateShopController extends GetxController {
 
   void deletePinDigit() {
     if (currentPin.value.isNotEmpty) {
-      currentPin.value = currentPin.value.substring(0, currentPin.value.length - 1);
+      currentPin.value = currentPin.value.substring(
+        0,
+        currentPin.value.length - 1,
+      );
     }
   }
 
@@ -251,7 +306,12 @@ class CreateShopController extends GetxController {
         _showPinSuccessDialog(firstPin);
       } else {
         // PIN ไม่ตรง
-        Get.snackbar("รหัสไม่ตรงกัน", "กรุณาตั้งรหัสใหม่อีกครั้ง", backgroundColor: Colors.red, colorText: Colors.white);
+        Get.snackbar(
+          "รหัสไม่ตรงกัน",
+          "กรุณาตั้งรหัสใหม่อีกครั้ง",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
         currentPin.value = "";
         firstPin = "";
         isConfirmPinStep.value = false;
@@ -269,23 +329,39 @@ class CreateShopController extends GetxController {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle, color: Color(0xFFFDD835), size: 80),
+              const Icon(
+                Icons.check_circle,
+                color: Color(0xFFFDD835),
+                size: 80,
+              ),
               const SizedBox(height: 20),
-              const Text("ตั้งรหัส PIN สำเร็จ", 
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
+              const Text(
+                "ตั้งรหัส PIN สำเร็จ",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, shape: const StadiumBorder()),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: const StadiumBorder(),
+                  ),
                   onPressed: () {
                     Get.back(); // ปิด Dialog PIN
                     // 🔥 เริ่มส่งข้อมูลทั้งหมดเข้า Backend
                     _submitAllDataToBackend(finalPin);
                   },
-                  child: const Text("ตกลง", style: TextStyle(color: Colors.white)),
+                  child: const Text(
+                    "ตกลง",
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -297,7 +373,10 @@ class CreateShopController extends GetxController {
   // 4. ฟังก์ชันส่งข้อมูลจริง (ย้ายมาจาก submitShopInfo เดิม)
   Future<void> _submitAllDataToBackend(String confirmedPin) async {
     // แสดง Loading
-    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
     isLoading.value = true;
 
     try {
@@ -312,7 +391,9 @@ class CreateShopController extends GetxController {
 
       // --- Upload Images (แนะนำใช้ Cloudinary ตามที่คุยกัน) ---
       final uploadService = ImageUploadService();
-      String? shopImageUrl = await uploadService.uploadImage(profileImage.value!);
+      String? shopImageUrl = await uploadService.uploadImage(
+        profileImage.value!,
+      );
       String? qrImageUrl = await uploadService.uploadImage(qrImage.value!);
 
       if (shopImageUrl == null || qrImageUrl == null) {
@@ -322,7 +403,8 @@ class CreateShopController extends GetxController {
       }
 
       // --- เตรียมที่อยู่ ---
-      String fullAddress = "${addressController.text} "
+      String fullAddress =
+          "${addressController.text} "
           "ต.${selectedSubDistrict.value ?? ''} "
           "อ.${selectedDistrict.value ?? ''} "
           "จ.${selectedProvince.value ?? ''} "
@@ -351,7 +433,6 @@ class CreateShopController extends GetxController {
       } else {
         Get.snackbar("ล้มเหลว", "สร้างร้านค้าไม่สำเร็จ");
       }
-
     } catch (e) {
       Get.back();
       isLoading.value = false;
@@ -366,29 +447,61 @@ class CreateShopController extends GetxController {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                height: 80, width: 80,
-                decoration: BoxDecoration(color: const Color(0xFFFDD835).withOpacity(0.2), shape: BoxShape.circle),
-                child: const Center(child: Icon(Icons.check, color: Color(0xFFFDD835), size: 40)),
+                height: 80,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDD835).withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.check, color: Color(0xFFFDD835), size: 40),
+                ),
               ),
               const SizedBox(height: 20),
-              const Text("สมัครร้านค้าสำเร็จ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF8BC34A))),
+              const Text(
+                "สมัครร้านค้าสำเร็จ",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF8BC34A),
+                ),
+              ),
               const SizedBox(height: 10),
-              Text('ชื่อร้าน: ${shopNameController.text}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+              Text(
+                'ชื่อร้าน: ${shopNameController.text}',
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
               const SizedBox(height: 30),
               SizedBox(
-                width: double.infinity, height: 50,
+                width: double.infinity,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: () {
                     Get.back();
                     Get.offAll(() => const HomePage());
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C853), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25))),
-                  child: const Text("ตกลง", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00C853),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  child: const Text(
+                    "ตกลง",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],
