@@ -115,7 +115,6 @@ class CheckoutController extends GetxController {
         if (response is List<ProductResponse>) {
           list = response;
         } else if (response is ProductPagedResponse) {
-          // ✅ แก้ไขตรงนี้: ใช้ .items ให้ตรงกับ Model
           list = response.items;
         }
 
@@ -133,22 +132,16 @@ class CheckoutController extends GetxController {
   Future<void> _loadAllProducts() async {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
-        // 1. เรียก API
         var response = await ApiProduct.getProductsByShop(loadedShopId!);
-
         List<ProductResponse> list = [];
 
-        // 2. ตรวจสอบเงื่อนไข Type ของ Response
         if (response is List<ProductResponse>) {
           list = response;
         } else if (response is ProductPagedResponse) {
-          // ✅ แก้ไขตรงนี้: ใช้ .items ตามที่นิยามไว้ใน Model
           list = response.items;
         }
 
-        // 3. กรองเฉพาะสินค้าที่สถานะเป็น true
         allProducts = list.where((p) => p.status == true).toList();
-
         print("✅ โหลดสินค้าสำเร็จ: ${allProducts.length} รายการ");
       }
     } catch (e) {
@@ -177,12 +170,9 @@ class CheckoutController extends GetxController {
     isSearching.value = true;
 
     try {
-      // ดึง shopId ปัจจุบัน
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
 
-      // ✨ เรียกใช้ ApiProduct.searchProduct
-      // หมายเหตุ: หาก API คืนค่าเป็นตัวเดียว ให้ใส่ใน List เพื่อแสดงผลใน UI
       ProductResponse? product = await ApiProduct.searchProduct(
         query,
         currentShopId,
@@ -191,8 +181,6 @@ class CheckoutController extends GetxController {
       if (product != null && product.status == true) {
         searchResults.assignAll([product]);
       } else {
-        // หากไม่เจอแบบ Exact Match (บาร์โค้ด)
-        // อาจจะยังคงใช้การค้นหาจากชื่อใน allProducts (Local) เสริมได้ถ้าต้องการ
         var localMatches = allProducts.where((p) {
           return p.name.toLowerCase().contains(query.toLowerCase());
         }).toList();
@@ -207,16 +195,10 @@ class CheckoutController extends GetxController {
 
   void selectProductToAdd(ProductResponse product) {
     _addToCart(product);
-
-    // เคลียร์สถานะการค้นหา
     searchController.clear();
     isSearching.value = false;
     searchResults.clear();
-
-    // ซ่อนคีย์บอร์ด
     FocusManager.instance.primaryFocus?.unfocus();
-
-    // อัปเดตข้อมูลสินค้าล่าสุด (เผื่อสต็อกเปลี่ยน)
     fetchFreshProducts();
   }
 
@@ -264,13 +246,9 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> addItemsByIds(List<String> productIds) async {
-    // มั่นใจว่ามีข้อมูลสินค้าก่อนหา
     if (allProducts.isEmpty) {
       await _loadAllProducts();
     }
-
-    print("📦 Attempting to add items: $productIds");
-    print("🛒 Current store items: ${allProducts.length}");
 
     for (var id in productIds) {
       var match = allProducts.firstWhereOrNull(
@@ -278,12 +256,8 @@ class CheckoutController extends GetxController {
       );
       if (match != null) {
         _addToCart(match);
-        print("➕ Added: ${match.name}");
-      } else {
-        print("❌ Not found product ID: $id");
       }
     }
-    // ไม่ต้องเรียก update(); เพราะ cartItems เป็น .obs อยู่แล้ว GetX จัดการให้เอง
   }
 
   void _addToCart(ProductResponse product) {
@@ -378,7 +352,7 @@ class CheckoutController extends GetxController {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => paymentSheet, // รับ Widget จาก View มาแสดง
+      builder: (context) => paymentSheet,
     );
   }
 
@@ -386,8 +360,8 @@ class CheckoutController extends GetxController {
     Get.to(() => DebtSalePage());
   }
 
-  // ✅ ฟังก์ชันแสดง Popup ยืนยันการชำระเงิน (ก่อนเรียก API)
-  void confirmPayment(VoidCallback processPayment) {
+  // ✅ ฟังก์ชันแสดง Popup ยืนยันการชำระเงินที่แก้ UI ให้ยืดหยุ่นรองรับฟอนต์ใหญ่แล้ว
+  void confirmPayment(VoidCallback processPaymentFunc) {
     if (cartItems.isEmpty) {
       _showWarningDialog("ตะกร้าว่าง", "กรุณาเลือกสินค้าก่อนทำรายการ");
       return;
@@ -404,170 +378,206 @@ class CheckoutController extends GetxController {
       return;
     }
 
-    // เปิด Dialog แบบสวยงาม
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.rectangle,
+      // ✨ 1. คุม Font Scale ให้ใหญ่สุด 1.2 ไม่ให้ทะลุกรอบป๊อปอัป
+      MediaQuery(
+        data: MediaQuery.of(Get.context!).copyWith(
+          textScaler: MediaQuery.textScalerOf(
+            Get.context!,
+          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        ),
+        child: Dialog(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 10.0,
-                offset: Offset(0.0, 10.0),
-              ),
-            ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // ทำให้กล่องพอดีกับเนื้อหา
-            children: [
-              Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  shape: BoxShape.circle,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400), // จำกัดความกว้าง
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.rectangle,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10.0,
+                  offset: Offset(0.0, 10.0),
                 ),
-                child: const Icon(
-                  Icons.receipt_long,
-                  color: Colors.blue,
-                  size: 40,
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // ทำให้กล่องพอดีเนื้อหา
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long,
+                    color: Colors.blue,
+                    size: 40,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "ยืนยันการทำรายการ",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 15),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 15,
-                  horizontal: 20,
+                const SizedBox(height: 20),
+                const Text(
+                  "ยืนยันการทำรายการ",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(10),
+                const SizedBox(height: 15),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 15,
+                    horizontal: 20,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      // ✨ 2. ใช้ Expanded เพื่อให้ข้อความตัดขึ้นบรรทัดใหม่ได้ถ้าฟอนต์ใหญ่
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "จำนวนรายการ:",
+                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "${cartItems.length} ชิ้น",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "วิธีชำระเงิน:",
+                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              paymentMethod.value,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 25, thickness: 1),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "ยอดสุทธิ:",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          // ✨ 3. หุ้มด้วย FittedBox ป้องกันตัวเลขยอดเงินแหว่งทะลุจอ
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                "${totalPrice.toInt()} ฿",
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
+                const SizedBox(height: 25),
+                Row(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "จำนวนรายการ:",
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
-                        ),
-                        Text(
-                          "${cartItems.length} ชิ้น",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                      ],
+                        // ✨ 4. หุ้มด้วย FittedBox ป้องกันปุ่มเบียดกัน
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "กลับไปแก้ไข",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "วิธีชำระเงิน:",
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.back();
+                          processPaymentFunc(); // เรียกใช้ฟังก์ชันจ่ายเงิน
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00C853),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 0,
                         ),
-                        Text(
-                          paymentMethod.value,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "ยืนยัน",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                    const Divider(height: 20, thickness: 1),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "ยอดสุทธิ:",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          "${totalPrice.toInt()} ฿",
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 25),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(), // ปิด Dialog
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        side: BorderSide(color: Colors.grey.shade300),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "กลับไปแก้ไข",
-                        style: TextStyle(fontSize: 16, color: Colors.black54),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back(); // ปิด Dialog
-                        processPayment(); // เรียก callback ฟังก์ชันบันทึก API
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00C853),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        "ยืนยัน",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-      barrierDismissible: false, // ห้ามกดคลิกพื้นที่ว่างเพื่อปิด
+      barrierDismissible: false,
     );
   }
 
-  // ✅ ฟังก์ชันยิง API บันทึกการขาย (ทำงานหลังจากกดยืนยันใน Popup)
+  // ✅ ฟังก์ชันยิง API บันทึกการขาย
   Future<void> processPayment() async {
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
@@ -646,7 +656,6 @@ class CheckoutController extends GetxController {
     super.onClose();
   }
 
-  // ✅ ฟังก์ชันแจ้งเตือนทั่วไป (สีส้ม)
   void _showWarningDialog(String title, String message) {
     _buildStatusDialog(
       title,
@@ -656,12 +665,10 @@ class CheckoutController extends GetxController {
     );
   }
 
-  // ✅ ฟังก์ชันแจ้งเตือนข้อผิดพลาด (สีแดง)
   void _showErrorDialog(String title, String message) {
     _buildStatusDialog(title, message, Colors.red, Icons.error_outline_rounded);
   }
 
-  // ✅ ฟังก์ชันสำเร็จ (สีเขียว)
   void _showSuccessDialog(String title, String message) {
     _buildStatusDialog(
       title,
@@ -671,6 +678,7 @@ class CheckoutController extends GetxController {
     );
   }
 
+  // ✨ จัดการ Dialog สถานะ (สำเร็จ/ผิดพลาด) ให้รองรับฟอนต์ใหญ่ด้วย
   void _buildStatusDialog(
     String title,
     String message,
@@ -678,51 +686,64 @@ class CheckoutController extends GetxController {
     IconData icon,
   ) {
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 60),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+      MediaQuery(
+        data: MediaQuery.of(Get.context!).copyWith(
+          textScaler: MediaQuery.textScalerOf(
+            Get.context!,
+          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        ),
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 60),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                message,
-                style: const TextStyle(fontSize: 16, color: Colors.black54),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: color,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: const TextStyle(fontSize: 16, color: Colors.black54),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: color,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        "ตกลง",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                  onPressed: () => Get.back(),
-                  child: const Text(
-                    "ตกลง",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

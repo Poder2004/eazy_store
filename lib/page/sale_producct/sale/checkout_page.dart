@@ -3,7 +3,7 @@ import 'package:eazy_store/model/request/baskets_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../menu_bar/bottom_navbar.dart';
-import 'checkout_controller.dart'; // ✅ Import Controller ที่เพิ่งสร้างใหม่มาใช้
+import 'checkout_controller.dart';
 
 class CheckoutPage extends StatelessWidget {
   const CheckoutPage({super.key});
@@ -17,61 +17,71 @@ class CheckoutPage extends StatelessWidget {
     });
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: TextField(
-                            controller: controller.searchController,
-                            onChanged: controller.onSearchChanged,
-                            decoration: InputDecoration(
-                              hintText: 'พิมพ์ชื่อสินค้า หรือ สแกน...',
-                              hintStyle: const TextStyle(color: Colors.grey),
-                              prefixIcon: const Icon(
-                                Icons.search,
-                                color: Colors.grey,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: const Icon(
-                                  Icons.qr_code_scanner,
-                                  color: Colors.black87,
+      // ✨ คุมฟอนต์หน้าหลักตะกร้า
+      body: MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: MediaQuery.textScalerOf(
+            context,
+          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: TextField(
+                              controller: controller.searchController,
+                              onChanged: controller.onSearchChanged,
+                              style: const TextStyle(fontSize: 16),
+                              decoration: InputDecoration(
+                                hintText: 'พิมพ์ชื่อสินค้า หรือ สแกน...',
+                                hintStyle: const TextStyle(color: Colors.grey),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: Colors.grey,
                                 ),
-                                onPressed: controller.openInternalScanner,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 14,
+                                suffixIcon: IconButton(
+                                  icon: const Icon(
+                                    Icons.qr_code_scanner,
+                                    color: Colors.black87,
+                                  ),
+                                  onPressed: controller.openInternalScanner,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: Obx(() {
-                          if (controller.isSearching.value) {
-                            return _buildSearchResults(controller);
-                          }
-                          return _buildCartList(context, controller);
-                        }),
-                      ),
-                    ],
+                        Expanded(
+                          child: Obx(() {
+                            if (controller.isSearching.value) {
+                              return _buildSearchResults(controller);
+                            }
+                            return _buildCartList(context, controller);
+                          }),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: Obx(
@@ -238,6 +248,8 @@ class CheckoutPage extends StatelessWidget {
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -247,15 +259,19 @@ class CheckoutPage extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 const SizedBox(height: 5),
-                Text(
-                  "${totalItemPrice.toInt()} บาท",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    "${totalItemPrice.toInt()} บาท",
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -328,69 +344,75 @@ class CheckoutPage extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "รวมทั้งหมด",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "รวมทั้งหมด",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 20),
+                  Obx(
+                    () => Text(
+                      "${controller.totalPrice.toInt()} บาท",
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Obx(
-                () => Text(
-                  "${controller.totalPrice.toInt()} บาท",
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+            ),
+            const Divider(height: 30, color: Color(0xFFEEEEEE)),
+            Row(
+              children: [
+                Expanded(
+                  child: _actionButton(
+                    "ชำระเงิน",
+                    const Color(0xFF00C853),
+                    () => controller.openPaymentSheet(
+                      context,
+                      false,
+                      _PaymentBottomSheet(controller: controller),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const Divider(height: 30, color: Color(0xFFEEEEEE)),
-          Row(
-            children: [
-              Expanded(
-                child: _actionButton(
-                  "ชำระเงิน",
-                  const Color(0xFF00C853),
-                  () => controller.openPaymentSheet(
-                    context,
-                    false,
-                    _PaymentBottomSheet(controller: controller),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: _actionButton(
+                    "ค้างชำระ",
+                    const Color(0xFF03A9F4),
+                    controller.goToDebtPaymentPage,
                   ),
                 ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: _actionButton(
-                  "ค้างชำระ",
-                  const Color(0xFF03A9F4),
-                  controller.goToDebtPaymentPage,
-                ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _actionButton(String label, Color color, VoidCallback onTap) {
-    return SizedBox(
-      height: 50,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 2,
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
         child: Text(
           label,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -409,80 +431,88 @@ class _PaymentBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          children: [
-            GestureDetector(
-              onTap: () => Get.back(),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                color: Colors.transparent,
-                width: double.infinity,
-                height: double.infinity,
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 800),
-                child: DraggableScrollableSheet(
-                  initialChildSize: 0.85,
-                  minChildSize: 0.5,
-                  maxChildSize: 0.95,
-                  expand: false,
-                  builder: (context, scrollController) {
-                    return Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Center(
-                            child: Container(
-                              margin: const EdgeInsets.only(
-                                top: 12,
-                                bottom: 20,
-                              ),
-                              width: 50,
-                              height: 5,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.only(bottom: 10),
-                            child: Text(
-                              "ชำระเงิน",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              controller: scrollController,
-                              padding: const EdgeInsets.all(20),
-                              child: _buildCashForm(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+    // ✨ คุมฟอนต์หน้าต่างชำระเงิน
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: MediaQuery.textScalerOf(
+          context,
+        ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              GestureDetector(
+                onTap: () => Get.back(),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  color: Colors.transparent,
+                  width: double.infinity,
+                  height: double.infinity,
                 ),
               ),
-            ),
-          ],
-        );
-      },
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: DraggableScrollableSheet(
+                    initialChildSize: 0.85,
+                    minChildSize: 0.5,
+                    maxChildSize: 0.95,
+                    expand: false,
+                    builder: (context, scrollController) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.only(
+                                  top: 12,
+                                  bottom: 20,
+                                ),
+                                width: 50,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 10),
+                              child: Text(
+                                "ชำระเงิน",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                controller: scrollController,
+                                padding: const EdgeInsets.all(20),
+                                child: _buildCashForm(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -490,9 +520,11 @@ class _PaymentBottomSheet extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ✨ ปรับแต่งกล่องยอดรวมให้กว้างเต็มขอบ
         Center(
           child: Container(
-            padding: const EdgeInsets.all(15),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(15),
@@ -504,13 +536,17 @@ class _PaymentBottomSheet extends StatelessWidget {
                   "ยอดรวมที่ต้องชำระ",
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
+                const SizedBox(height: 5),
                 Obx(
-                  () => Text(
-                    "${controller.totalPrice.toInt()} บาท",
-                    style: const TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  () => FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      "${controller.totalPrice.toInt()} บาท",
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ),
@@ -530,7 +566,12 @@ class _PaymentBottomSheet extends StatelessWidget {
             children: [
               Expanded(
                 child: ChoiceChip(
-                  label: const Center(child: Text("จ่ายเงินสด")),
+                  label: const Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text("จ่ายเงินสด"),
+                    ),
+                  ),
                   selectedColor: Colors.green.shade100,
                   labelStyle: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -546,7 +587,12 @@ class _PaymentBottomSheet extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: ChoiceChip(
-                  label: const Center(child: Text("โอนจ่าย")),
+                  label: const Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text("โอนจ่าย"),
+                    ),
+                  ),
                   selectedColor: Colors.blue.shade100,
                   labelStyle: TextStyle(
                     fontWeight: FontWeight.bold,
@@ -575,12 +621,20 @@ class _PaymentBottomSheet extends StatelessWidget {
                       true,
                     ),
                     const SizedBox(height: 15),
+                    // ✨ จัดกล่องเงินทอนใหม่ ให้เต็มความกว้างและจัดข้อความซ้ายขวา
                     Container(
-                      padding: const EdgeInsets.all(15),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.green.shade200),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.green.shade200,
+                          width: 1.5,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -590,15 +644,21 @@ class _PaymentBottomSheet extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black87,
                             ),
                           ),
-                          Obx(
-                            () => Text(
-                              "${controller.changeAmount.value.toInt()} ฿",
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
+                          Flexible(
+                            child: Obx(
+                              () => FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  "${controller.changeAmount.value.toInt()} ฿",
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -690,40 +750,46 @@ class _PaymentBottomSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
             ),
+            isDense: true,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 15,
-              vertical: 15,
+              vertical: 16,
             ),
           ),
         ),
 
         const SizedBox(height: 40),
-        SizedBox(
-          width: double.infinity,
-          height: 60,
-          child: ElevatedButton(
-            onPressed: () => controller.confirmPayment(
-              controller.processPayment,
-            ), // ส่ง function ไป execute เมื่อกด ยืนยัน
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black87,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+        SafeArea(
+          top: false,
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () =>
+                  controller.confirmPayment(controller.processPayment),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black87,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 5,
+                shadowColor: Colors.black45,
               ),
-              elevation: 5,
-              shadowColor: Colors.black45,
-            ),
-            child: const Text(
-              "ยืนยันการทำรายการ",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  "ยืนยันการทำรายการ",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -732,13 +798,16 @@ class _PaymentBottomSheet extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
         ),
-        SizedBox(
-          width: 160,
-          height: 50,
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 3,
           child: TextField(
             controller: ctrl,
             readOnly: !isEditable,
@@ -746,8 +815,12 @@ class _PaymentBottomSheet extends StatelessWidget {
             textAlign: TextAlign.right,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             decoration: InputDecoration(
+              isDense: true,
               suffixText: " ฿",
-              contentPadding: const EdgeInsets.symmetric(horizontal: 15),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 15,
+                vertical: 12,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(color: Colors.grey[300]!),

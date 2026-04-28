@@ -56,74 +56,93 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: controller.loadProfileData, // ดึงจอลงเพื่อโหลดข้อมูลใหม่ได้
-        color: primaryColor,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProfileHeader(controller),
-              const SizedBox(height: 36),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'CURRENT STORE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.blueGrey.shade400,
-                      letterSpacing: 1.2,
+      // ✨ 1. หุ้ม MediaQuery เพื่อจำกัดการขยายฟอนต์สูงสุด 1.2 เท่า
+      body: MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: MediaQuery.textScalerOf(
+            context,
+          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        ),
+        child: RefreshIndicator(
+          onRefresh:
+              controller.loadProfileData, // ดึงจอลงเพื่อโหลดข้อมูลใหม่ได้
+          color: primaryColor,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 12.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildProfileHeader(controller),
+                const SizedBox(height: 36),
+
+                // ✨ 2. หุ้มด้วย Row และ Expanded ป้องกันข้อความชนกับปุ่ม
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'CURRENT STORE',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.blueGrey.shade400,
+                          letterSpacing: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  TextButton.icon(
-                    onPressed: controller.switchStore,
-                    icon: Icon(
-                      Icons.swap_vert_rounded,
-                      size: 18,
-                      color: primaryColor,
-                    ),
-                    label: Text(
-                      'Switch Store',
-                      style: TextStyle(
+                    const SizedBox(width: 8),
+                    TextButton.icon(
+                      onPressed: controller.switchStore,
+                      icon: Icon(
+                        Icons.swap_vert_rounded,
+                        size: 18,
                         color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                      ),
+                      label: Text(
+                        'Switch Store',
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: primaryColor.withOpacity(
+                          0.05,
+                        ), // มีพื้นหลังจางๆ
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                    style: TextButton.styleFrom(
-                      backgroundColor: primaryColor.withOpacity(
-                        0.05,
-                      ), // มีพื้นหลังจางๆ
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _buildStoreCard(controller),
-              const SizedBox(height: 36),
-              Text(
-                'PREFERENCES',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.blueGrey.shade400,
-                  letterSpacing: 1.2,
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              _buildActionMenu(controller),
-            ],
+                const SizedBox(height: 12),
+                _buildStoreCard(controller),
+                const SizedBox(height: 36),
+                Text(
+                  'PREFERENCES',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.blueGrey.shade400,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildActionMenu(controller),
+              ],
+            ),
           ),
         ),
       ),
@@ -196,7 +215,8 @@ class ProfilePage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF0F172A),
                   ),
-                  maxLines: 1,
+                  // ✨ ให้ชื่อยาวขึ้นบรรทัดใหม่ได้ ป้องกันโดนตัดหาย
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -296,17 +316,22 @@ class ProfilePage extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
                         ),
-                        maxLines: 1,
+                        // ✨ ให้ชื่อร้านขึ้นบรรทัดใหม่ได้ 2 บรรทัด
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.location_on_rounded,
-                          size: 14,
-                          color: Colors.blueGrey.shade400,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: Icon(
+                            Icons.location_on_rounded,
+                            size: 14,
+                            color: Colors.blueGrey.shade400,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -319,7 +344,7 @@ class ProfilePage extends StatelessWidget {
                                 fontSize: 13,
                                 color: Colors.blueGrey.shade500,
                               ),
-                              maxLines: 1,
+                              maxLines: 2, // ให้ที่อยู่ขึ้น 2 บรรทัดได้
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -371,34 +396,47 @@ class ProfilePage extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.12),
-                  shape: BoxShape.circle,
+          // ✨ 3. ใช้ Expanded หุ้มฝั่ง Icon+ข้อความ เพื่อให้ยืดหยุ่น
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: iconColor.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 16, color: iconColor),
                 ),
-                child: Icon(icon, size: 16, color: iconColor),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.blueGrey.shade700,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.blueGrey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
-              letterSpacing: -0.2,
+          const SizedBox(width: 8),
+          // ✨ 4. ใช้ FittedBox ป้องกันตัวเลขยอดขายหลุดกรอบ
+          FittedBox(
+            alignment: Alignment.centerRight,
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+                letterSpacing: -0.2,
+              ),
             ),
           ),
         ],
@@ -426,7 +464,7 @@ class ProfilePage extends StatelessWidget {
           _buildMenuTile(
             icon: Icons.store_rounded,
             title: 'Manage Stores',
-            subtitle: 'แก้ไขข้อมูลร้าค้า',
+            subtitle: 'แก้ไขข้อมูลร้านค้า',
             iconColor: const Color(0xFF6366F1),
             onTap: controller.goToManageStores,
           ),

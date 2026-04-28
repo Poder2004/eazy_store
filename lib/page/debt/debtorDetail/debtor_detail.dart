@@ -79,7 +79,6 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                         CircleAvatar(
                           radius: 40,
                           backgroundColor: Colors.grey.shade200,
-                          // ลำดับการแสดงรูปภาพ: รูปที่เลือกใหม่ > รูปที่มีในฐานข้อมูล > ไอคอนเริ่มต้น
                           backgroundImage: selectedImage != null
                               ? FileImage(selectedImage!) as ImageProvider
                               : (_controller.currentDebtor.imgDebtor != null &&
@@ -231,7 +230,6 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
           backgroundColor: Colors.white,
           elevation: 1,
           foregroundColor: Colors.black,
-          // ✨ เพิ่ม TabBar ตรงนี้
           bottom: const TabBar(
             labelColor: Colors.blue,
             unselectedLabelColor: Colors.grey,
@@ -243,57 +241,63 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
           ),
         ),
         backgroundColor: const Color(0xFFF7F7F7),
-        body: Column(
-          children: [
-            _buildProfileCard(), // ส่วนหัวแสดงชื่อและ Credit Bar
-            // ✨ ใช้ Expanded ครอบ TabBarView เพื่อให้รายการเลื่อนได้
-            Expanded(
-              child: TabBarView(
-                children: [
-                  // แท็บที่ 1: หนี้ค้างชำระ
-                  RefreshIndicator(
-                    onRefresh: () => _controller.fetchAllData(),
-                    child: ListView(
-                      // ใช้ ListView เพื่อให้ Scroll ได้และรองรับ RefreshIndicator
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            "ประวัติการติดหนี้",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+        // ✨ 1. หุ้มเนื้อหาทั้งหมดด้วย MediaQuery เพื่อคุม Font ไม่ให้ใหญ่จน Component ของ Flutter พัง
+        body: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.textScalerOf(
+              context,
+            ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+          ),
+          child: Column(
+            children: [
+              _buildProfileCard(),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    // แท็บที่ 1: หนี้ค้างชำระ
+                    RefreshIndicator(
+                      onRefresh: () => _controller.fetchAllData(),
+                      child: ListView(
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text(
+                              "ประวัติการติดหนี้",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        _buildHistoryList(),
-                      ],
+                          _buildHistoryList(),
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // แท็บที่ 2: ประวัติการคืนเงิน
-                  RefreshIndicator(
-                    onRefresh: () => _controller.fetchAllData(),
-                    child: ListView(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            "ประวัติการจ่ายหนี้",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                    // แท็บที่ 2: ประวัติการคืนเงิน
+                    RefreshIndicator(
+                      onRefresh: () => _controller.fetchAllData(),
+                      child: ListView(
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text(
+                              "ประวัติการจ่ายหนี้",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        _buildPaymentHistoryList(),
-                      ],
+                          _buildPaymentHistoryList(),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -316,11 +320,9 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- รูปโปรไฟล์ลูกหนี้ ---
               CircleAvatar(
                 radius: 35,
                 backgroundColor: Colors.blue.shade50,
-                // ✨ ตรวจสอบอย่างละเอียด: ต้องไม่เป็น null และไม่เป็นค่าว่าง
                 backgroundImage:
                     (debtor.imgDebtor != null &&
                         debtor.imgDebtor!.trim().isNotEmpty)
@@ -394,19 +396,26 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("ยอดหนี้ปัจจุบัน", style: TextStyle(fontSize: 16)),
-                  Text(
-                    "${debtor.currentDebt.toStringAsFixed(0)} บาท",
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
+              // ✨ ป้องกันกรณียอดหนี้เยอะ แล้วเบียดกับคำว่ายอดหนี้ปัจจุบัน
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "ยอดหนี้ปัจจุบัน ",
+                      style: TextStyle(fontSize: 16),
                     ),
-                  ),
-                ],
+                    Text(
+                      "${debtor.currentDebt.toStringAsFixed(0)} บาท",
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 8),
               ClipRRect(
@@ -421,8 +430,10 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // ✨ เปลี่ยนจาก Row เป็น Wrap เผื่อตัวหนังสือใหญ่แล้วจะตกบรรทัดให้อัตโนมัติ
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     "วงเงิน: ${debtor.creditLimit.toStringAsFixed(0)}",
@@ -494,23 +505,27 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   ),
               ],
             ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  "คงเหลือ",
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                Text(
-                  "${history.remainingAmount}",
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+            // ✨ 2. ห่อด้วย FittedBox ป้องกัน Column ทะลุความสูงของ ListTile
+            trailing: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    "คงเหลือ",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                ),
-              ],
+                  Text(
+                    "${history.remainingAmount}",
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
             ),
             children: [
               Container(
@@ -666,8 +681,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
 
     return ListView.builder(
       shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(), // เพราะอยู่ภายใต้ SingleChildScrollView ใน TabBarView
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: _controller.paymentList.length,
       itemBuilder: (context, index) {
         final pay = _controller.paymentList[index];
@@ -689,22 +703,26 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
               ),
             ),
             subtitle: Text("วันที่: ${pay.date}\nวิธีจ่าย: ${pay.method}"),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  "หนี้คงเหลือ",
-                  style: TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-                Text(
-                  "${pay.remainingDebt}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+            // ✨ ห่อด้วย FittedBox ป้องกัน Column ทะลุความสูงของ ListTile
+            trailing: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    "หนี้คงเหลือ",
+                    style: TextStyle(fontSize: 10, color: Colors.grey),
                   ),
-                ),
-              ],
+                  Text(
+                    "${pay.remainingDebt}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

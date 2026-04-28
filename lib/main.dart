@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 2. เปลี่ยนจุดนี้จาก MaterialApp เป็น GetMaterialApp
+    // 2. ปลี่ยนจุดนี้จาก MaterialApp เป็น GetMaterialApp
     return GetMaterialApp(
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

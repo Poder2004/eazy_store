@@ -12,7 +12,6 @@ import '../../sale_producct/sale/checkout_controller.dart';
 import '../../homepage/home_page.dart';
 
 class DebtSaleController extends GetxController {
-  // --- Controllers สำหรับ TextFields ---
   final debtorNameController = TextEditingController();
   final debtorPhoneController = TextEditingController();
   final payAmountController = TextEditingController();
@@ -21,20 +20,17 @@ class DebtSaleController extends GetxController {
 
   DebtorResponse? selectedDebtor;
 
-  // --- ตัวแปรสำหรับระบบค้นหา (Observable) ---
   Timer? debounce;
   var isSearching = false.obs;
   var searchResults = <DebtorResponse>[].obs;
   var showResults = false.obs;
   var isSearchEmpty = true.obs;
 
-  // ไว้เก็บค่ายอดจ่ายปัจจุบันเพื่อคำนวณแบบ Real-time
   var payAmount = 0.0.obs;
 
   @override
   void onInit() {
     super.onInit();
-    // ดักจับการพิมพ์ยอดจ่ายเงิน เพื่อให้ UI อัปเดต "ยอดที่เซ็น" อัตโนมัติ
     payAmountController.addListener(() {
       payAmount.value = double.tryParse(payAmountController.text) ?? 0.0;
     });
@@ -52,15 +48,13 @@ class DebtSaleController extends GetxController {
   }
 
   void onSearchChanged(String keyword) {
-    
     isSearchEmpty.value = keyword.isEmpty;
-
     if (keyword.isEmpty) {
       searchResults.clear();
       showResults.value = false;
       return;
     }
-    
+
     if (debounce?.isActive ?? false) debounce!.cancel();
     debounce = Timer(const Duration(milliseconds: 300), () async {
       isSearching.value = true;
@@ -82,41 +76,213 @@ class DebtSaleController extends GetxController {
     debtorNameController.text = debtor.name;
     debtorPhoneController.text = debtor.phone;
     showResults.value = false;
-    FocusManager.instance.primaryFocus?.unfocus(); // ซ่อนคีย์บอร์ด
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 
- 
   void clearSearch() {
     searchController.clear();
     isSearchEmpty.value = true;
     searchResults.clear();
     showResults.value = false;
-    FocusManager.instance.primaryFocus?.unfocus(); // ซ่อนคีย์บอร์ด
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 
+  // ✨ Popup ยืนยันที่แก้ไขใหม่ โชว์ปุ่มครบ ไม่ต้องเลื่อนหา
   void confirmSubmit(CheckoutController checkoutController) {
+    // 1. สั่งปิดคีย์บอร์ดก่อนเสมอ เพื่อไม่ให้จอโดนดันจน Popup เล็กลง
+    FocusManager.instance.primaryFocus?.unfocus();
+
     if (checkoutController.cartItems.isEmpty) {
-      Get.snackbar("แจ้งเตือน", "ไม่มีสินค้าในตะกร้า",
-          backgroundColor: Colors.orange, colorText: Colors.white);
+      showErrorDialog("ไม่มีสินค้าในตะกร้า");
       return;
     }
     if (selectedDebtor == null) {
-      Get.snackbar("แจ้งเตือน", "กรุณาเลือกลูกหนี้ก่อน",
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
+      showErrorDialog("กรุณาเลือกลูกหนี้ก่อนบันทึก");
       return;
     }
 
-    Get.defaultDialog(
-      title: "ยืนยันการทำรายการ",
-      middleText: "คุณต้องการบันทึกการค้างชำระของ\n'${selectedDebtor?.name}' ใช่หรือไม่?",
-      textConfirm: "ยืนยัน",
-      textCancel: "ยกเลิก",
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.black,
-      onConfirm: () {
-        Get.back(); // ปิด Dialog ยืนยัน
-        submitDebt(checkoutController);
-      },
+    int debt = (checkoutController.totalPrice - payAmount.value).toInt();
+
+    Get.dialog(
+      MediaQuery(
+        data: MediaQuery.of(Get.context!).copyWith(
+          textScaler: MediaQuery.textScalerOf(
+            Get.context!,
+          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        ),
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.transparent, // ใช้ Container ด้านในคุมสีแทน
+          elevation: 0,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400), // จำกัดความกว้าง
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
+            ),
+            // ✨ 2. เอา SingleChildScrollView ที่คลุมทั้งหน้าออก แล้วใช้ MainAxisSize.min
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.assignment_ind_rounded,
+                    size: 40,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "ยืนยันบันทึกค้างชำระ",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+
+                // กรอบข้อมูลสรุปยอด
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _rowPopupInfo("ลูกหนี้:", selectedDebtor?.name ?? ""),
+                      const SizedBox(height: 10),
+                      _rowPopupInfo(
+                        "จ่ายล่วงหน้า:",
+                        "${payAmount.value.toInt()} ฿",
+                      ),
+                      const Divider(height: 24, thickness: 1),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "ยอดที่เซ็น:",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                "$debt ฿",
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                // ปุ่มกดยืนยัน / ยกเลิก (มองเห็นได้ทันที)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: Colors.grey.shade300),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "ยกเลิก",
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Get.back();
+                          submitDebt(checkoutController);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black87,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "ยืนยัน",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  // Widget ช่วยจัด Row ใน Popup ให้ยืดหยุ่นขึ้น
+  Widget _rowPopupInfo(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 15)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            textAlign: TextAlign.right,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 
@@ -124,7 +290,8 @@ class DebtSaleController extends GetxController {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
-      String userName = prefs.getString('name') ??
+      String userName =
+          prefs.getString('name') ??
           prefs.getString('username') ??
           "พนักงานขาย";
 
@@ -170,7 +337,6 @@ class DebtSaleController extends GetxController {
           colorText: Colors.white,
           snackPosition: SnackPosition.BOTTOM,
         );
-
         checkoutController.clearAll();
         Get.offAll(() => const HomePage());
       } else {
@@ -178,19 +344,80 @@ class DebtSaleController extends GetxController {
         showErrorDialog(errorMsg);
       }
     } catch (e) {
-      Get.back(); // ปิด Loading
+      Get.back();
       showErrorDialog("เกิดข้อผิดพลาด: $e");
     }
   }
 
+  // ✨ ปรับปรุง Error Dialog ให้สมบูรณ์แบบ
   void showErrorDialog(String message) {
-    Get.defaultDialog(
-      title: "แจ้งเตือน",
-      middleText: message,
-      textConfirm: "ตกลง",
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.redAccent,
-      onConfirm: () => Get.back(),
+    FocusManager.instance.primaryFocus?.unfocus();
+    Get.dialog(
+      MediaQuery(
+        data: MediaQuery.of(Get.context!).copyWith(
+          textScaler: MediaQuery.textScalerOf(
+            Get.context!,
+          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        ),
+        child: Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min, // ให้หดตัวตามเนื้อหา
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Colors.redAccent,
+                  size: 60,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "แจ้งเตือน",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: const TextStyle(fontSize: 15, color: Colors.black54),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => Get.back(),
+                    child: const Text(
+                      "ตกลง",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
