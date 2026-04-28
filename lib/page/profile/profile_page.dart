@@ -27,7 +27,7 @@ class ProfilePage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Profile',
+          'โปรไฟล์', // ✨ เปลี่ยนเป็นภาษาไทย
           style: TextStyle(
             color: Color(0xFF0F172A),
             fontWeight: FontWeight.bold,
@@ -40,7 +40,7 @@ class ProfilePage extends StatelessWidget {
             child: ActionChip(
               avatar: Icon(Icons.edit_rounded, size: 16, color: primaryColor),
               label: Text(
-                'Edit',
+                'แก้ไข', // ✨ เปลี่ยนเป็นภาษาไทย
                 style: TextStyle(
                   color: primaryColor,
                   fontWeight: FontWeight.bold,
@@ -85,12 +85,11 @@ class ProfilePage extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'CURRENT STORE',
+                        'ร้านค้าปัจจุบัน', // ✨ เปลี่ยนเป็นภาษาไทย
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: Colors.blueGrey.shade400,
-                          letterSpacing: 1.2,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -105,11 +104,11 @@ class ProfilePage extends StatelessWidget {
                         color: primaryColor,
                       ),
                       label: Text(
-                        'Switch Store',
+                        'สลับร้าน', // ✨ เปลี่ยนเป็นภาษาไทย
                         style: TextStyle(
                           color: primaryColor,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                       style: TextButton.styleFrom(
@@ -131,16 +130,16 @@ class ProfilePage extends StatelessWidget {
                 _buildStoreCard(controller),
                 const SizedBox(height: 36),
                 Text(
-                  'PREFERENCES',
+                  'การตั้งค่าระบบ', // ✨ เปลี่ยนเป็นภาษาไทย
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: Colors.blueGrey.shade400,
-                    letterSpacing: 1.2,
                   ),
                 ),
                 const SizedBox(height: 12),
                 _buildActionMenu(controller),
+                const SizedBox(height: 20), // เผื่อพื้นที่ด้านล่างสุด
               ],
             ),
           ),
@@ -220,18 +219,21 @@ class ProfilePage extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.blueGrey.shade100.withOpacity(0.5),
+                  color: Colors.blueGrey.shade50, // ปรับสีให้อ่อนลง ดูละมุนตา
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Obx(
                   () => Text(
                     controller.userRole.value, // ✅ ดึงตำแหน่ง
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Colors.blueGrey.shade700,
                     ),
@@ -262,11 +264,13 @@ class ProfilePage extends StatelessWidget {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment:
+                CrossAxisAlignment.start, // ให้ชิดบนเพื่อความสวยงาม
             children: [
               Obx(
                 () => Container(
-                  width: 52,
-                  height: 52,
+                  width: 55,
+                  height: 55,
                   decoration: BoxDecoration(
                     color: const Color(0xFF0F172A),
                     borderRadius: BorderRadius.circular(14),
@@ -279,7 +283,7 @@ class ProfilePage extends StatelessWidget {
                         : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withOpacity(0.05),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -321,7 +325,7 @@ class ProfilePage extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -329,11 +333,11 @@ class ProfilePage extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 2.0),
                           child: Icon(
                             Icons.location_on_rounded,
-                            size: 14,
+                            size: 16,
                             color: Colors.blueGrey.shade400,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Obx(
                             () => Text(
@@ -341,7 +345,7 @@ class ProfilePage extends StatelessWidget {
                                   .shopAddress
                                   .value, // ✅ ดึงที่อยู่ร้านค้า
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 14,
                                 color: Colors.blueGrey.shade500,
                               ),
                               maxLines: 2, // ให้ที่อยู่ขึ้น 2 บรรทัดได้
@@ -356,7 +360,7 @@ class ProfilePage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // 🔥 Stat Card แสดงยอดขายวันนี้ผ่าน API
           Obx(() {
@@ -370,7 +374,7 @@ class ProfilePage extends StatelessWidget {
             }
             return _buildStatCard(
               icon: Icons.auto_graph_rounded,
-              title: 'Today Sales',
+              title: 'ยอดขายวันนี้', // ✨ เปลี่ยนเป็นภาษาไทย
               value: '฿${controller.todaySales.value}', // ✅ ยอดขายจาก API
               iconColor: const Color(0xFF10B981),
             );
@@ -387,11 +391,11 @@ class ProfilePage extends StatelessWidget {
     required Color iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       decoration: BoxDecoration(
         color: iconColor.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: iconColor.withOpacity(0.1), width: 1),
+        border: Border.all(color: iconColor.withOpacity(0.1), width: 1.5),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -401,20 +405,20 @@ class ProfilePage extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.12),
+                    color: iconColor.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 16, color: iconColor),
+                  child: Icon(icon, size: 18, color: iconColor),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Flexible(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.blueGrey.shade700,
+                      fontSize: 15,
+                      color: Colors.blueGrey.shade800,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
@@ -432,10 +436,10 @@ class ProfilePage extends StatelessWidget {
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF0F172A),
-                letterSpacing: -0.2,
+                letterSpacing: -0.5,
               ),
             ),
           ),
@@ -463,7 +467,7 @@ class ProfilePage extends StatelessWidget {
         children: [
           _buildMenuTile(
             icon: Icons.store_rounded,
-            title: 'Manage Stores',
+            title: 'จัดการร้านค้า', // ✨ เปลี่ยนเป็นภาษาไทย
             subtitle: 'แก้ไขข้อมูลร้านค้า',
             iconColor: const Color(0xFF6366F1),
             onTap: controller.goToManageStores,
@@ -471,7 +475,7 @@ class ProfilePage extends StatelessWidget {
           _buildDivider(),
           _buildMenuTile(
             icon: Icons.headset_mic_rounded,
-            title: 'Help & Support',
+            title: 'ช่วยเหลือและสนับสนุน', // ✨ เปลี่ยนเป็นภาษาไทย
             subtitle: 'ศูนย์ช่วยเหลือและแจ้งปัญหาการใช้งาน',
             iconColor: const Color(0xFF10B981),
             onTap: controller.goToSupport,
@@ -480,7 +484,7 @@ class ProfilePage extends StatelessWidget {
           // Logout Menu (เน้นสีแดงเฉพาะจุด)
           _buildMenuTile(
             icon: Icons.logout_rounded,
-            title: 'Sign Out',
+            title: 'ออกจากระบบ', // ✨ เปลี่ยนเป็นภาษาไทย
             subtitle: 'ออกจากบัญชีผู้ใช้ปัจจุบัน',
             iconColor: const Color(0xFFE11D48),
             onTap: controller.logout,
@@ -493,7 +497,7 @@ class ProfilePage extends StatelessWidget {
 
   // ตัวคั่นที่ดู Clean
   Widget _buildDivider() =>
-      Divider(height: 1, color: Colors.grey.shade50, indent: 70);
+      Divider(height: 1, color: Colors.grey.shade50, indent: 70, endIndent: 20);
 
   Widget _buildMenuTile({
     required IconData icon,
@@ -505,14 +509,14 @@ class ProfilePage extends StatelessWidget {
   }) {
     return ListTile(
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: iconColor.withOpacity(0.08),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Icon(icon, color: iconColor, size: 22),
+        child: Icon(icon, color: iconColor, size: 24),
       ),
       title: Text(
         title,
@@ -524,14 +528,17 @@ class ProfilePage extends StatelessWidget {
               : const Color(0xFF1E293B),
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade300),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 4.0),
+        child: Text(
+          subtitle,
+          style: TextStyle(fontSize: 13, color: Colors.blueGrey.shade400),
+        ),
       ),
       trailing: Icon(
         Icons.chevron_right_rounded,
         color: Colors.grey.shade300,
-        size: 20,
+        size: 24,
       ),
     );
   }
