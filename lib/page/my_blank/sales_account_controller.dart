@@ -1,5 +1,4 @@
-// sales_account_controller.dart
-import 'package:flutter/material.dart'; // เพิ่ม import นี้
+import 'package:flutter/material.dart';
 import 'package:eazy_store/api/api_dashboad.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -28,58 +27,21 @@ class SalesAccountController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // ตั้งค่า Locale เป็นไทย
     Intl.defaultLocale = 'th_TH';
     fetchSummaryData();
     ever(selectedView, (_) => fetchSummaryData());
     ever(currentDate, (_) => fetchSummaryData());
   }
 
-  // ฟังก์ชันเลือกวันที่/เดือน/ปี
+  // ✨ ฟังก์ชันเลือกวันที่/เดือน/ปี ที่ปรับแก้ใหม่ทั้งหมด
   Future<void> selectDate(BuildContext context) async {
     if (selectedView.value == 'วันนี้') {
-      // 1. ดึงปีปัจจุบันมาเตรียมไว้
-      final int currentYear = DateTime.now().year;
-
-      // 2. เรียกใช้ Picker มาตรฐาน แต่กำหนดช่วงแบบ Dynamic
       final DateTime? picked = await showDatePicker(
         context: context,
         initialDate: currentDate.value,
-        // เอาปีปัจจุบัน - 1 (ปีที่แล้ว)
-        firstDate: DateTime(currentYear - 1),
-        // เอาปีปัจจุบัน (ปีนี้)
-        lastDate: DateTime(currentYear),
-        locale: const Locale('th', 'TH'),
-        builder: (context, child) {
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: Color(0xFF2563EB), // สีหลัก (ปุ่ม/ส่วนหัว)
-                onPrimary: Colors.white,
-                surface: Colors.white, // พื้นหลัง Dialog
-                onSurface: Colors.black, // สีตัวอักษร
-              ),
-              // ปิดสีม่วงสะท้อน (Surface Tint)
-              dialogBackgroundColor: Colors.white,
-            ),
-            child: child!,
-          );
-        },
-      );
-      if (picked != null) currentDate.value = picked;
-    }
-    // ✅ กรณีเลือก "เดือนนี้" - สร้าง Dialog รายชื่อเดือนเอง
-    else if (selectedView.value == 'เดือนนี้') {
-      _showMonthPicker(context);
-    } else {
-      final int currentYear = DateTime.now().year;
-
-      final DateTime? picked = await showDatePicker(
-        context: context,
-        initialDate: currentDate.value,
-        firstDate: DateTime(currentYear - 1), // ปีที่แล้ว
-        lastDate: DateTime(currentYear), // ปีนี้
-        initialDatePickerMode: DatePickerMode.year,
+        // เปิดช่วงให้กว้างขึ้น ป้องกันบัคทะลุวันที่
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2100),
         locale: const Locale('th', 'TH'),
         builder: (context, child) {
           return Theme(
@@ -90,29 +52,25 @@ class SalesAccountController extends GetxController {
                 surface: Colors.white,
                 onSurface: Colors.black,
               ),
-              // ✅ เปลี่ยนจาก DialogTheme เป็น DialogThemeData
-              dialogTheme: const DialogThemeData(
-                backgroundColor: Colors.white,
-                surfaceTintColor: Colors.transparent,
-              ),
-              // ✅ ส่วนนี้ใช้ DatePickerThemeData ถูกต้องแล้ว
-              datePickerTheme: const DatePickerThemeData(
-                headerBackgroundColor: Color.fromARGB(255, 255, 255, 255),
-                surfaceTintColor: Colors.transparent,
-              ),
+              dialogBackgroundColor: Colors.white,
             ),
             child: child!,
           );
         },
       );
-
-      if (picked != null) {
-        currentDate.value = DateTime(picked.year, 1, 1);
-      }
+      if (picked != null) currentDate.value = picked;
+    }
+    // กรณีเลือก "เดือนนี้"
+    else if (selectedView.value == 'เดือนนี้') {
+      _showMonthPicker(context);
+    }
+    // กรณีเลือก "ปีนี้"
+    else {
+      _showYearPicker(context);
     }
   }
 
-  // 🗓️ ฟังก์ชันสร้างหน้าเลือกเดือนแบบรายชื่อ (ม.ค. - ธ.ค.)
+  // 🗓️ ป๊อปอัปเลือกเดือน
   void _showMonthPicker(BuildContext context) {
     final List<String> months = [
       'มกราคม',
@@ -131,9 +89,8 @@ class SalesAccountController extends GetxController {
 
     Get.dialog(
       AlertDialog(
-        backgroundColor: Colors.white, // 🎨 กำหนดให้เป็นสีขาว
+        backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
-
         title: Center(
           child: Text(
             'เลือกเดือน (พ.ศ. ${currentDate.value.year + 543})',
@@ -145,7 +102,7 @@ class SalesAccountController extends GetxController {
           child: GridView.builder(
             shrinkWrap: true,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, // แสดง 3 เดือนต่อแถว
+              crossAxisCount: 3,
               childAspectRatio: 1.5,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
@@ -160,7 +117,7 @@ class SalesAccountController extends GetxController {
                     index + 1,
                     1,
                   );
-                  Get.back(); // เลือกเสร็จปิด Dialog
+                  Get.back();
                 },
                 child: Container(
                   alignment: Alignment.center,
@@ -190,7 +147,7 @@ class SalesAccountController extends GetxController {
             onPressed: () => Get.back(),
             child: const Text(
               'ยกเลิก',
-              style: TextStyle(color: Color.fromARGB(255, 10, 92, 185)),
+              style: TextStyle(color: Color(0xFF2563EB)),
             ),
           ),
         ],
@@ -198,7 +155,80 @@ class SalesAccountController extends GetxController {
     );
   }
 
-  // แปลงปี ค.ศ. เป็น พ.ศ. และแสดงภาษาไทย
+  // 📅 ป๊อปอัปเลือกปี (สร้างขึ้นมาใหม่สำหรับกรณีเลือก "ปีนี้")
+  void _showYearPicker(BuildContext context) {
+    final int currentYear = DateTime.now().year;
+    // สร้างตัวเลือกปี (ย้อนหลัง 10 ปี และไปข้างหน้า 1 ปี)
+    final List<int> years = List.generate(
+      12,
+      (index) => currentYear - 10 + index,
+    ).reversed.toList();
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: const Center(
+          child: Text(
+            'เลือกปี (พ.ศ.)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 1.5,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+            ),
+            itemCount: years.length,
+            itemBuilder: (context, index) {
+              int year = years[index];
+              bool isSelected = currentDate.value.year == year;
+              return GestureDetector(
+                onTap: () {
+                  currentDate.value = DateTime(year, 1, 1);
+                  Get.back();
+                },
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFF2563EB)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${year + 543}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isSelected ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text(
+              'ยกเลิก',
+              style: TextStyle(color: Color(0xFF2563EB)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String getPeriodLabel() {
     DateTime date = currentDate.value;
     if (selectedView.value == 'วันนี้') {
@@ -209,9 +239,6 @@ class SalesAccountController extends GetxController {
       return 'ปี ${(date.year + 543)}';
     }
   }
-
-  // --- ส่วน API และคำนวณคงเดิม (ข้ามเพื่อความกระชับ) ---
-  // ... (ฟังก์ชัน fetchSummaryData, _getDateRange, _calculateTrend ฯลฯ ของเดิม) ...
 
   void navigatePeriod(int direction) {
     DateTime now = currentDate.value;
@@ -235,7 +262,6 @@ class SalesAccountController extends GetxController {
   }
 
   Future<void> fetchSummaryData() async {
-    // ... โค้ด fetch เดิมของคุณ ...
     isLoading(true);
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -287,13 +313,15 @@ class SalesAccountController extends GetxController {
   Map<String, String> _getDateRange() {
     DateTime now = currentDate.value;
     var formatter = DateFormat('yyyy-MM-dd');
-    if (selectedView.value == 'วันนี้')
+    if (selectedView.value == 'วันนี้') {
       return {"start": formatter.format(now), "end": formatter.format(now)};
-    if (selectedView.value == 'เดือนนี้')
+    }
+    if (selectedView.value == 'เดือนนี้') {
       return {
         "start": formatter.format(DateTime(now.year, now.month, 1)),
         "end": formatter.format(DateTime(now.year, now.month + 1, 0)),
       };
+    }
     return {
       "start": formatter.format(DateTime(now.year, 1, 1)),
       "end": formatter.format(DateTime(now.year, 12, 31)),
@@ -307,11 +335,12 @@ class SalesAccountController extends GetxController {
       DateTime prev = now.subtract(const Duration(days: 1));
       return {"start": formatter.format(prev), "end": formatter.format(prev)};
     }
-    if (selectedView.value == 'เดือนนี้')
+    if (selectedView.value == 'เดือนนี้') {
       return {
         "start": formatter.format(DateTime(now.year, now.month - 1, 1)),
         "end": formatter.format(DateTime(now.year, now.month, 0)),
       };
+    }
     return {
       "start": formatter.format(DateTime(now.year - 1, 1, 1)),
       "end": formatter.format(DateTime(now.year - 1, 12, 31)),
@@ -323,7 +352,7 @@ class SalesAccountController extends GetxController {
     return ((current - previous) / previous) * 100;
   }
 
-   void changeTab(int index) {
+  void changeTab(int index) {
     currentIndex.value = index;
   }
 }

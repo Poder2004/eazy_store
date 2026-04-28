@@ -43,8 +43,6 @@ class LoginController extends GetxController {
     }
     // 🔥 เคสที่ 2: บัญชียังไม่ได้ยืนยันตัวตน
     else if (res.error != null && res.error!.contains("ยืนยันตัวตน")) {
-      // ✨ หัวใจสำคัญ: ใช้อีเมลและชื่อจริงที่ Server ส่งกลับมา (res.email / res.username)
-      // เพื่อป้องกันกรณีผู้ใช้ล็อกอินด้วยเบอร์โทร แต่ระบบต้องการอีเมลในการยืนยัน OTP
       String actualEmail = res.email ?? emailController.text.trim();
       String actualUsername = res.username ?? "User";
 
@@ -95,6 +93,7 @@ class LoginController extends GetxController {
               const Text(
                 "ยืนยันบัญชีของคุณ",
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
               Text(
@@ -126,7 +125,6 @@ class LoginController extends GetxController {
                     child: ElevatedButton(
                       onPressed: () {
                         Get.back();
-                        // ✨ ส่งค่าจริง (Email และ Username) ไปที่หน้า Verify
                         Get.to(
                           () => const VerifyRegistrationPage(),
                           arguments: {"email": email, "username": username},
@@ -146,6 +144,7 @@ class LoginController extends GetxController {
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ),
@@ -174,7 +173,7 @@ class LoginController extends GetxController {
 }
 
 // ----------------------------------------------------------------------
-// 2. The View (คงเดิมตามโครงสร้างของคุณ)
+// 2. The View (หน้า UI ที่ปรับปรุงให้รองรับคนตั้งฟอนต์ใหญ่โดยเฉพาะ)
 // ----------------------------------------------------------------------
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -187,24 +186,45 @@ class LoginPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: IntrinsicHeight(
-                child: Center(
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    padding: const EdgeInsets.symmetric(horizontal: 30.0),
+      body: SafeArea(
+        // ✨ เคล็ดลับที่ 1: จำกัดการขยายตัวอักษรสูงสุดที่ 1.4 เท่า
+        // ช่วยให้คนแก่อ่านง่าย แต่ป้องกันไม่ให้ UI พังจนปุ่มหายไปนอกขอบจอ
+        child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.textScalerOf(
+              context,
+            ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.4),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  // ✨ เคล็ดลับที่ 2: ลบการครอบ Center() ออก แล้วใช้ Padding แทน
+                  // เพื่อให้เวลาเนื้อหาเยอะกว่าจอ มันจะเริ่ม Scroll จากด้านบนสุด ไม่โดนตัดโลโก้ทิ้ง
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30.0,
+                      vertical: 40.0,
+                    ),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment
+                          .center, // จัดให้อยู่กลางจอถ้ายาวไม่ถึงจอ
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(height: Get.height * 0.1),
+                        // --- ส่วนโลโก้ ---
                         Center(
                           child: Container(
-                            height: (Get.width * 0.6).clamp(150.0, 250.0),
-                            width: (Get.width * 0.6).clamp(150.0, 250.0),
+                            // ปรับขนาดรูปลงมานิดหน่อยเพื่อเผื่อพื้นที่ให้ตัวอักษรใหญ่
+                            height: (constraints.maxWidth * 0.4).clamp(
+                              100.0,
+                              180.0,
+                            ),
+                            width: (constraints.maxWidth * 0.4).clamp(
+                              100.0,
+                              180.0,
+                            ),
                             decoration: const BoxDecoration(
                               image: DecorationImage(
                                 image: AssetImage('assets/image/logoEazy.png'),
@@ -213,42 +233,53 @@ class LoginPage extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(height: Get.height * 0.05),
+                        const SizedBox(height: 30),
+
+                        // --- หัวข้อเข้าสู่ระบบ ---
                         const Text(
                           "เข้าสู่ระบบ",
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize:
+                                24, // ไม่ต้องคูณ textScale แล้ว Flutter ขยายให้เอง
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // --- ฟอร์มกรอกข้อมูล ---
                         _buildCustomTextField(
                           controller: controller.emailController,
                           hintText: "กรอกอีเมลหรือเบอร์โทร",
                           icon: Icons.person_outline,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         _buildCustomTextField(
                           controller: controller.passwordController,
                           hintText: "กรอกรหัสผ่าน",
                           isPassword: true,
                           icon: Icons.lock_outline,
                         ),
+
+                        // --- ลืมรหัสผ่าน ---
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: controller.goToForgotPassword,
                             child: Text(
                               "ลืมรหัสผ่าน ?",
-                              style: TextStyle(color: Colors.grey[700]),
+                              style: TextStyle(
+                                color: Colors.grey[700],
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 10),
+
+                        // --- ปุ่มเข้าสู่ระบบ ---
                         SizedBox(
                           width: double.infinity,
-                          height: 55,
                           child: Obx(
                             () => ElevatedButton(
                               onPressed: controller.isLoading.value
@@ -257,14 +288,23 @@ class LoginPage extends StatelessWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
                                 foregroundColor: Colors.white,
+                                // ใช้ Padding แทนความสูง เพื่อให้ปุ่มขยายรับฟอนต์ใหญ่ได้
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(15),
                                 ),
                                 elevation: 2,
                               ),
                               child: controller.isLoading.value
-                                  ? const CircularProgressIndicator(
-                                      color: Colors.white,
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 3,
+                                      ),
                                     )
                                   : const Text(
                                       "เข้าสู่ระบบ",
@@ -276,15 +316,22 @@ class LoginPage extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Spacer(),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 30.0, top: 20),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+
+                        const SizedBox(
+                          height: 40,
+                        ), // ระยะห่างดันส่วนสมัครไปข้างล่างสุด
+                        // --- ส่วนสมัครสมาชิก ---
+                        Center(
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 "คุณยังไม่มีบัญชีผู้ใช้หรือไม่ ",
-                                style: TextStyle(color: Colors.grey[800]),
+                                style: TextStyle(
+                                  color: Colors.grey[800],
+                                  fontSize: 14,
+                                ),
                               ),
                               GestureDetector(
                                 onTap: controller.goToSignup,
@@ -293,6 +340,8 @@ class LoginPage extends StatelessWidget {
                                   style: TextStyle(
                                     color: Colors.purpleAccent[400],
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    decoration: TextDecoration.underline,
                                   ),
                                 ),
                               ),
@@ -303,14 +352,15 @@ class LoginPage extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 
+  // สร้าง Textfield ปกติ (Flutter จะขยายตัวอักษรให้อัตโนมัติอยู่แล้ว)
   Widget _buildCustomTextField({
     required TextEditingController controller,
     required String hintText,
@@ -333,15 +383,13 @@ class LoginPage extends StatelessWidget {
       child: TextField(
         controller: controller,
         obscureText: isPassword,
+        style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey[400]),
           prefixIcon: icon != null ? Icon(icon, color: Colors.grey[400]) : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
+          contentPadding: const EdgeInsets.all(20),
         ),
       ),
     );

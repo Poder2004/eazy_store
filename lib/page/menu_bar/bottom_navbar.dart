@@ -23,6 +23,7 @@ class BottomNavBar extends StatelessWidget {
   final Function(int) onTap;
 
   Widget _buildNavItem(
+    BuildContext context, // เพิ่ม BuildContext
     IconData icon,
     String label,
     int index,
@@ -34,12 +35,14 @@ class BottomNavBar extends StatelessWidget {
 
     return Expanded(
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque, // ทำให้พื้นที่ว่างรอบๆ ไอคอนกดติดได้
         onTap: () {
           onTap(index);
           _navigateToPage(index);
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.end, // จัดให้อยู่ด้านล่างเสมอ
           children: [
             Icon(
               icon,
@@ -47,12 +50,18 @@ class BottomNavBar extends StatelessWidget {
               size: isActive ? 28 : 24,
             ),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isActive ? activeColor : inactiveColor,
+            // ✨ ใช้ Flexible + FittedBox เพื่อย่อขนาดตัวหนังสืออัตโนมัติเมื่อเจอฟอนต์ใหญ่
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isActive ? activeColor : inactiveColor,
+                  ),
+                ),
               ),
             ),
           ],
@@ -61,12 +70,13 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildScanButton(bool isDarkMode) {
+  Widget _buildScanButton(BuildContext context, bool isDarkMode) {
     const int index = 2;
     return Expanded(
       child: Transform.translate(
         offset: const Offset(0, -20),
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () async {
             var barcode = await Get.to(() => const ScanBarcodePage());
 
@@ -96,6 +106,7 @@ class BottomNavBar extends StatelessWidget {
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end, // จัดให้อยู่ด้านล่าง
             children: [
               Container(
                 width: 56,
@@ -123,12 +134,18 @@ class BottomNavBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                'สแกนขาย',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade500,
+              // ✨ ใช้ Flexible + FittedBox ป้องกันคำว่า 'สแกนขาย' แตกหรือตกบรรทัด
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'สแกนขาย',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -161,39 +178,76 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color surfaceColor = isDarkMode ? surfaceDark : surfaceLight;
-    return Container(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            offset: const Offset(0, -5),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-        ],
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
+
+    // ✨ ครอบ MediaQuery ไว้ชั้นนอกสุดของเมนู เพื่อควบคุมฟอนต์ไม่ให้ใหญ่ทะลุจอ
+    // ให้ขยายได้สูงสุดแค่ 1.2 เท่า เพื่อรักษาความสวยงามและไม่กินพื้นที่เนื้อหา
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: MediaQuery.textScalerOf(
+          context,
+        ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+      ),
+      child: Container(
+        // ✨ ใส่ Clip.none เพื่อไม่ให้ปุ่มสแกนขายที่ลอยขึ้นไปโดนตัดขอบทิ้ง
+        clipBehavior: Clip.none,
+        decoration: BoxDecoration(
+          color: surfaceColor, // พื้นหลังของ Navbar จะยาวลงไปสุดขอบจอด้านล่าง
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24.0)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              offset: const Offset(0, -5),
+              blurRadius: 10,
+              spreadRadius: 1,
+            ),
+          ],
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100,
+            ),
           ),
         ),
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(Icons.home, 'หน้าหลัก', 0, isDarkMode),
-          _buildNavItem(Icons.receipt_long, 'บัญชี', 1, isDarkMode),
-          _buildScanButton(isDarkMode),
-          _buildNavItem(Icons.person, 'คนค้างชำระ', 3, isDarkMode),
-          _buildNavItem(
-            Icons.account_circle_outlined,
-            'โปรไฟล์',
-            4,
-            isDarkMode,
+        // ✨ ห่อเนื้อหาด้านในด้วย SafeArea(bottom: true)
+        // ตัวนี้จะเป็นตัวดันปุ่มเมนูให้หลบขึ้นมาจากแถบ Home/Back บนจอ Android รุ่นเก่า
+        // รวมถึงเส้นขีดด้านล่างของ iPhone โดยอัตโนมัติ
+        child: SafeArea(
+          bottom: true,
+          top: false,
+          child: Padding(
+            // เปลี่ยนจาก (16, 12, 16, 24) เป็น (10, 12, 10, 12) เพราะ SafeArea ดันขอบล่างให้แล้ว
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment:
+                  CrossAxisAlignment.end, // ให้ไอคอนทุกตัวเรียงฐานเท่ากัน
+              children: [
+                _buildNavItem(context, Icons.home, 'หน้าหลัก', 0, isDarkMode),
+                _buildNavItem(
+                  context,
+                  Icons.receipt_long,
+                  'บัญชี',
+                  1,
+                  isDarkMode,
+                ),
+                _buildScanButton(context, isDarkMode),
+                _buildNavItem(
+                  context,
+                  Icons.person,
+                  'คนค้างชำระ',
+                  3,
+                  isDarkMode,
+                ),
+                _buildNavItem(
+                  context,
+                  Icons.account_circle_outlined,
+                  'โปรไฟล์',
+                  4,
+                  isDarkMode,
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

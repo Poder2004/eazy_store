@@ -1,4 +1,4 @@
-import 'package:eazy_store/page/homepage/home_controller.dart'; // import ไฟล์ controller ที่สร้างด้านบน
+import 'package:eazy_store/page/homepage/home_controller.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
@@ -20,70 +20,83 @@ class HomePage extends StatelessWidget {
     const Color scaffoldBgColor = Color(0xFFF8FAFC);
     const Color iconColor = Color(0xFF10B981);
 
-    // เรียกใช้ Controller
     final HomeController controller = Get.put(HomeController());
 
     return Scaffold(
       backgroundColor: scaffoldBgColor,
-      body: RefreshIndicator(
-        onRefresh: () async => controller.fetchTodaySales(),
-        color: headerBgColor,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              _buildHeader(context, controller, headerBgColor: headerBgColor),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: Column(
-                  children: [
-                    _buildScanToSellCard(context),
-                    const SizedBox(height: 25),
-                    _buildMenuTile(
-                      icon: Icons.add_circle_outline,
-                      iconColor: iconColor,
-                      title: "เพิ่มสินค้า",
-                      subtitle: "สร้างรายการสินค้าใหม่สำหรับร้านนี้",
-                      onTap: () => Get.to(() => const AddProductScreen()),
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.inventory_2_outlined,
-                      iconColor: Colors.blue.shade600,
-                      title: "เพิ่มสต็อกสินค้า",
-                      subtitle: "เติมจำนวนสินค้าในคลัง",
-                      onTap: () => Get.to(() => const AddStockScreen()),
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.local_offer_outlined,
-                      iconColor: Colors.orange.shade600,
-                      title: "เช็คราคาสินค้า",
-                      subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
-                      onTap: () => Get.to(() => const CheckPriceScreen()),
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.fact_check_outlined,
-                      iconColor: Colors.purple.shade500,
-                      title: "เช็คสต็อกสินค้า",
-                      subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
-                      onTap: () => Get.to(() => const CheckStockScreen()),
-                    ),
-                    _buildMenuTile(
-                      icon: Icons.receipt_long,
-                      iconColor: Colors.teal.shade500,
-                      title: "ทำใบสั่งสินค้า",
-                      subtitle: "เลือกสินค้าและส่งออกเป็นไฟล์ PDF",
-                      onTap: () => Get.to(() => const BuyProductsScreen()),
-                    ),
-                  ],
+      // ✨ เคล็ดลับ: จำกัดการขยายฟอนต์ไม่เกิน 1.3 เท่า ป้องกัน UI แตก
+      body: MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: MediaQuery.textScalerOf(
+            context,
+          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.3),
+        ),
+        child: RefreshIndicator(
+          onRefresh: () async => controller.fetchTodaySales(),
+          color: headerBgColor,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              children: [
+                // --- ส่วน Header สีแดง + กล่องยอดขาย ---
+                _buildHeader(context, controller, headerBgColor: headerBgColor),
+
+                // --- ส่วนเมนูด้านล่าง ---
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  child: Column(
+                    children: [
+                      const SizedBox(
+                        height: 20,
+                      ), // เพิ่มระยะห่างให้ไม่ชิดกล่องขาวเกินไป
+                      _buildScanToSellCard(context),
+                      const SizedBox(height: 25),
+                      _buildMenuTile(
+                        icon: Icons.add_circle_outline,
+                        iconColor: iconColor,
+                        title: "เพิ่มสินค้า",
+                        subtitle: "สร้างรายการสินค้าใหม่สำหรับร้านนี้",
+                        onTap: () => Get.to(() => const AddProductScreen()),
+                      ),
+                      _buildMenuTile(
+                        icon: Icons.inventory_2_outlined,
+                        iconColor: Colors.blue.shade600,
+                        title: "เพิ่มสต็อกสินค้า",
+                        subtitle: "เติมจำนวนสินค้าในคลัง",
+                        onTap: () => Get.to(() => const AddStockScreen()),
+                      ),
+                      _buildMenuTile(
+                        icon: Icons.local_offer_outlined,
+                        iconColor: Colors.orange.shade600,
+                        title: "เช็คราคาสินค้า",
+                        subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
+                        onTap: () => Get.to(() => const CheckPriceScreen()),
+                      ),
+                      _buildMenuTile(
+                        icon: Icons.fact_check_outlined,
+                        iconColor: Colors.purple.shade500,
+                        title: "เช็คสต็อกสินค้า",
+                        subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
+                        onTap: () => Get.to(() => const CheckStockScreen()),
+                      ),
+                      _buildMenuTile(
+                        icon: Icons.receipt_long,
+                        iconColor: Colors.teal.shade500,
+                        title: "ทำใบสั่งสินค้า",
+                        subtitle: "เลือกสินค้าและส่งออกเป็นไฟล์ PDF",
+                        onTap: () => Get.to(() => const BuyProductsScreen()),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
+              ],
+            ),
           ),
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 0, // ล็อคให้เป็นสีแดงที่หน้าหลักเสมอเมื่ออยู่หน้านี้
+        currentIndex: 0,
         onTap: (index) {
           controller.changeTab(index);
         },
@@ -91,160 +104,168 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // ✨ โครงสร้าง Header แบบใหม่ที่คำนวณความสูงอัตโนมัติ หมดปัญหาทับซ้อน
   Widget _buildHeader(
     BuildContext context,
     HomeController controller, {
     required Color headerBgColor,
   }) {
-    final double topContainerHeight = MediaQuery.of(context).size.height * 0.44;
-
-    // เรียกใช้ CheckoutController เพื่อดึงจำนวนสินค้าในตะกร้า
     final CheckoutController checkoutCtrl =
         Get.isRegistered<CheckoutController>()
         ? Get.find<CheckoutController>()
         : Get.put(CheckoutController());
 
-    return SizedBox(
-      width: double.infinity,
-      height: topContainerHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: double.infinity,
-            height: topContainerHeight - 23,
+    return Stack(
+      children: [
+        // 1. พื้นหลังสีแดง (จะมีความสูงเท่ากับ Column ลบด้วยระยะที่เราให้มันเหลื่อม)
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 60, // ปล่อยให้การ์ดสีขาวห้อยทะลุลงมา 60px
+          child: Container(
             decoration: BoxDecoration(
               color: headerBgColor,
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(15),
-                bottomRight: Radius.circular(15),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
           ),
-          Positioned(
-            top: 60,
-            right: 20,
-            child: InkWell(
-              onTap: () => Get.to(() => const CheckoutPage()),
-              child: Stack(
-                clipBehavior: Clip.none, // ยอมให้ Badge ล้นออกมานอกวงกลมได้
-                children: [
-                  // วงกลมสีขาวหลัก
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.shopping_basket,
-                      color: Color(0xFF10B981),
-                      size: 28,
-                    ),
-                  ),
+        ),
 
-                  // 🔴 ตัวเลขสีแดง (Badge)
-                  Obx(() {
-                    // สมมติว่าใน CheckoutController คุณมีตัวแปร cartItems หรือรายการสินค้า
-                    // ให้ใช้ .length เพื่อดูว่ามีของกี่อย่าง
-                    int itemCount = checkoutCtrl.cartItems.length;
-
-                    if (itemCount == 0)
-                      return const SizedBox.shrink(); // ถ้าไม่มีของไม่ต้องโชว์เลข
-
-                    return Positioned(
-                      right: -2,
-                      top: -7,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.red, // สีพื้นหลังตัวเลข
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 2,
-                          ), // ขอบขาวตัดกับสีแดง
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 10,
-                          minHeight: 10,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '$itemCount',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
+        // 2. เนื้อหาหลัก (ตัวนี้จะดันความสูงของ Header ทั้งหมดอัตโนมัติ)
+        SafeArea(
+          bottom: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // --- ส่วนต้อนรับ และ ไอคอนตะกร้า ---
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "ยินดีต้อนรับเข้าสู่",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 60,
-            left: 24,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "ยินดีต้อนรับเข้าสู่",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Obx(
-                      () => Text(
-                        controller.shopName.value,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
+                          const SizedBox(height: 4),
+                          // ใช้ Wrap ป้องกันข้อความชื่อร้านยาวจนแตก
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Obx(
+                                () => Text(
+                                  controller.shopName.value,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                "เฮง เฮง เฮง รวยๆ",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      "เฮง เฮง เฮง รวยๆ",
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    const SizedBox(width: 16),
+                    InkWell(
+                      onTap: () => Get.to(() => const CheckoutPage()),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.shopping_basket,
+                              color: Color(0xFF10B981),
+                              size: 28,
+                            ),
+                          ),
+                          Obx(() {
+                            int itemCount = checkoutCtrl.cartItems.length;
+                            if (itemCount == 0) return const SizedBox.shrink();
+                            return Positioned(
+                              right: -2,
+                              top: -7,
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Text(
+                                  '$itemCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              // --- ส่วนกล่องยอดขาย (ซ้อนทับกรอบสีแดงลงมา) ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildDailyReportCard(controller),
+              ),
+            ],
           ),
-          Positioned(
-            left: 20,
-            right: 20,
-            top: 135,
-            child: _buildDailyReportCard(controller),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildDailyReportCard(HomeController controller) {
     return Container(
-      padding: const EdgeInsets.all(25),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -264,10 +285,9 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              // 🔥 เปลี่ยนสีไอคอนตาม Trend
               Obx(
                 () => Icon(
                   controller.isTrendUp.value
@@ -285,18 +305,24 @@ class HomePage extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Obx(
-                () => Text(
-                  "฿ ${controller.formattedTotal}",
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2D2D2D),
+              // ✨ ห่อด้วย Expanded + FittedBox ป้องกันตัวเลขยอดขายยาวทะลุกราฟ
+              Expanded(
+                child: Obx(
+                  () => FittedBox(
+                    alignment: Alignment.centerLeft,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      "฿ ${controller.formattedTotal}",
+                      style: const TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D2D2D),
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const Spacer(),
-              // 🔥 กราฟเปลี่ยนสีตาม Trend
+              const SizedBox(width: 16),
               Obx(() {
                 final color = controller.isTrendUp.value
                     ? Colors.green.shade400
@@ -370,20 +396,28 @@ class HomePage extends StatelessWidget {
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              // ✨ ห่อด้วย Flexible ป้องกันคำยาวเกิน
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
+          // ✨ ใช้ FittedBox เพื่อบีบตัวเลขหากฟอนต์ใหญ่เกินไป
           Obx(
-            () => Text(
-              "฿ ${value.value}",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: color,
+            () => FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                "฿ ${value.value}",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
               ),
             ),
           ),
