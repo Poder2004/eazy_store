@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eazy_store/api/api_dashboad.dart';
+import 'package:eazy_store/model/response/dashboard_detail_response.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,6 +24,51 @@ class SalesAccountController extends GetxController {
   var transTrend = 0.0.obs;
 
   var currentIndex = 0.obs;
+
+  // 📝 ข้อมูลรายละเอียด (Details)
+  var isDetailLoading = false.obs;
+  var transactionsList = <TransactionDetailModel>[].obs;
+  var productSalesList = <ProductSalesDetailModel>[].obs;
+
+  // ฟังก์ชันดึงข้อมูลรายการบิล
+  Future<void> fetchTransactionsDetail() async {
+    isDetailLoading(true);
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+      var currentRange = _getDateRange();
+      var data = await ApiDashboad.getTransactionsDetail(
+        shopId,
+        currentRange['start']!,
+        currentRange['end']!,
+      );
+      transactionsList.assignAll(data);
+    } catch (e) {
+      print(e);
+    } finally {
+      isDetailLoading(false);
+    }
+  }
+
+  // ฟังก์ชันดึงข้อมูลยอดขายแยกรายสินค้า
+  Future<void> fetchProductSalesDetail() async {
+    isDetailLoading(true);
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+      var currentRange = _getDateRange();
+      var data = await ApiDashboad.getProductSalesDetail(
+        shopId,
+        currentRange['start']!,
+        currentRange['end']!,
+      );
+      productSalesList.assignAll(data);
+    } catch (e) {
+      print(e);
+    } finally {
+      isDetailLoading(false);
+    }
+  }
 
   @override
   void onInit() {
