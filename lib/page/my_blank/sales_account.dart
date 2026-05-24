@@ -435,8 +435,12 @@ class SalesAccountScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.of(context).textScaler.clamp(maxScaleFactor: 1.25),
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.7,
           minChildSize: 0.5,
           maxChildSize: 0.95,
           builder: (context, scrollController) {
@@ -558,6 +562,7 @@ class SalesAccountScreen extends StatelessWidget {
               ),
             );
           },
+        ),
         );
       },
     );
@@ -580,8 +585,12 @@ class SalesAccountScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.of(context).textScaler.clamp(maxScaleFactor: 1.25),
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.7,
           minChildSize: 0.5,
           maxChildSize: 0.95,
           builder: (context, scrollController) {
@@ -666,9 +675,13 @@ class SalesAccountScreen extends StatelessWidget {
                                         children: [
                                           Icon(Icons.shopping_cart, size: 14, color: Colors.grey.shade400),
                                           const SizedBox(width: 4),
-                                          Text(
-                                            'ขายได้ ${item.totalQty} ชิ้น',
-                                            style: const TextStyle(fontSize: 13, color: _kTextMuted),
+                                          Flexible(
+                                            child: Text(
+                                              'ขายได้ ${item.totalQty} ชิ้น',
+                                              style: const TextStyle(fontSize: 13, color: _kTextMuted),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -678,6 +691,7 @@ class SalesAccountScreen extends StatelessWidget {
                                 const SizedBox(width: 12),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -708,6 +722,7 @@ class SalesAccountScreen extends StatelessWidget {
               ),
             );
           },
+        ),
         );
       },
     );
@@ -731,22 +746,28 @@ class SalesAccountScreen extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: iconColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: iconColor, size: 20),
                     ),
-                    child: Icon(icon, color: iconColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kTextDark),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kTextDark),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               InkWell(
                 onTap: () => Navigator.pop(context),
