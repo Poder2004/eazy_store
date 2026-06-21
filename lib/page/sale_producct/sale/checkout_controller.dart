@@ -169,6 +169,19 @@ class CheckoutController extends GetxController {
 
     isSearching.value = true;
 
+    // 🔍 ค้นหาจาก local cache ก่อนเสมอ เพื่อแสดงผลหลายรายการทันที
+    final localMatches = allProducts.where((p) {
+      return p.name.toLowerCase().contains(query.toLowerCase()) ||
+          (p.barcode != null &&
+              p.barcode!.toLowerCase().contains(query.toLowerCase()));
+    }).toList();
+
+    if (localMatches.isNotEmpty) {
+      searchResults.assignAll(localMatches);
+      return;
+    }
+
+    // 🌐 ไม่พบใน local → fallback ไป API (เช่น สแกนบาร์โค้ดสินค้าใหม่)
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
@@ -181,11 +194,7 @@ class CheckoutController extends GetxController {
       if (product != null && product.status == true) {
         searchResults.assignAll([product]);
       } else {
-        var localMatches = allProducts.where((p) {
-          return p.name.toLowerCase().contains(query.toLowerCase());
-        }).toList();
-
-        searchResults.assignAll(localMatches);
+        searchResults.clear();
       }
     } catch (e) {
       print("Search API Error: $e");

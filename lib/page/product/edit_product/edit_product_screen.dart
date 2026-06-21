@@ -67,7 +67,7 @@ class EditProductScreen extends StatelessWidget {
                 child: Stack(
                   children: [
                     GestureDetector(
-                     onTap: () => controller.showImagePickerOptions(),
+                      onTap: () => controller.showImagePickerOptions(),
                       child: Obx(() {
                         ImageProvider imageProvider;
                         if (controller.selectedImage.value != null) {
@@ -208,34 +208,6 @@ class EditProductScreen extends StatelessWidget {
                     label: "หน่วยนับ",
                     controller: controller.unitCtrl,
                     icon: Icons.scale,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 25),
-
-              // 💰 ราคา
-              _buildSectionTitle("ตั้งราคาสินค้า"),
-              _buildCardContainer(
-                children: [
-                  _buildTextField(
-                    label: "ราคาขาย (บาท)",
-                    controller: controller.sellPriceCtrl,
-                    icon: Icons.sell,
-                    isPrice: true,
-                    textColor: primaryColor,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  _buildTextField(
-                    label: "ราคาต้นทุน (บาท)",
-                    controller: controller.costPriceCtrl,
-                    icon: Icons.attach_money,
-                    isPrice: true,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
                   ),
                 ],
               ),

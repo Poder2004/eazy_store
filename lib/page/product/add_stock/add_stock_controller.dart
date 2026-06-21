@@ -11,6 +11,7 @@ class AddStockController extends GetxController {
   var isSearching = false.obs;
   Rx<ProductResponse?> foundProduct = Rx<ProductResponse?>(null);
   var calculatedTotal = 0.obs;
+  var isSavingPrice = false.obs;
   Timer? _debounce;
 
   // ---------------- Controllers ----------------
@@ -22,6 +23,10 @@ class AddStockController extends GetxController {
   final addAmountController = TextEditingController();
   final unitController = TextEditingController();
   final categoryController = TextEditingController();
+
+  // 💰 Controllers สำหรับแก้ไขราคา
+  final editSellPriceCtrl = TextEditingController();
+  final editCostPriceCtrl = TextEditingController();
 
   @override
   void onInit() {
@@ -51,6 +56,8 @@ class AddStockController extends GetxController {
     addAmountController.dispose();
     unitController.dispose();
     categoryController.dispose();
+    editSellPriceCtrl.dispose();
+    editCostPriceCtrl.dispose();
     super.onClose();
   }
 
@@ -95,6 +102,10 @@ class AddStockController extends GetxController {
         unitController.text = match.unit ?? '';
         categoryController.text = match.category?.name ?? 'ทั่วไป';
 
+        // ตั้งค่าเริ่มต้นให้ช่องแก้ไขราคา
+        editSellPriceCtrl.text = (match.sellPrice ?? 0).toStringAsFixed(2);
+        editCostPriceCtrl.text = (match.costPrice ?? 0).toStringAsFixed(2);
+
         calculatedTotal.value = match.stock ?? 0;
       } else {
         // ถ้าไม่เจอสินค้า ให้ล้างค่า แต่ไม่ต้องแจ้งเตือน Snack เดี๋ยวมันเด้งรัวๆ ตอนพิมพ์
@@ -124,10 +135,128 @@ class AddStockController extends GetxController {
     addAmountController.clear();
     unitController.clear();
     categoryController.clear();
+    editSellPriceCtrl.clear();
+    editCostPriceCtrl.clear();
     calculatedTotal.value = 0;
   }
 
-  // 💾 บันทึกจริง (API)
+  // ✅ ตรวจสอบว่าราคาถูกเปลี่ยนหรือไม่
+  bool get _isPriceChanged {
+    final newSell = double.tryParse(editSellPriceCtrl.text);
+    final newCost = double.tryParse(editCostPriceCtrl.text);
+    final origSell = foundProduct.value?.sellPrice ?? 0;
+    final origCost = foundProduct.value?.costPrice ?? 0;
+    if (newSell == null || newCost == null) return false;
+    return newSell != origSell || newCost != origCost;
+  }
+
+  // Public getter สำหรับ View
+  bool get isPriceChangedPublic => _isPriceChanged;
+
+  // ✅ ตรวจสอบว่ามีการเพิ่มสต็อกหรือไม่
+  bool get _hasStockToAdd {
+    final amount = int.tryParse(addAmountController.text) ?? 0;
+    return amount > 0;
+  }
+
+  // Public getter สำหรับ View
+  bool get hasStockToAddPublic => _hasStockToAdd;
+
+  // 🔗 ฟังก์ชันหลัก — บันทึกทุกอย่างด้วยปุ่มเดียว
+  Future<void> saveAll() async {
+    if (foundProduct.value == null) return;
+
+    final hasPrice = _isPriceChanged;
+    final hasStock = _hasStockToAdd;
+
+    // ไม่มีการเปลี่ยนแปลงอะไรเลย
+    if (!hasPrice && !hasStock) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "ยังไม่มีการเปลี่ยนแปลงข้อมูล",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    isSavingPrice.value = true;
+
+    try {
+      bool priceOk = true;
+      bool stockOk = true;
+
+      // --- อัปเดตราคา (ถ้ามีการเปลี่ยน) ---
+      if (hasPrice) {
+        final newSell = double.tryParse(editSellPriceCtrl.text);
+        final newCost = double.tryParse(editCostPriceCtrl.text);
+        if (newSell == null || newCost == null) {
+          Get.snackbar(
+            "แจ้งเตือน",
+            "กรุณากรอกราคาให้ถูกต้อง",
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+          );
+          isSavingPrice.value = false;
+          return;
+        }
+
+        final result = await ApiProduct.updateProduct(
+          foundProduct.value!.productId!,
+          {"sell_price": newSell, "cost_price": newCost},
+        );
+
+        if (result != null) {
+          salePriceController.text = newSell.toStringAsFixed(2);
+          costController.text = newCost.toStringAsFixed(2);
+        } else {
+          priceOk = false;
+        }
+      }
+
+      // --- เพิ่มสต็อก (ถ้ามีจำนวน) ---
+      if (hasStock) {
+        final amount = int.parse(addAmountController.text);
+        stockOk = await ApiProduct.updateStock(
+          foundProduct.value!.productId!,
+          amount,
+        );
+      }
+
+      // --- แจ้งผลลัพธ์ ---
+      if (priceOk && stockOk) {
+        String msg = "";
+        if (hasPrice && hasStock) msg = "อัปเดตราคาและสต็อกเรียบร้อยแล้ว";
+        else if (hasPrice) msg = "อัปเดตราคาเรียบร้อยแล้ว";
+        else msg = "เพิ่มสต็อกเรียบร้อยแล้ว";
+
+        Get.snackbar(
+          "สำเร็จ",
+          msg,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        if (hasStock) {
+          handleClear();
+          searchController.clear();
+        }
+      } else {
+        Get.snackbar(
+          "ผิดพลาด",
+          "บันทึกไม่สำเร็จบางส่วน กรุณาลองใหม่",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar("Error", "เกิดข้อผิดพลาด: $e", backgroundColor: Colors.red);
+    } finally {
+      isSavingPrice.value = false;
+    }
+  }
+
+  // 💾 เก็บไว้ใช้ใน Dialog ยืนยัน
   Future<void> executeSave(int amount) async {
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
@@ -149,6 +278,7 @@ class AddStockController extends GetxController {
         colorText: Colors.white,
       );
       handleClear();
+
       searchController.clear();
     } else {
       Get.snackbar(

@@ -16,10 +16,12 @@ class EditProductController extends GetxController {
   // ---------------- Controllers ----------------
   late TextEditingController nameCtrl;
   late TextEditingController barcodeCtrl;
-  late TextEditingController sellPriceCtrl;
-  late TextEditingController costPriceCtrl;
   late TextEditingController stockCtrl;
   late TextEditingController unitCtrl;
+
+  // เก็บราคาเดิมไว้ใช้ส่งกลับ API (ราคาแก้ไขได้ผ่านหน้า Add Stock)
+  double _currentSellPrice = 0.0;
+  double _currentCostPrice = 0.0;
 
   // ---------------- Data Variables ----------------
   late ProductResponse originalProduct;
@@ -43,12 +45,8 @@ class EditProductController extends GetxController {
       // Setup ค่าเริ่มต้น
       nameCtrl = TextEditingController(text: originalProduct.name);
       barcodeCtrl = TextEditingController(text: originalProduct.barcode ?? "");
-      sellPriceCtrl = TextEditingController(
-        text: originalProduct.sellPrice.toString(),
-      );
-      costPriceCtrl = TextEditingController(
-        text: originalProduct.costPrice.toString(),
-      );
+      _currentSellPrice = originalProduct.sellPrice;
+      _currentCostPrice = originalProduct.costPrice;
       stockCtrl = TextEditingController(text: originalProduct.stock.toString());
       unitCtrl = TextEditingController(text: originalProduct.unit);
 
@@ -66,8 +64,6 @@ class EditProductController extends GetxController {
   void onClose() {
     nameCtrl.dispose();
     barcodeCtrl.dispose();
-    sellPriceCtrl.dispose();
-    costPriceCtrl.dispose();
     stockCtrl.dispose();
     unitCtrl.dispose();
     super.onClose();
@@ -256,8 +252,8 @@ class EditProductController extends GetxController {
         "barcode": barcodeCtrl.text.trim().isEmpty
             ? null
             : barcodeCtrl.text.trim(),
-        "sell_price": double.tryParse(sellPriceCtrl.text) ?? 0.0,
-        "cost_price": double.tryParse(costPriceCtrl.text) ?? 0.0,
+        "sell_price": _currentSellPrice,
+        "cost_price": _currentCostPrice,
         "unit": unitCtrl.text.trim(),
         "category_id": selectedCategory.value!.categoryId,
       };

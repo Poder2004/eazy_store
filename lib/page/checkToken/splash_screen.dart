@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../auth/login.dart';
 import '../homepage/home_page.dart';
+import '../shop/myShop/myshop.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,11 +41,17 @@ class _SplashScreenState extends State<SplashScreen>
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
+    int? shopId = prefs.getInt('shopId');
 
-    if (token != null && token.isNotEmpty) {
-      Get.off(() => const HomePage());
-    } else {
+    if (token == null || token.isEmpty) {
+      // ไม่มี token → ไปหน้า Login
       Get.off(() => const LoginPage());
+    } else if (shopId == null || shopId == 0) {
+      // มี token แต่ยังไม่ได้เลือกร้านค้า → ไปหน้า MyShop
+      Get.off(() => const MyShopPage());
+    } else {
+      // มีทั้ง token และ shopId → เข้าหน้า Home ได้เลย
+      Get.off(() => const HomePage());
     }
   }
 

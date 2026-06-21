@@ -54,6 +54,8 @@ class AddStockScreen extends StatelessWidget {
                     children: [
                       _buildProductCard(controller),
                       const SizedBox(height: 20),
+                      _buildPriceEditSection(controller),
+                      const SizedBox(height: 20),
                       _buildStockInputSection(controller),
                       const SizedBox(height: 30),
                       _buildActionButtons(controller),
@@ -253,57 +255,205 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildPriceEditSection(AddStockController controller) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // หัวข้อ
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.price_change_outlined,
+                  color: _kPrimaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                "แก้ไขราคาสินค้า",
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          const SizedBox(height: 16),
+
+          // ราคาขาย
+          _buildPriceInputRow(
+            label: "ราคาขาย",
+            unit: "บาท",
+            icon: Icons.sell_outlined,
+            controller: controller.editSellPriceCtrl,
+          ),
+          const SizedBox(height: 12),
+
+          // ราคาต้นทุน
+          _buildPriceInputRow(
+            label: "ราคาต้นทุน",
+            unit: "บาท",
+            icon: Icons.shopping_bag_outlined,
+            controller: controller.editCostPriceCtrl,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceInputRow({
+    required String label,
+    required String unit,
+    required IconData icon,
+    required TextEditingController controller,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F8FA),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.grey.shade400, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              decoration: InputDecoration(
+                labelText: label,
+                labelStyle: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 12,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                isDense: true,
+              ),
+            ),
+          ),
+          Text(
+            unit,
+            style: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStockInputSection(AddStockController controller) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _kPrimaryColor.withOpacity(0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.add_circle_outline, color: _kPrimaryColor),
-              SizedBox(width: 10),
-              Text(
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.add_circle_outline,
+                  color: _kPrimaryColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
                 "เพิ่มจำนวนสต็อก",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          const SizedBox(height: 16),
           TextField(
             controller: controller.addAmountController,
             keyboardType: TextInputType.number,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 32,
               fontWeight: FontWeight.bold,
               color: _kPrimaryColor,
             ),
             textAlign: TextAlign.center,
             decoration: InputDecoration(
               hintText: '0',
-              hintStyle: TextStyle(color: Colors.grey[300]),
+              hintStyle: TextStyle(color: Colors.grey[300], fontSize: 32),
               filled: true,
-              fillColor: _kInputFillColor,
+              fillColor: const Color(0xFFF7F8FA),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 20),
+              contentPadding: const EdgeInsets.symmetric(vertical: 18),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Center(
             child: Obx(
-              () => Text(
-                "ยอดรวมใหม่: ${controller.calculatedTotal.value} ${controller.unitController.text}",
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.bold,
+              () => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "ยอดรวมใหม่: ${controller.calculatedTotal.value} ${controller.unitController.text}",
+                  style: const TextStyle(
+                    color: _kPrimaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -414,6 +564,216 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 
+  // 🟢 Dialog ยืนยันแบบใหม่ (แสดงสิ่งที่จะเปลี่ยน)
+  void _showConfirmDialog(AddStockController controller) {
+    if (controller.foundProduct.value == null) return;
+
+    final hasPrice = controller.isPriceChangedPublic;
+    final hasStock = controller.hasStockToAddPublic;
+
+    if (!hasPrice && !hasStock) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "ยังไม่มีการเปลี่ยนแปลงข้อมูล",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+      );
+      return;
+    }
+
+    final newSell = double.tryParse(controller.editSellPriceCtrl.text);
+    final newCost = double.tryParse(controller.editCostPriceCtrl.text);
+    final origSell = controller.foundProduct.value?.sellPrice ?? 0;
+    final origCost = controller.foundProduct.value?.costPrice ?? 0;
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.fact_check_outlined,
+                  color: _kPrimaryColor,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                "ยืนยันการบันทึก",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                controller.nameController.text,
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+
+              // --- สรุปการเปลี่ยนแปลง ---
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F8FA),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    if (hasPrice) ...[
+                      _buildChangeRow(
+                        icon: Icons.sell_outlined,
+                        label: "ราคาขาย",
+                        from: "฿${origSell.toStringAsFixed(0)}",
+                        to: "฿${newSell?.toStringAsFixed(0) ?? '-'}",
+                        changed: newSell != origSell,
+                      ),
+                      const SizedBox(height: 10),
+                      _buildChangeRow(
+                        icon: Icons.shopping_bag_outlined,
+                        label: "ราคาต้นทุน",
+                        from: "฿${origCost.toStringAsFixed(0)}",
+                        to: "฿${newCost?.toStringAsFixed(0) ?? '-'}",
+                        changed: newCost != origCost,
+                      ),
+                    ],
+                    if (hasPrice && hasStock)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 10),
+                        child: Divider(height: 1),
+                      ),
+                    if (hasStock)
+                      _buildChangeRow(
+                        icon: Icons.inventory_2_outlined,
+                        label: "สต็อกคงเหลือ",
+                        from: controller.currentStockController.text,
+                        to: "${controller.calculatedTotal.value} ${controller.unitController.text}",
+                        changed: true,
+                        toColor: _kPrimaryColor,
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      child: const Text(
+                        "แก้ไข",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        controller.saveAll();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kPrimaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        "ยืนยันบันทึก",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  Widget _buildChangeRow({
+    required IconData icon,
+    required String label,
+    required String from,
+    required String to,
+    required bool changed,
+    Color? toColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey.shade400),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          ),
+        ),
+        if (changed) ...[
+          Text(
+            from,
+            style: const TextStyle(
+              color: Colors.grey,
+              fontSize: 13,
+              decoration: TextDecoration.lineThrough,
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Icon(Icons.arrow_forward, size: 12, color: Colors.grey),
+          ),
+        ],
+        Text(
+          to,
+          style: TextStyle(
+            color: toColor ?? _kPrimaryColor,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildConfirmRow(
     String label,
     String value, {
@@ -440,26 +800,42 @@ class AddStockScreen extends StatelessWidget {
   }
 
   Widget _buildActionButtons(AddStockController controller) {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton.icon(
-        onPressed: () => _showSaveCheckDialog(controller),
-        icon: const Icon(Icons.save, color: Colors.white),
-        label: const Text(
-          "บันทึกสต็อก",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    return Obx(
+      () => SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: ElevatedButton.icon(
+          onPressed: controller.isSavingPrice.value
+              ? null
+              : () => _showConfirmDialog(controller),
+          icon: controller.isSavingPrice.value
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.save_rounded, color: Colors.white, size: 22),
+          label: Text(
+            controller.isSavingPrice.value ? "กำลังบันทึก..." : "บันทึกสต็อก",
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.3,
+            ),
           ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _kPrimaryColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: controller.isSavingPrice.value
+                ? _kPrimaryColor.withOpacity(0.6)
+                : _kPrimaryColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: controller.isSavingPrice.value ? 0 : 4,
           ),
-          elevation: 5,
         ),
       ),
     );
