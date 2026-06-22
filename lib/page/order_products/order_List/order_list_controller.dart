@@ -192,7 +192,7 @@ class OrderListController extends GetxController {
               Get.back();
               if (isFromButton ||
                   (int.tryParse(item.quantityController.text) ?? 0) <= 0) {
-                item.quantityController.text = originalQuantity == '0'
+                item.quantityController.text = (originalQuantity == '0' || originalQuantity.trim().isEmpty)
                     ? '1'
                     : originalQuantity;
               }

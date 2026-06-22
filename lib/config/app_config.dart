@@ -15,4 +15,5 @@ class AppConfig {
   // }
 
   static const String baseUrl = "https://eazystoreapi.onrender.com";
+  // static const String baseUrl = "https://eazy-store-api.vercel.app";
 }

@@ -18,45 +18,50 @@ class OrderListScreen extends StatelessWidget {
     // เรียกใช้งาน Controller
     final controller = Get.put(OrderListController());
 
-    return Scaffold(
-      backgroundColor: _kBackgroundColor,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Get.back(),
-        ),
-        title: const Text('รายการสั่งของ',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
-        centerTitle: true,
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+      ),
+      child: Scaffold(
         backgroundColor: _kBackgroundColor,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Obx(() => controller.orderItems.isEmpty
-                ? const Center(child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 15.0),
-                    itemCount: controller.orderItems.length,
-                    itemBuilder: (context, index) => 
-                      _buildOrderItemCard(controller.orderItems[index], controller),
-                  )),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Get.back(),
           ),
-          _buildBottomActionArea(controller),
-        ],
+          title: const Text('รายการสั่งของ',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+          centerTitle: true,
+          backgroundColor: _kBackgroundColor,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: Obx(() => controller.orderItems.isEmpty
+                  ? const Center(child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
+                      itemCount: controller.orderItems.length,
+                      itemBuilder: (context, index) => 
+                        _buildOrderItemCard(controller.orderItems[index], controller),
+                    )),
+            ),
+            _buildBottomActionArea(controller),
+          ],
+        ),
+        bottomNavigationBar: Obx(() => BottomNavBar(
+              currentIndex: controller.selectedIndex.value,
+              onTap: controller.onTabTapped,
+            )),
       ),
-      bottomNavigationBar: Obx(() => BottomNavBar(
-            currentIndex: controller.selectedIndex.value,
-            onTap: controller.onTabTapped,
-          )),
     );
   }
 
   Widget _buildOrderItemCard(OrderItem item, OrderListController controller) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15.0),
-      padding: const EdgeInsets.all(15.0),
+      padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15.0),
@@ -89,18 +94,31 @@ class OrderListScreen extends StatelessWidget {
           ),
           const SizedBox(height: 15),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('จำนวน:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
               const SizedBox(width: 10),
-              _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
-              _buildQtyField(item.quantityController, (v) {
-                if (v.isEmpty || v == '0') controller.showDeleteConfirmation(item);
-              }),
-              _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
-              const SizedBox(width: 10),
-              Text(item.unit, style: const TextStyle(fontSize: 16, color: Colors.black54)),
-              const SizedBox(width: 15),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
+                    _buildQtyField(item.quantityController, (v) {
+                      if (v.isEmpty || v == '0') controller.showDeleteConfirmation(item);
+                    }),
+                    _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        item.unit,
+                        style: const TextStyle(fontSize: 16, color: Colors.black54),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 15),
@@ -124,7 +142,7 @@ class OrderListScreen extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 30, height: 30,
-        margin: const EdgeInsets.symmetric(horizontal: 5),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(color: _kPrimaryColor, borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: Colors.white, size: 18),
       ),
@@ -133,7 +151,7 @@ class OrderListScreen extends StatelessWidget {
 
   Widget _buildQtyField(TextEditingController ctrl, Function(String) onChange) {
     return SizedBox(
-      width: 70, height: 35,
+      width: 50, height: 35,
       child: TextField(
         controller: ctrl,
         keyboardType: TextInputType.number,

@@ -128,7 +128,7 @@ class ManualListController extends GetxController {
     }
   }
 
-  void goToCheckout() {
+  Future<void> goToCheckout() async {
     if (selectedIds.isEmpty) {
       Get.snackbar(
         "แจ้งเตือน",
@@ -144,11 +144,33 @@ class ManualListController extends GetxController {
     if (Get.isRegistered<CheckoutController>()) {
       final checkoutCtrl = Get.find<CheckoutController>();
 
-      // ✅ ส่ง ID ไปให้ CheckoutController ตัวจริงจัดการ
-      checkoutCtrl.addItemsByIds(idsToSend);
+      // ✅ await เพื่อรอให้เพิ่มสินค้าลงตะกร้าจริงๆ ก่อนแสดง snackbar
+      final int addedCount = await checkoutCtrl.addItemsByIds(idsToSend);
 
       // อัปเดต Nav Index เพื่อให้ Tab Bar แสดงสีแดงที่เมนูขาย (Index 2)
       checkoutCtrl.currentNavIndex.value = 2;
+
+      // ล้างค่าที่เลือกไว้เพื่อให้กลับมาเลือกใหม่ได้สะอาดๆ
+      selectedIds.clear();
+
+      if (addedCount > 0) {
+        Get.snackbar(
+          "สำเร็จ",
+          "เพิ่มสินค้า $addedCount รายการลงตะกร้าแล้ว",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 1),
+        );
+      } else {
+        Get.snackbar(
+          "ไม่สามารถเพิ่มได้",
+          "สินค้าที่เลือกอาจหมดสต็อก หรือไม่พบในระบบ",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+        return; // ไม่เปลี่ยนหน้าถ้าไม่มีสินค้าถูกเพิ่มเลย
+      }
 
       // จัดการหน้าจอ
       if (Get.previousRoute.contains('CheckoutPage')) {
@@ -158,21 +180,11 @@ class ManualListController extends GetxController {
       }
     } else {
       // กรณีเปิดแอปมาแล้วเข้าหน้านี้เลยโดยไม่มี CheckoutController (กันพลาด)
+      selectedIds.clear();
       Get.offAll(
         () => const CheckoutPage(),
         arguments: {'selectedIds': idsToSend},
       );
     }
-
-    // ล้างค่าที่เลือกไว้เพื่อให้กลับมาเลือกใหม่ได้สะอาดๆ
-    selectedIds.clear();
-
-    Get.snackbar(
-      "สำเร็จ",
-      "เพิ่มสินค้าลงตะกร้าแล้ว",
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      duration: const Duration(seconds: 1),
-    );
   }
 }

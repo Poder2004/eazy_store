@@ -103,23 +103,60 @@ class CheckoutController extends GetxController {
     }
   }
 
+  Future<List<ProductResponse>> _fetchProductsFromApi(int shopId) async {
+    List<ProductResponse> allFetched = [];
+    try {
+      var response = await ApiProduct.getProductsByShop(shopId);
+      List<ProductResponse> list = [];
+      if (response is List<ProductResponse>) {
+        list = response;
+      } else if (response is ProductPagedResponse) {
+        list = response.items;
+      }
+      allFetched.addAll(list.where((p) => p.status == true));
+    } catch (e) {
+      print("❌ Error loading products by shop: $e");
+    }
+
+    try {
+      final nullBarcodeData = await ApiProduct.getNullBarcodeProducts(shopId);
+      final List<ProductResponse> nullBarcodeList = nullBarcodeData.map((item) {
+        return ProductResponse(
+          productId: int.tryParse(item['product_id']?.toString() ?? item['id']?.toString() ?? ""),
+          shopId: shopId,
+          categoryId: int.tryParse(item['category_id']?.toString() ?? "") ?? 0,
+          productCode: item['product_code']?.toString(),
+          name: item['name'] ?? '',
+          barcode: item['barcode']?.toString(),
+          imgProduct: item['img_product'] ?? item['image'] ?? '',
+          sellPrice: double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
+          costPrice: double.tryParse(item['cost_price']?.toString() ?? "0") ?? 0.0,
+          stock: int.tryParse(item['stock']?.toString() ?? "") ?? 999,
+          unit: item['unit'] ?? '',
+          status: item['status'] == true || item['status'] == 1 || item['status']?.toString().toLowerCase() == 'true',
+          categoryName: item['category_name']?.toString().trim(),
+        );
+      }).toList();
+
+      for (var p in nullBarcodeList) {
+        if (p.status == true && !allFetched.any((existing) => existing.productId == p.productId)) {
+          allFetched.add(p);
+        }
+      }
+    } catch (e) {
+      print("❌ Error loading null barcode products: $e");
+    }
+
+    return allFetched;
+  }
+
   Future<void> fetchFreshProducts() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
       if (shopId != 0) {
-        var response = await ApiProduct.getProductsByShop(shopId);
-        List<ProductResponse> list = [];
-
-        if (response is List<ProductResponse>) {
-          list = response;
-        } else if (response is ProductPagedResponse) {
-          list = response.items;
-        }
-
-        allProducts = list.where((p) => p.status == true).toList();
-
+        allProducts = await _fetchProductsFromApi(shopId);
         if (searchController.text.isNotEmpty) {
           onSearchChanged(searchController.text);
         }
@@ -132,17 +169,8 @@ class CheckoutController extends GetxController {
   Future<void> _loadAllProducts() async {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
-        var response = await ApiProduct.getProductsByShop(loadedShopId!);
-        List<ProductResponse> list = [];
-
-        if (response is List<ProductResponse>) {
-          list = response;
-        } else if (response is ProductPagedResponse) {
-          list = response.items;
-        }
-
-        allProducts = list.where((p) => p.status == true).toList();
-        print("✅ โหลดสินค้าสำเร็จ: ${allProducts.length} รายการ");
+        allProducts = await _fetchProductsFromApi(loadedShopId!);
+        print("✅ โหลดสินค้าสำเร็จทั้งหมด: ${allProducts.length} รายการ (รวมไม่มีบาร์โค้ด)");
       }
     } catch (e) {
       print("❌ Error loading products: $e");
@@ -254,19 +282,24 @@ class CheckoutController extends GetxController {
     }
   }
 
-  Future<void> addItemsByIds(List<String> productIds) async {
+  Future<int> addItemsByIds(List<String> productIds) async {
     if (allProducts.isEmpty) {
       await _loadAllProducts();
     }
 
+    int addedCount = 0;
     for (var id in productIds) {
       var match = allProducts.firstWhereOrNull(
         (p) => p.productId.toString() == id,
       );
       if (match != null) {
+        final beforeCount = cartItems.length;
         _addToCart(match);
+        // นับเฉพาะที่เพิ่มสำเร็จจริงๆ (stock ไม่หมด)
+        if (cartItems.length > beforeCount) addedCount++;
       }
     }
+    return addedCount;
   }
 
   void _addToCart(ProductResponse product) {
