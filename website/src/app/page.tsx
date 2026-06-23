@@ -44,8 +44,12 @@ export default function Home() {
         {/* Hero */}
         <section className="bg-gradient-to-br from-[#4F46E5] to-[#6366F1] text-white py-20 px-4">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <span className="text-4xl">🏪</span>
+            <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md overflow-hidden p-1">
+              <img
+                src="/logo.png"
+                alt="Eazy Store App Icon"
+                className="w-full h-full object-contain rounded-xl"
+              />
             </div>
             <h1 className="text-4xl font-extrabold mb-4">Eazy Store</h1>
             <p className="text-indigo-100 text-lg max-w-xl mx-auto leading-relaxed">

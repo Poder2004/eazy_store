@@ -17,9 +17,11 @@ export default function Navbar() {
     <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#4F46E5] rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">E</span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="Eazy Store Logo"
+            className="w-8 h-8 object-contain rounded-lg"
+          />
           <span className="font-bold text-[#0F172A] text-lg">Eazy Store</span>
         </Link>
         <div className="hidden md:flex items-center gap-1">
