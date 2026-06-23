@@ -266,13 +266,18 @@ class DebtLedgerScreen extends StatelessWidget {
                 SizedBox(
                   height: 38,
                   child: ElevatedButton(
-                    onPressed: () => controller.goToPaymentScreen(debtor),
+                    onPressed: debtAmount > 0
+                        ? () => controller.goToPaymentScreen(debtor)
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kPayButtonColor,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      disabledForegroundColor: Colors.grey.shade500,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.0),
                       ),
-                      elevation: 2,
+                      elevation: debtAmount > 0 ? 2 : 0,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                     ),
                     // ✨ ใช้ FittedBox หุ้มข้อความ เพื่อไม่ให้ปุ่มแตกเวลาฟอนต์ขยาย
@@ -283,7 +288,6 @@ class DebtLedgerScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
                         ),
                       ),
                     ),
