@@ -221,7 +221,7 @@ class ProfileController extends GetxController {
   }
 
   // URL ของเว็บไซต์ (เปลี่ยนเป็น URL จริงหลัง deploy)
-  static const String _webBaseUrl = 'https://your-eazystore-website.vercel.app';
+  static const String _webBaseUrl = ' https://eazystore-web.vercel.app';
 
   Future<void> _launchUrl(String path) async {
     final uri = Uri.parse('$_webBaseUrl$path');
