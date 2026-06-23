@@ -467,15 +467,39 @@ class ProfilePage extends StatelessWidget {
         children: [
           _buildMenuTile(
             icon: Icons.store_rounded,
-            title: 'จัดการร้านค้า', // ✨ เปลี่ยนเป็นภาษาไทย
+            title: 'จัดการร้านค้า',
             subtitle: 'แก้ไขข้อมูลร้านค้า',
             iconColor: const Color(0xFF6366F1),
             onTap: controller.goToManageStores,
           ),
           _buildDivider(),
           _buildMenuTile(
+            icon: Icons.policy_rounded,
+            title: 'นโยบายความเป็นส่วนตัว',
+            subtitle: 'ข้อมูลที่เราเก็บและวิธีการใช้งาน',
+            iconColor: const Color(0xFF8B5CF6),
+            onTap: controller.goToPrivacyPolicy,
+          ),
+          _buildDivider(),
+          _buildMenuTile(
+            icon: Icons.description_rounded,
+            title: 'เงื่อนไขการใช้งาน',
+            subtitle: 'ข้อตกลงและเงื่อนไขการใช้แอพ',
+            iconColor: const Color(0xFF0EA5E9),
+            onTap: controller.goToTerms,
+          ),
+          _buildDivider(),
+          _buildMenuTile(
+            icon: Icons.contact_support_rounded,
+            title: 'ติดต่อเรา',
+            subtitle: 'LINE, Facebook, อีเมล และโทรศัพท์',
+            iconColor: const Color(0xFF059669),
+            onTap: controller.goToContact,
+          ),
+          _buildDivider(),
+          _buildMenuTile(
             icon: Icons.headset_mic_rounded,
-            title: 'ช่วยเหลือและสนับสนุน', // ✨ เปลี่ยนเป็นภาษาไทย
+            title: 'ช่วยเหลือและสนับสนุน',
             subtitle: 'ศูนย์ช่วยเหลือและแจ้งปัญหาการใช้งาน',
             iconColor: const Color(0xFF10B981),
             onTap: controller.goToSupport,

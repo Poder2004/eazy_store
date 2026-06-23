@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --font-sarabun: 'Sarabun', sans-serif;
+}
+
+body {
+  font-family: 'Sarabun', sans-serif;
+}
+
+@layer components {
+  .section-card {
+    @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100;
+  }
+  .page-container {
+    @apply max-w-3xl mx-auto px-4 py-8;
+  }
+}

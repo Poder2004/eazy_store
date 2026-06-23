@@ -1,16 +1,16 @@
 import 'package:eazy_store/api/api_dashboad.dart';
 import 'package:eazy_store/api/api_shop.dart';
-import 'package:eazy_store/api/api_user.dart'; // ✨ เพิ่ม Import ApiUser
+import 'package:eazy_store/api/api_user.dart';
 import 'package:eazy_store/model/response/shop_response.dart';
 import 'package:eazy_store/page/auth/login.dart';
 import 'package:eazy_store/page/edit_profile/edit_profile_page.dart';
-
 import 'package:eazy_store/page/shop/editShop/edit_shop.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileController extends GetxController {
   // ---------------- State Variables ----------------
@@ -220,15 +220,30 @@ class ProfileController extends GetxController {
     }
   }
 
-  void goToSecurity() {
-    print("ไปยังหน้า ความปลอดภัย");
-    // Get.to(() => const SecurityScreen());
+  // URL ของเว็บไซต์ (เปลี่ยนเป็น URL จริงหลัง deploy)
+  static const String _webBaseUrl = 'https://your-eazystore-website.vercel.app';
+
+  Future<void> _launchUrl(String path) async {
+    final uri = Uri.parse('$_webBaseUrl$path');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      Get.snackbar(
+        'ไม่สามารถเปิดได้',
+        'กรุณาลองใหม่อีกครั้ง',
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+    }
   }
 
-  void goToSupport() {
-    print("ไปยังหน้า ช่วยเหลือ");
-    // Get.to(() => const SupportScreen());
+  void goToPrivacyPolicy() => _launchUrl('/privacy');
+  void goToTerms() => _launchUrl('/terms');
+  void goToContact() => _launchUrl('/contact');
+
+  void goToSecurity() {
+    print("ไปยังหน้า ความปลอดภัย");
   }
+
+  void goToSupport() => _launchUrl('/support');
 
   void logout() {
     Get.bottomSheet(
