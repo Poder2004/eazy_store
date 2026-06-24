@@ -1,62 +1,21 @@
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'profile_controller.dart'; // ✅ Import Controller ที่แยกไว้
+import 'profile_controller.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  final Color primaryColor = const Color(0xFF4F46E5);
-  final Color dangerColor = const Color(0xFFE11D48);
-  final Color bgColor = const Color(0xFFF4F7FA);
-
   @override
   Widget build(BuildContext context) {
-    // ✅ เรียกใช้งาน Controller
     final ProfileController controller = Get.put(ProfileController());
 
-    // 🔥 โหลดข้อมูลใหม่ทุกครั้งที่เปิดหน้า เผื่อมีการสลับร้าน
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.loadProfileData();
     });
 
     return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'โปรไฟล์', // ✨ เปลี่ยนเป็นภาษาไทย
-          style: TextStyle(
-            color: Color(0xFF0F172A),
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: ActionChip(
-              avatar: Icon(Icons.edit_rounded, size: 16, color: primaryColor),
-              label: Text(
-                'แก้ไข', // ✨ เปลี่ยนเป็นภาษาไทย
-                style: TextStyle(
-                  color: primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              backgroundColor: primaryColor.withOpacity(0.1),
-              side: BorderSide.none,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              onPressed: controller.goToEditProfile, // ✅ ผูกฟังก์ชัน
-            ),
-          ),
-        ],
-      ),
-      // ✨ 1. หุ้ม MediaQuery เพื่อจำกัดการขยายฟอนต์สูงสุด 1.2 เท่า
+      backgroundColor: const Color(0xFFF4F7FA),
       body: MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: MediaQuery.textScalerOf(
@@ -64,84 +23,119 @@ class ProfilePage extends StatelessWidget {
           ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
         ),
         child: RefreshIndicator(
-          onRefresh:
-              controller.loadProfileData, // ดึงจอลงเพื่อโหลดข้อมูลใหม่ได้
-          color: primaryColor,
-          child: SingleChildScrollView(
+          onRefresh: controller.loadProfileData,
+          color: const Color(0xFF4F46E5),
+          child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 12.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildProfileHeader(controller),
-                const SizedBox(height: 36),
+            slivers: [
+              SliverToBoxAdapter(child: _buildHeader(controller)),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: 16),
+                    _buildStoreCard(controller),
+                    const SizedBox(height: 24),
 
-                // ✨ 2. หุ้มด้วย Row และ Expanded ป้องกันข้อความชนกับปุ่ม
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
+                    // ── หมวด: บัญชีของฉัน ──────────────────────────────
+                    _buildSectionHeader('บัญชีของฉัน', Icons.person_outline_rounded),
+                    const SizedBox(height: 10),
+                    _buildMenuGroup([
+                      _MenuItem(
+                        icon: Icons.edit_rounded,
+                        iconColor: const Color(0xFF4F46E5),
+                        title: 'แก้ไขข้อมูลส่วนตัว',
+                        subtitle: 'เปลี่ยนชื่อ อีเมล และเบอร์โทรศัพท์',
+                        onTap: controller.goToEditProfile,
+                      ),
+                    ]),
+
+                    const SizedBox(height: 20),
+
+                    // ── หมวด: ร้านค้า ───────────────────────────────────
+                    _buildSectionHeader('ร้านค้า', Icons.store_outlined),
+                    const SizedBox(height: 10),
+                    _buildMenuGroup([
+                      _MenuItem(
+                        icon: Icons.store_rounded,
+                        iconColor: const Color(0xFF6366F1),
+                        title: 'จัดการร้านค้า',
+                        subtitle: 'แก้ไขข้อมูลร้าน ที่อยู่ และรูปภาพ',
+                        onTap: controller.goToManageStores,
+                      ),
+                      _MenuItem(
+                        icon: Icons.swap_horiz_rounded,
+                        iconColor: const Color(0xFF0EA5E9),
+                        title: 'สลับสาขา / ร้านค้า',
+                        subtitle: 'เปลี่ยนไปใช้งานร้านค้าหรือสาขาอื่น',
+                        onTap: controller.switchStore,
+                      ),
+                    ]),
+
+                    const SizedBox(height: 20),
+
+                    // ── หมวด: ความช่วยเหลือ ─────────────────────────────
+                    _buildSectionHeader('ความช่วยเหลือ', Icons.support_agent_outlined),
+                    const SizedBox(height: 10),
+                    _buildMenuGroup([
+                      _MenuItem(
+                        icon: Icons.contact_support_rounded,
+                        iconColor: const Color(0xFF059669),
+                        title: 'ติดต่อทีมงาน',
+                        subtitle: 'LINE, Facebook, อีเมล และโทรศัพท์',
+                        onTap: controller.goToContact,
+                      ),
+                      _MenuItem(
+                        icon: Icons.headset_mic_rounded,
+                        iconColor: const Color(0xFF10B981),
+                        title: 'ศูนย์ช่วยเหลือ',
+                        subtitle: 'คำถามที่พบบ่อย และแจ้งปัญหาการใช้งาน',
+                        onTap: controller.goToSupport,
+                      ),
+                    ]),
+
+                    const SizedBox(height: 20),
+
+                    // ── หมวด: ข้อมูลและกฎหมาย ──────────────────────────
+                    _buildSectionHeader('ข้อมูลและกฎหมาย', Icons.gavel_outlined),
+                    const SizedBox(height: 10),
+                    _buildMenuGroup([
+                      _MenuItem(
+                        icon: Icons.policy_rounded,
+                        iconColor: const Color(0xFF8B5CF6),
+                        title: 'นโยบายความเป็นส่วนตัว',
+                        subtitle: 'ข้อมูลที่เราเก็บและวิธีการใช้งาน',
+                        onTap: controller.goToPrivacyPolicy,
+                      ),
+                      _MenuItem(
+                        icon: Icons.description_rounded,
+                        iconColor: const Color(0xFF64748B),
+                        title: 'เงื่อนไขการใช้งาน',
+                        subtitle: 'ข้อตกลงและเงื่อนไขการใช้แอพ',
+                        onTap: controller.goToTerms,
+                      ),
+                    ]),
+
+                    const SizedBox(height: 28),
+
+                    // ── ปุ่มออกจากระบบ ──────────────────────────────────
+                    _buildLogoutButton(controller),
+
+                    const SizedBox(height: 12),
+                    Center(
                       child: Text(
-                        'ร้านค้าปัจจุบัน', // ✨ เปลี่ยนเป็นภาษาไทย
+                        'EazyStore v1.0.0',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.blueGrey.shade400,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: controller.switchStore,
-                      icon: Icon(
-                        Icons.swap_vert_rounded,
-                        size: 18,
-                        color: primaryColor,
-                      ),
-                      label: Text(
-                        'สลับร้าน', // ✨ เปลี่ยนเป็นภาษาไทย
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      style: TextButton.styleFrom(
-                        backgroundColor: primaryColor.withOpacity(
-                          0.05,
-                        ), // มีพื้นหลังจางๆ
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          fontSize: 12,
+                          color: Colors.blueGrey.shade300,
                         ),
                       ),
                     ),
-                  ],
+                    const SizedBox(height: 20),
+                  ]),
                 ),
-                const SizedBox(height: 12),
-                _buildStoreCard(controller),
-                const SizedBox(height: 36),
-                Text(
-                  'การตั้งค่าระบบ', // ✨ เปลี่ยนเป็นภาษาไทย
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.blueGrey.shade400,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildActionMenu(controller),
-                const SizedBox(height: 20), // เผื่อพื้นที่ด้านล่างสุด
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -149,148 +143,181 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileHeader(ProfileController controller) {
-    return Row(
+  // ══════════════════════════════════════════════════════
+  // Header — gradient banner + รูปโปรไฟล์ + ชื่อ + ปุ่มแก้ไข
+  // ══════════════════════════════════════════════════════
+  Widget _buildHeader(ProfileController controller) {
+    return Stack(
       children: [
-        Stack(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [primaryColor, const Color(0xFF38BDF8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        Container(
+          height: 210,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(32),
+              bottomRight: Radius.circular(32),
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 44),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // รูปโปรไฟล์
+                Obx(
+                  () => Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                    ),
+                    child: CircleAvatar(
+                      radius: 38,
+                      backgroundColor: const Color(0xFF7C3AED),
+                      backgroundImage: controller.userImage.value.isNotEmpty
+                          ? NetworkImage(controller.userImage.value)
+                          : null,
+                      child: controller.userImage.value.isEmpty
+                          ? Text(
+                              controller.userInitials.value,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
                 ),
-              ),
-              child: Obx(
-                () => CircleAvatar(
-                  radius: 36,
-                  backgroundColor: const Color(0xFF1E293B),
-                  // ✨ ถ้ามี URL รูปภาพให้โชว์รูป
-                  backgroundImage: controller.userImage.value.isNotEmpty
-                      ? NetworkImage(controller.userImage.value)
-                      : null,
-                  // ✨ ถ้าไม่มีรูปภาพให้โชว์ตัวย่อชื่อ
-                  child: controller.userImage.value.isEmpty
-                      ? Text(
-                          controller.userInitials.value,
+                const SizedBox(width: 16),
+                // ชื่อ + ตำแหน่ง
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Obx(
+                        () => Text(
+                          controller.userName.value,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
-                        )
-                      : null,
-                ),
-              ),
-            ),
-            Positioned(
-              right: 2,
-              bottom: 2,
-              child: Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: bgColor, width: 3),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Obx(
-                () => Text(
-                  controller.userName.value, // ✅ ดึงชื่อจริงมาแสดง
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Obx(
+                        () => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.18),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            controller.userRole.value,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  // ✨ ให้ชื่อยาวขึ้นบรรทัดใหม่ได้ ป้องกันโดนตัดหาย
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blueGrey.shade50, // ปรับสีให้อ่อนลง ดูละมุนตา
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Obx(
-                  () => Text(
-                    controller.userRole.value, // ✅ ดึงตำแหน่ง
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blueGrey.shade700,
+                // ปุ่มแก้ไขโปรไฟล์
+                InkWell(
+                  onTap: controller.goToEditProfile,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.4),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          color: Colors.white,
+                          size: 15,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'แก้ไข',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
+  // ══════════════════════════════════════════════════════
+  // Card ข้อมูลร้านค้าปัจจุบัน + ยอดขายวันนี้
+  // ══════════════════════════════════════════════════════
   Widget _buildStoreCard(ProfileController controller) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
           Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.start, // ให้ชิดบนเพื่อความสวยงาม
             children: [
               Obx(
                 () => Container(
-                  width: 55,
-                  height: 55,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
                     color: const Color(0xFF0F172A),
                     borderRadius: BorderRadius.circular(14),
-                    // ✨ ถ้าร้านมี URL รูปภาพให้โชว์เป็นพื้นหลัง
                     image: controller.shopImage.value.isNotEmpty
                         ? DecorationImage(
                             image: NetworkImage(controller.shopImage.value),
                             fit: BoxFit.cover,
                           )
                         : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   alignment: Alignment.center,
-                  // ✨ ถ้าไม่มีรูปร้านให้โชว์ตัวอักษรแทน
                   child: controller.shopImage.value.isEmpty
                       ? Text(
                           controller.shopName.value.length >= 2
@@ -307,76 +334,103 @@ class ProfilePage extends StatelessWidget {
                       : null,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text(
+                      'ร้านค้าปัจจุบัน',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 2),
                     Obx(
                       () => Text(
-                        controller.shopName.value, // ✅ ดึงชื่อร้านค้า
+                        controller.shopName.value,
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
                         ),
-                        // ✨ ให้ชื่อร้านขึ้นบรรทัดใหม่ได้ 2 บรรทัด
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2.0),
-                          child: Icon(
-                            Icons.location_on_rounded,
-                            size: 16,
+                    const SizedBox(height: 3),
+                    Obx(
+                      () => Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 13,
                             color: Colors.blueGrey.shade400,
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Obx(
-                            () => Text(
-                              controller
-                                  .shopAddress
-                                  .value, // ✅ ดึงที่อยู่ร้านค้า
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              controller.shopAddress.value,
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.blueGrey.shade500,
+                                fontSize: 12,
+                                color: Colors.blueGrey.shade400,
                               ),
-                              maxLines: 2, // ให้ที่อยู่ขึ้น 2 บรรทัดได้
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-
-          // 🔥 Stat Card แสดงยอดขายวันนี้ผ่าน API
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 16),
           Obx(() {
             if (controller.isSalesLoading.value) {
               return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: CircularProgressIndicator(),
+                child: SizedBox(
+                  height: 28,
+                  width: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               );
             }
-            return _buildStatCard(
-              icon: Icons.auto_graph_rounded,
-              title: 'ยอดขายวันนี้', // ✨ เปลี่ยนเป็นภาษาไทย
-              value: '฿${controller.todaySales.value}', // ✅ ยอดขายจาก API
-              iconColor: const Color(0xFF10B981),
+            return Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.auto_graph_rounded,
+                    color: Color(0xFF10B981),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ยอดขายวันนี้',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    Text(
+                      '฿${controller.todaySales.value}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             );
           }),
         ],
@@ -384,186 +438,141 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color iconColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: iconColor.withOpacity(0.1), width: 1.5),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // ✨ 3. ใช้ Expanded หุ้มฝั่ง Icon+ข้อความ เพื่อให้ยืดหยุ่น
-          Expanded(
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 18, color: iconColor),
-                ),
-                const SizedBox(width: 14),
-                Flexible(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.blueGrey.shade800,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
+  // ══════════════════════════════════════════════════════
+  // หัวข้อหมวดเมนู
+  // ══════════════════════════════════════════════════════
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: Colors.blueGrey.shade400),
+        const SizedBox(width: 8),
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Colors.blueGrey.shade400,
+            letterSpacing: 0.8,
           ),
-          const SizedBox(width: 8),
-          // ✨ 4. ใช้ FittedBox ป้องกันตัวเลขยอดขายหลุดกรอบ
-          FittedBox(
-            alignment: Alignment.centerRight,
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildActionMenu(ProfileController controller) {
+  // ══════════════════════════════════════════════════════
+  // กล่องรวมเมนูในหมวดเดียวกัน
+  // ══════════════════════════════════════════════════════
+  Widget _buildMenuGroup(List<_MenuItem> items) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade100), // ใส่เส้นขอบบางๆ
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          _buildMenuTile(
-            icon: Icons.store_rounded,
-            title: 'จัดการร้านค้า',
-            subtitle: 'แก้ไขข้อมูลร้านค้า',
-            iconColor: const Color(0xFF6366F1),
-            onTap: controller.goToManageStores,
-          ),
-          _buildDivider(),
-          _buildMenuTile(
-            icon: Icons.policy_rounded,
-            title: 'นโยบายความเป็นส่วนตัว',
-            subtitle: 'ข้อมูลที่เราเก็บและวิธีการใช้งาน',
-            iconColor: const Color(0xFF8B5CF6),
-            onTap: controller.goToPrivacyPolicy,
-          ),
-          _buildDivider(),
-          _buildMenuTile(
-            icon: Icons.description_rounded,
-            title: 'เงื่อนไขการใช้งาน',
-            subtitle: 'ข้อตกลงและเงื่อนไขการใช้แอพ',
-            iconColor: const Color(0xFF0EA5E9),
-            onTap: controller.goToTerms,
-          ),
-          _buildDivider(),
-          _buildMenuTile(
-            icon: Icons.contact_support_rounded,
-            title: 'ติดต่อเรา',
-            subtitle: 'LINE, Facebook, อีเมล และโทรศัพท์',
-            iconColor: const Color(0xFF059669),
-            onTap: controller.goToContact,
-          ),
-          _buildDivider(),
-          _buildMenuTile(
-            icon: Icons.headset_mic_rounded,
-            title: 'ช่วยเหลือและสนับสนุน',
-            subtitle: 'ศูนย์ช่วยเหลือและแจ้งปัญหาการใช้งาน',
-            iconColor: const Color(0xFF10B981),
-            onTap: controller.goToSupport,
-          ),
-          _buildDivider(),
-          // Logout Menu (เน้นสีแดงเฉพาะจุด)
-          _buildMenuTile(
-            icon: Icons.logout_rounded,
-            title: 'ออกจากระบบ', // ✨ เปลี่ยนเป็นภาษาไทย
-            subtitle: 'ออกจากบัญชีผู้ใช้ปัจจุบัน',
-            iconColor: const Color(0xFFE11D48),
-            onTap: controller.logout,
-            isDestructive: true,
-          ),
+          for (int i = 0; i < items.length; i++) ...[
+            _buildMenuTile(items[i]),
+            if (i < items.length - 1)
+              Divider(
+                height: 1,
+                color: Colors.grey.shade50,
+                indent: 64,
+                endIndent: 16,
+              ),
+          ],
         ],
       ),
     );
   }
 
-  // ตัวคั่นที่ดู Clean
-  Widget _buildDivider() =>
-      Divider(height: 1, color: Colors.grey.shade50, indent: 70, endIndent: 20);
-
-  Widget _buildMenuTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color iconColor,
-    required VoidCallback onTap,
-    bool isDestructive = false,
-  }) {
+  Widget _buildMenuTile(_MenuItem item) {
     return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      onTap: item.onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(14),
+          color: item.iconColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: iconColor, size: 24),
+        child: Icon(item.icon, color: item.iconColor, size: 22),
       ),
       title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
+        item.title,
+        style: const TextStyle(
+          fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: isDestructive
-              ? const Color(0xFFE11D48)
-              : const Color(0xFF1E293B),
+          color: Color(0xFF1E293B),
         ),
       ),
       subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
+        padding: const EdgeInsets.only(top: 3),
         child: Text(
-          subtitle,
-          style: TextStyle(fontSize: 13, color: Colors.blueGrey.shade400),
+          item.subtitle,
+          style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade400),
         ),
       ),
       trailing: Icon(
         Icons.chevron_right_rounded,
         color: Colors.grey.shade300,
-        size: 24,
+        size: 22,
       ),
     );
   }
+
+  // ══════════════════════════════════════════════════════
+  // ปุ่มออกจากระบบ — แยกออกมาให้เห็นชัด
+  // ══════════════════════════════════════════════════════
+  Widget _buildLogoutButton(ProfileController controller) {
+    return InkWell(
+      onTap: controller.logout,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF1F3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFCDD5), width: 1.5),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.logout_rounded, color: Color(0xFFE11D48), size: 20),
+            SizedBox(width: 10),
+            Text(
+              'ออกจากระบบ',
+              style: TextStyle(
+                color: Color(0xFFE11D48),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuItem {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _MenuItem({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 }
