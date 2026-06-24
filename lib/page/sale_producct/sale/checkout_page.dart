@@ -1,5 +1,7 @@
 // ไฟล์: lib/sale_producct/checkout_page.dart
 import 'package:eazy_store/model/request/baskets_model.dart';
+import 'package:eazy_store/page/sale_producct/sale/park_order_controller.dart';
+import 'package:eazy_store/page/sale_producct/sale/parked_orders_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../menu_bar/bottom_navbar.dart';
@@ -154,18 +156,46 @@ class CheckoutPage extends StatelessWidget {
   Widget _buildCartList(BuildContext context, CheckoutController controller) {
     return Column(
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-          child: Align(
-            alignment: Alignment.center,
-            child: Text(
-              "รายการในตะกร้า",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "รายการในตะกร้า",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
-            ),
+              Obx(() {
+                final parkCtrl = Get.find<ParkOrderController>();
+                final count = parkCtrl.parkedOrders.length;
+                if (count == 0) return const SizedBox.shrink();
+                return GestureDetector(
+                  onTap: () => _showParkedOrdersSheet(context, controller),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.pause_circle_outline, color: Colors.white, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'พัก $count รายการ',
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
         const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
@@ -372,6 +402,31 @@ class CheckoutPage extends StatelessWidget {
               ),
             ),
             const Divider(height: 30, color: Color(0xFFEEEEEE)),
+            Obx(() {
+              if (controller.cartItems.isEmpty) return const SizedBox.shrink();
+              return Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: controller.parkOrder,
+                      icon: const Icon(Icons.pause_circle_outline, color: Colors.white, size: 20),
+                      label: const Text(
+                        'พักออเดอร์',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF59E0B),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              );
+            }),
             Row(
               children: [
                 Expanded(
@@ -418,6 +473,15 @@ class CheckoutPage extends StatelessWidget {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
+    );
+  }
+
+  void _showParkedOrdersSheet(BuildContext context, CheckoutController controller) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ParkedOrdersSheet(checkoutController: controller),
     );
   }
 }
