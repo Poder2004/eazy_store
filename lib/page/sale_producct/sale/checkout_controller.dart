@@ -322,11 +322,11 @@ class CheckoutController extends GetxController {
       );
     } else {
       Get.snackbar(
-        "สินค้าหมด",
-        "คงเหลือ ${product.stock} ชิ้น",
+        "ถึงจำนวนสูงสุดแล้ว",
+        "สินค้านี้มีในสต็อก ${product.stock} ชิ้น ไม่สามารถเพิ่มได้อีก",
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
-        duration: const Duration(seconds: 1),
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -739,7 +739,7 @@ class CheckoutController extends GetxController {
       final result = await ApiSale.createSale(saleRequest);
       Get.back();
 
-      if (result != null) {
+      if (result != null && result.containsKey('sale_id')) {
         Get.back(); // ปิดหน้าชำระเงิน
         _showSuccessDialog("ชำระเงินสำเร็จ", "บันทึกข้อมูลการขายเรียบร้อยแล้ว");
 
@@ -748,10 +748,8 @@ class CheckoutController extends GetxController {
         receivedAmountController.clear();
         await _loadAllProducts();
       } else {
-        _showErrorDialog(
-          "เกิดข้อผิดพลาด",
-          "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้",
-        );
+        final errorMsg = result?['error'] ?? "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้";
+        _showErrorDialog("เกิดข้อผิดพลาด", errorMsg);
       }
     } catch (e) {
       Get.back();

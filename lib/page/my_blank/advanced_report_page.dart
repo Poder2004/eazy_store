@@ -558,9 +558,10 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
         .entries
         .map((e) => FlSpot(e.key.toDouble(), e.value.totalSales))
         .toList();
-    final maxY =
-        (displayData.map((e) => e.totalSales).reduce((a, b) => a > b ? a : b)) *
-        1.45;
+    final maxY = displayData.isEmpty
+        ? 1000.0
+        : (displayData.map((e) => e.totalSales).reduce((a, b) => a > b ? a : b)) *
+          1.45;
 
     // Monthly: 10px/day (dense, ~310px for 31 days)
     // Yearly: 40px/point to prevent cramped labels

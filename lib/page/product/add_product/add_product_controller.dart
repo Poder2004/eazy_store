@@ -127,8 +127,8 @@ class AddProductController extends GetxController {
             ? null
             : idController.text.trim(),
         imgProduct: uploadedImageUrl,
-        sellPrice: double.parse(salePriceController.text),
-        costPrice: double.parse(costController.text),
+        sellPrice: double.tryParse(salePriceController.text) ?? 0.0,
+        costPrice: double.tryParse(costController.text) ?? 0.0,
         stock: int.parse(
           stockController.text.isEmpty ? "0" : stockController.text,
         ),

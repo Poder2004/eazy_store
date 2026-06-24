@@ -290,6 +290,12 @@ class DebtSaleController extends GetxController {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
+
+      if (currentShopId == 0) {
+        showErrorDialog("ไม่พบข้อมูลร้านค้า กรุณาล็อกอินใหม่");
+        return;
+      }
+
       String userName =
           prefs.getString('name') ??
           prefs.getString('username') ??

@@ -96,6 +96,9 @@ class CheckoutPage extends StatelessWidget {
   }
 
   Widget _buildSearchResults(CheckoutController controller) {
+    if (controller.isSearching.value && controller.searchResults.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (controller.searchResults.isEmpty) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,

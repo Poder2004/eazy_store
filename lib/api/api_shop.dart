@@ -76,13 +76,10 @@ class ApiShop {
   // ฟังก์ชันลบร้านค้า
   Future<bool> deleteShop(int shopId) async {
     try {
-      // 1. ดึง Token จากเครื่อง (ต้องรอ await)
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString(
-        'token',
-      ); // **ต้องใช้ key เดียวกับตอน Login**
+      String? token = prefs.getString('token');
 
-      // ถ้าไม่มี Token ให้ return false เลย (เพราะยังไงก็ยิงไม่ผ่าน)
       if (token == null) {
         print("Error: ไม่พบ Token ในเครื่อง");
         return false;
@@ -117,10 +114,9 @@ class ApiShop {
     final url = Uri.parse('${AppConfig.baseUrl}/api/shops/$shopId');
 
     try {
-      // --- เพิ่มส่วนนี้เข้ามาเหมือน createShop ---
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
-      // -------------------------------------
 
       final response = await http.put(
         url,

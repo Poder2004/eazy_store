@@ -108,7 +108,6 @@ class CheckPriceScreen extends StatelessWidget {
 
   Widget _buildSearchBar(PriceController controller, Color primaryColor) {
     return Container(
-      height: 50,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15.0),
@@ -131,7 +130,10 @@ class CheckPriceScreen extends StatelessWidget {
             onPressed: controller.openScanner,
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12.0),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14.0,
+            horizontal: 4.0,
+          ),
         ),
       ),
     );
