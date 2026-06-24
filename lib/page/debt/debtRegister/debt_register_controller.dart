@@ -85,8 +85,13 @@ class DebtRegisterController extends GetxController {
     selectedSubdistrict.value = null;
 
     final provinceData = fullAddressData.value![selectedProvince.value!];
-    final List<dynamic> rawDistricts = provinceData?['districts'];
-    final selectedDistrictData = rawDistricts.firstWhere((d) => d['name_th'] == newValue);
+    final List<dynamic>? rawDistricts = provinceData?['districts'] as List<dynamic>?;
+    if (rawDistricts == null) return;
+    final selectedDistrictData = rawDistricts.firstWhere(
+      (d) => d['name_th'] == newValue,
+      orElse: () => null,
+    );
+    if (selectedDistrictData == null) return;
     final List<dynamic>? rawSubs = selectedDistrictData['sub_districts'] as List<dynamic>?;
     subdistricts.value = rawSubs?.map((s) => s['name_th'] as String).toList() ?? [];
   }
@@ -122,6 +127,13 @@ class DebtRegisterController extends GetxController {
   Future<void> submitDebtorData() async {
     if (nameController.text.isEmpty || phoneController.text.isEmpty) {
       Get.snackbar("แจ้งเตือน", "กรุณากรอกชื่อและเบอร์โทรศัพท์",
+          backgroundColor: Colors.orange, colorText: Colors.white);
+      return;
+    }
+
+    final phone = phoneController.text.trim();
+    if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
+      Get.snackbar("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์โทรเป็นตัวเลข 10 หลัก",
           backgroundColor: Colors.orange, colorText: Colors.white);
       return;
     }

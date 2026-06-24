@@ -115,6 +115,10 @@ class AddProductController extends GetxController {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
+      if (shopId == 0) {
+        throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
+      }
+
       ProductRequest newProduct = ProductRequest(
         shopId: shopId,
         categoryId: selectedCategoryObject.value!.categoryId,

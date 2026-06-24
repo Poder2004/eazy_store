@@ -59,9 +59,13 @@ class ApiSale {
         if (AuthGuard.isUnauthorized(response.statusCode)) {
           await AuthGuard.handleUnauthorized();
         }
-        final errorData = jsonDecode(response.body);
-        print("Credit Sale Error: ${errorData['error']}");
-        return {"error": errorData['error'] ?? "บันทึกไม่สำเร็จ"};
+        try {
+          final errorData = jsonDecode(response.body);
+          print("Credit Sale Error: ${errorData['error']}");
+          return {"error": errorData['error'] ?? "บันทึกไม่สำเร็จ"};
+        } catch (_) {
+          return {"error": "เซิร์ฟเวอร์ตอบกลับผิดพลาด (${response.statusCode})"};
+        }
       }
     } catch (e) {
       print("Credit Sale Exception: $e");

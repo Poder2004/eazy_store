@@ -1,69 +1,81 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../model/request/pay_debt_request.dart'; // Import Model ของคุณ
+import '../model/request/pay_debt_request.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 
 class ApiPayment {
 
   static Future<Map<String, dynamic>> payDebt(PayDebtRequest request) async {
     try {
-      // 1. ดึง Token จากเครื่อง
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
-      // 2. ยิง API ไปที่ /api/paymentDebt
       final response = await http.post(
         Uri.parse("${AppConfig.baseUrl}/api/payments"),
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer $token", // แนบ Token ไปด้วย
+          "Authorization": "Bearer $token",
         },
-        body: jsonEncode(request.toJson()), // แปลง Model เป็น JSON
+        body: jsonEncode(request.toJson()),
       );
 
-      // 3. แปลงข้อมูลตอบกลับ
-      final responseData = jsonDecode(response.body);
+      Map<String, dynamic> responseData;
+      try {
+        responseData = jsonDecode(response.body);
+      } catch (_) {
+        return {"error": "เซิร์ฟเวอร์ตอบกลับผิดพลาด กรุณาลองใหม่"};
+      }
 
       if (response.statusCode == 200) {
-        // ✅ สำเร็จ: ส่งข้อมูลกลับไป (มี message, new_debt, payment_id)
-        return responseData; 
+        return responseData;
       } else {
-        // ❌ ไม่สำเร็จ: ส่ง error กลับไป
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Pay Debt Error: ${responseData['error']}");
         return {"error": responseData['error'] ?? "เกิดข้อผิดพลาดในการชำระเงิน"};
       }
     } catch (e) {
-      // ❌ Error การเชื่อมต่อ
       print("Pay Debt Exception: $e");
       return {"error": "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้"};
     }
   }
 
   static Future<List<dynamic>?> getPaymentHistory(int debtorId) async {
-  final Uri url = Uri.parse('${AppConfig.baseUrl}/api/payments/$debtorId');
+    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/payments/$debtorId');
 
-  try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
 
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body); // ส่ง List กลับไป
-    } else {
-      print("API Error (Payments): ${response.statusCode}");
+      if (response.statusCode == 200) {
+        try {
+          return jsonDecode(response.body);
+        } catch (_) {
+          return null;
+        }
+      } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
+        print("API Error (Payments): ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      print("Exception in getPaymentHistory: $e");
       return null;
     }
-  } catch (e) {
-    print("Exception in getPaymentHistory: $e");
-    return null;
   }
-}
 }

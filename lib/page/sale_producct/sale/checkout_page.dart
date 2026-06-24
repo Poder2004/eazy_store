@@ -768,10 +768,19 @@ class _PaymentBottomSheet extends StatelessWidget {
                                       size: 80,
                                       color: Colors.grey,
                                     ),
-                                    SizedBox(height: 10),
+                                    SizedBox(height: 8),
                                     Text(
                                       "ไม่มี QR Code",
                                       style: TextStyle(color: Colors.grey),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      "เพิ่มได้ที่ แก้ไขข้อมูลร้านค้า",
+                                      style: TextStyle(
+                                        color: Colors.blueAccent,
+                                        fontSize: 12,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ],
                                 ),
@@ -827,11 +836,14 @@ class _PaymentBottomSheet extends StatelessWidget {
           top: false,
           child: SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () =>
-                  controller.confirmPayment(controller.processPayment),
+            child: Obx(() => ElevatedButton(
+              onPressed: controller.isProcessingPayment.value
+                  ? null
+                  : () => controller.confirmPayment(controller.processPayment),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black87,
+                backgroundColor: controller.isProcessingPayment.value
+                    ? Colors.grey
+                    : Colors.black87,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -839,18 +851,27 @@ class _PaymentBottomSheet extends StatelessWidget {
                 elevation: 5,
                 shadowColor: Colors.black45,
               ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  "ยืนยันการทำรายการ",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+              child: controller.isProcessingPayment.value
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        "ยืนยันการทำรายการ",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+            )),
           ),
         ),
         const SizedBox(height: 20),

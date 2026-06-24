@@ -216,7 +216,13 @@ class AddStockController extends GetxController {
 
       // --- เพิ่มสต็อก (ถ้ามีจำนวน) ---
       if (hasStock) {
-        final amount = int.parse(addAmountController.text);
+        final amount = int.tryParse(addAmountController.text);
+        if (amount == null || amount <= 0) {
+          Get.snackbar("แจ้งเตือน", "กรุณากรอกจำนวนสต็อกเป็นตัวเลขที่มากกว่า 0",
+              backgroundColor: Colors.orange, colorText: Colors.white);
+          isSavingPrice.value = false;
+          return;
+        }
         stockOk = await ApiProduct.updateStock(
           foundProduct.value!.productId!,
           amount,

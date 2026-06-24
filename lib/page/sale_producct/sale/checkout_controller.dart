@@ -25,6 +25,7 @@ class CheckoutController extends GetxController {
 
   // 💰 การชำระเงิน
   var isDebtMode = false.obs;
+  var isProcessingPayment = false.obs;
   var paymentMethod = "จ่ายเงินสด".obs;
   final receivedAmountController = TextEditingController();
   final noteController = TextEditingController();
@@ -279,6 +280,7 @@ class CheckoutController extends GetxController {
         }
       } catch (e) {
         Get.back();
+        _showWarningDialog("เกิดข้อผิดพลาด", "ไม่สามารถค้นหาสินค้าได้ กรุณาลองใหม่");
       }
     }
   }
@@ -397,8 +399,11 @@ class CheckoutController extends GetxController {
   Future<void> resumeOrder(String parkId) async {
     if (cartItems.isNotEmpty) {
       _parkCtrl.parkCurrentOrder(cartItems.toList());
-      clearAll();
     }
+    clearAll();
+    noteController.clear();
+    receivedAmountController.clear();
+    changeAmount.value = 0.0;
     final parked = _parkCtrl.retrieveOrder(parkId);
     if (parked == null) return;
 
@@ -677,6 +682,9 @@ class CheckoutController extends GetxController {
 
   // ✅ ฟังก์ชันยิง API บันทึกการขาย
   Future<void> processPayment() async {
+    if (isProcessingPayment.value) return;
+    isProcessingPayment.value = true;
+
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
       barrierDismissible: false,
@@ -685,6 +693,13 @@ class CheckoutController extends GetxController {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId == 0) {
+        Get.back();
+        _showErrorDialog("ผิดพลาด", "ไม่พบข้อมูลร้านค้า กรุณาล็อกอินใหม่");
+        return;
+      }
+
       double received = double.tryParse(receivedAmountController.text) ?? 0;
 
       String userName = prefs.getString('username') ?? "พนักงานขาย";
@@ -741,6 +756,8 @@ class CheckoutController extends GetxController {
     } catch (e) {
       Get.back();
       _showErrorDialog("ข้อผิดพลาดระบบ", "พบปัญหา: ${e.toString()}");
+    } finally {
+      isProcessingPayment.value = false;
     }
   }
 

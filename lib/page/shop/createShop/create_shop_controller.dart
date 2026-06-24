@@ -293,7 +293,16 @@ class CreateShopController extends GetxController {
 
   // 3. Logic ยืนยัน PIN
   void confirmCurrentPin() {
-    if (currentPin.value.length != 6) return;
+    if (currentPin.value.length != 6) {
+      Get.snackbar(
+        "รหัส PIN ไม่ครบ",
+        "กรุณากรอก PIN ให้ครบ 6 หลัก",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
 
     if (!isConfirmPinStep.value) {
       // จบรอบแรก
