@@ -434,7 +434,7 @@ class HomePage extends StatelessWidget {
     final HomeController homeController = Get.find<HomeController>();
     return InkWell(
       onTap: () async {
-        var barcode = await Get.to(() => const ScanBarcodePage());
+        var barcode = await Get.to(() => const ScanBarcodePage(showBookButton: true));
         if (barcode != null && barcode is String) {
           CheckoutController checkoutCtrl =
               Get.isRegistered<CheckoutController>()

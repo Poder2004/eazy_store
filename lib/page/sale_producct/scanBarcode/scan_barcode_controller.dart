@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
-import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 
 // ----------------------------------------------------------------------
 // 1. Controller: จัดการ Logic การสแกน
@@ -26,7 +25,7 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
       detectionSpeed: DetectionSpeed.noDuplicates,
       facing: CameraFacing.back,
       torchEnabled: false,
-      returnImage: false, 
+      returnImage: false,
     );
   }
 
@@ -75,18 +74,11 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
       if (barcode.rawValue != null) {
         isScanned.value = true;
         print('สแกนเจอแล้ว: ${barcode.rawValue}');
-        
+
         Get.back(result: barcode.rawValue);
         break;
       }
     }
-  }
-
-  void onCapturePressed() {
-    print("กดปุ่มถ่ายภาพ (Manual Capture)");
-    // ✅ หยุดกล้องก่อนไปหน้าอื่น
-    cameraController.stop();
-    Get.to(() => const CheckoutPage());
   }
 
   void goToListPage() {
