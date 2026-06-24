@@ -195,15 +195,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                             height: 1.1,
                           ),
                         ),
-                        const Text(
-                          'ADVANCED REPORT',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: _kBlue,
-                            letterSpacing: 1.1,
-                          ),
-                        ),
+                        
                       ],
                     ),
                   ),

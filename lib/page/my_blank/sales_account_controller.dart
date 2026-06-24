@@ -30,6 +30,10 @@ class SalesAccountController extends GetxController {
   var transactionsList = <TransactionDetailModel>[].obs;
   var productSalesList = <ProductSalesDetailModel>[].obs;
 
+  // 📋 รายการสินค้าในบิล (รอ backend)
+  var isSaleItemsLoading = false.obs;
+  var currentSaleDetail = Rxn<SaleDetailModel>();
+
   // ฟังก์ชันดึงข้อมูลรายการบิล
   Future<void> fetchTransactionsDetail() async {
     isDetailLoading(true);
@@ -47,6 +51,22 @@ class SalesAccountController extends GetxController {
       print(e);
     } finally {
       isDetailLoading(false);
+    }
+  }
+
+  // ฟังก์ชันดึงรายการสินค้าในบิล (รอ backend)
+  Future<void> fetchSaleItems(int saleId) async {
+    isSaleItemsLoading(true);
+    currentSaleDetail.value = null;
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+      final data = await ApiDashboad.getSaleItems(shopId, saleId);
+      currentSaleDetail.value = data;
+    } catch (e) {
+      print(e);
+    } finally {
+      isSaleItemsLoading(false);
     }
   }
 

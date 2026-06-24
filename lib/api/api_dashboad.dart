@@ -102,6 +102,36 @@ class ApiDashboad {
     }
   }
 
+  // ✅ ฟังก์ชันดึงรายการสินค้าในบิล (รอ backend)
+  static Future<SaleDetailModel?> getSaleItems(
+    int shopId,
+    int saleId,
+  ) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final Uri url = Uri.parse(
+        "${AppConfig.baseUrl}/api/dashboard/sale-items?shop_id=$shopId&sale_id=$saleId",
+      );
+
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200) {
+        return SaleDetailModel.fromJson(jsonDecode(response.body));
+      } else {
+        print("Sale Items API Error: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Sale Items API Exception: $e");
+      return null;
+    }
+  }
+
   // ✅ ฟังก์ชันดึงรายงานขั้นสูง
   static Future<AdvancedReportResponse?> getAdvancedReport(
     int shopId,
