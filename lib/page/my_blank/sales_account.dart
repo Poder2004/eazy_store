@@ -1,802 +1,977 @@
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/page/my_blank/advanced_report_page.dart';
-
-// ✅ สำคัญ: อย่าลืม Import ไฟล์ Controller ให้ตรงกับ Path ของคุณ
 import 'sales_account_controller.dart';
 
-// --- THEME & CONSTANTS ---
-const Color _kBackgroundColor = Color(0xFFF8FAFC);
-const Color _kCardColor = Colors.white;
-const Color _kPrimaryBlue = Color(0xFF2563EB);
-const Color _kSuccessGreen = Color(0xFF16A34A);
-const Color _kDangerRed = Color(0xFFDC2626);
-const Color _kTextDark = Color(0xFF1E293B);
-const Color _kTextMuted = Color(0xFF64748B);
+// ─── Design Tokens (aligned with AdvancedReportPage) ──────────────────────────
+const _kBg = Color(0xFFEDEEF2);
+const _kSurface = Colors.white;
+const _kSurface2 = Color(0xFFF5F6FA);
+const _kBorder = Color(0xFFE8EAF0);
+const _kBlue = Color(0xFF4A7EFF);
+const _kBlueBg = Color(0xFFEBF3FF);
+const _kBlue2 = Color(0xFF185FA5);
+const _kGreenDark = Color(0xFF00A86B);
+const _kGreenBg = Color(0xFFE8FDF5);
+const _kAmber = Color(0xFFFFB340);
+const _kRed = Color(0xFFD93F4C);
+const _kPurple = Color(0xFF8B5CF6);
+const _kPurpleBg = Color(0xFFF3F0FF);
+const _kInk = Color(0xFF0D1730);
+const _kInk2 = Color(0xFF6B7A99);
+const _kInk3 = Color(0xFF9AA4BF);
+const _kInk4 = Color(0xFFC0C8DC);
+const _kMaxTextScale = 1.25;
 
-// ----------------------------------------------------------------------
-// View (UI)
-// ----------------------------------------------------------------------
 class SalesAccountScreen extends StatelessWidget {
   const SalesAccountScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final SalesAccountController controller = Get.put(SalesAccountController());
+    final c = Get.put(SalesAccountController());
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.fetchSummaryData();
+      c.fetchSummaryData();
     });
 
-    return Scaffold(
-      backgroundColor: _kBackgroundColor,
-      // ✨ คุมฟอนต์สูงสุด 1.2 เท่า เพื่อรักษาความสวยงามของกล่อง Layout
-      body: MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: MediaQuery.textScalerOf(
-            context,
-          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: controller.fetchSummaryData,
-            color: _kPrimaryBlue,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'ภาพรวมบัญชี',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: _kTextDark,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            const Text(
-                              'ตรวจสอบยอดขายแบบเรียลไทม์',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: _kTextMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: () => Get.to(() => AdvancedReportPage()),
-                        child: const Text(
-                          'ดูรายงานทั้งหมด',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: _kPrimaryBlue,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 25),
-
-                  // 2. Segmented Control
-                  _buildModernSegmentedControl(controller),
-                  const SizedBox(height: 15),
-
-                  // 3. Date Navigator (< วันที่ >)
-                  _buildDateNavigator(controller),
-                  const SizedBox(height: 20),
-
-                  // 4. แสดงข้อมูลการ์ด
-                  Obx(() {
-                    if (controller.isLoading.value) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(40.0),
-                          child: CircularProgressIndicator(
-                            color: _kPrimaryBlue,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return Column(
+    final mq = MediaQuery.of(context);
+    return MediaQuery(
+      data: mq.copyWith(
+        textScaler: mq.textScaler
+            .clamp(minScaleFactor: 1.0, maxScaleFactor: _kMaxTextScale),
+      ),
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark,
+        child: Scaffold(
+          backgroundColor: _kBg,
+          body: Column(
+            children: [
+              _buildHeader(c),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: c.fetchSummaryData,
+                  color: _kBlue,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+                    child: Column(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatCard(
-                                title: 'ยอดขายรวม',
-                                amount:
-                                    '฿${controller.formatNumber(controller.totalSales.value)}',
-                                trend: controller.salesTrend.value,
-                                trendLabel: controller.getTrendTextLabel(),
-                                icon: Icons.attach_money,
-                                iconColor: _kPrimaryBlue,
-                                iconBgColor: Colors.blue.shade50,
-                                onTap: controller.selectedView.value == 'ปีนี้'
-                                    ? null
-                                    : () => _showProductSalesDetail(context, controller, 'รายละเอียด: ยอดขายรวม', false),
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: _buildStatCard(
-                                title: 'ต้นทุนรวม',
-                                amount:
-                                    '฿${controller.formatNumber(controller.totalCost.value)}',
-                                trend: controller.costTrend.value,
-                                trendLabel: controller.getTrendTextLabel(),
-                                icon: Icons.shopping_bag_outlined,
-                                iconColor: Colors.grey.shade700,
-                                iconBgColor: Colors.grey.shade200,
-                                isCost: true,
-                                onTap: controller.selectedView.value == 'ปีนี้'
-                                    ? null
-                                    : () => _showProductSalesDetail(context, controller, 'รายละเอียด: ต้นทุนรวม', true),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 15),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatCard(
-                                title: 'กำไรสุทธิ',
-                                amount:
-                                    '฿${controller.formatNumber(controller.netProfit.value)}',
-                                trend: controller.profitTrend.value,
-                                trendLabel: controller.getTrendTextLabel(),
-                                icon: Icons.account_balance_wallet,
-                                iconColor: _kSuccessGreen,
-                                iconBgColor: Colors.green.shade50,
-                                onTap: controller.selectedView.value == 'ปีนี้'
-                                    ? null
-                                    : () => _showProductSalesDetail(context, controller, 'รายละเอียด: กำไรสุทธิ', false),
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: _buildStatCard(
-                                title: 'จำนวนรายการ',
-
-                                amount: controller.formatNumber(
-                                  controller.totalTransactions.value.toDouble(),
+                        _buildPeriodNav(context, c),
+                        const SizedBox(height: 12),
+                        Obx(() {
+                          if (c.isLoading.value) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 60),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: _kBlue,
+                                  strokeWidth: 2.5,
                                 ),
-                                trend: controller.transTrend.value,
-                                trendLabel: controller.getTrendTextLabel(),
-                                icon: Icons.receipt_long,
-                                iconColor: Colors.purple.shade600,
-                                iconBgColor: Colors.purple.shade50,
-                                onTap: controller.selectedView.value == 'ปีนี้'
-                                    ? null
-                                    : () => _showTransactionsDetail(context, controller),
                               ),
-                            ),
-                          ],
-                        ),
+                            );
+                          }
+                          return _buildKpiGrid(context, c);
+                        }),
                       ],
-                    );
-                  }),
-                  const SizedBox(height: 25),
-                ],
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
+          ),
+          bottomNavigationBar: BottomNavBar(
+            currentIndex: 1,
+            onTap: (index) => c.changeTab(index),
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 1, // ล็อคให้เป็นสีแดงที่หน้าหลักเสมอเมื่ออยู่หน้านี้
-        onTap: (index) {
-          controller.changeTab(index);
-        },
+    );
+  }
+
+  // ─── Header ─────────────────────────────────────────────────────────────────
+  Widget _buildHeader(SalesAccountController c) {
+    return Container(
+      color: _kSurface,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'ภาพรวมบัญชี',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: _kInk,
+                            letterSpacing: -.5,
+                            height: 1.1,
+                          ),
+                        ),
+                        Text(
+                          'SALES OVERVIEW',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: _kBlue,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Get.to(() => const AdvancedReportPage()),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [_kBlue, _kBlue2],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bar_chart_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'รายงานเชิงลึก',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Obx(() => _buildToggle(c)),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildModernSegmentedControl(SalesAccountController controller) {
-    final views = ['วันนี้', 'เดือนนี้', 'ปีนี้'];
-    return Obx(
-      () => Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Row(
-          children: views.map((view) {
-            final isSelected = controller.selectedView.value == view;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => controller.selectedView.value = view,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isSelected ? _kCardColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : [],
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    view,
-                    style: TextStyle(
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w500,
-                      color: isSelected ? _kTextDark : _kTextMuted,
-                    ),
+  Widget _buildToggle(SalesAccountController c) {
+    const views = ['วันนี้', 'เดือนนี้', 'ปีนี้'];
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F2F8),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Row(
+        children: views.map((v) {
+          final on = c.selectedView.value == v;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => c.selectedView.value = v,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: on ? _kSurface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: on
+                      ? [
+                          BoxShadow(
+                            color: _kBlue.withValues(alpha: .12),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Text(
+                  v,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: on ? _kBlue : _kInk3,
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildDateNavigator(SalesAccountController controller) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left, color: _kTextMuted),
-          onPressed: () => controller.navigatePeriod(-1),
-        ),
-        InkWell(
-          onTap: () => controller.selectDate(Get.context!),
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                Obx(
-                  () => Text(
-                    controller.getPeriodLabel(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _kTextDark,
+  // ─── Period Nav ──────────────────────────────────────────────────────────────
+  Widget _buildPeriodNav(BuildContext context, SalesAccountController c) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _kBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(5),
+      child: Row(
+        children: [
+          _navBtn(Icons.chevron_left_rounded, () => c.navigatePeriod(-1)),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => c.selectDate(context),
+              child: Obx(
+                () => Column(
+                  children: [
+                    Text(
+                      c.getPeriodLabel(),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: _kInk,
+                        letterSpacing: -.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                    const SizedBox(height: 1),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.touch_app_rounded,
+                          size: 10,
+                          color: _kBlue.withValues(alpha: .6),
+                        ),
+                        const SizedBox(width: 3),
+                        const Text(
+                          'แตะเพื่อเลือกช่วงเวลา',
+                          style: TextStyle(fontSize: 12, color: _kInk3),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 5),
-                const Icon(
-                  Icons.calendar_month,
-                  size: 18,
-                  color: _kPrimaryBlue,
+              ),
+            ),
+          ),
+          _navBtn(Icons.chevron_right_rounded, () => c.navigatePeriod(1)),
+        ],
+      ),
+    );
+  }
+
+  Widget _navBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: _kSurface2,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Icon(icon, color: _kBlue, size: 22),
+      ),
+    );
+  }
+
+  // ─── KPI 2×2 Grid ────────────────────────────────────────────────────────────
+  Widget _buildKpiGrid(BuildContext context, SalesAccountController c) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'ยอดขายรวม',
+                amount: '฿${c.formatNumber(c.totalSales.value)}',
+                trend: c.salesTrend.value,
+                trendLabel: c.getTrendTextLabel(),
+                icon: Icons.attach_money_rounded,
+                iconBg: _kBlueBg,
+                iconFg: _kBlue,
+                valueFg: _kInk,
+                onTap: c.selectedView.value == 'ปีนี้'
+                    ? null
+                    : () => _showProductSalesDetail(
+                          context,
+                          c,
+                          'รายละเอียด: ยอดขายรวม',
+                          false,
+                        ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _StatCard(
+                title: 'ต้นทุนรวม',
+                amount: '฿${c.formatNumber(c.totalCost.value)}',
+                trend: c.costTrend.value,
+                trendLabel: c.getTrendTextLabel(),
+                icon: Icons.shopping_bag_rounded,
+                iconBg: const Color(0xFFF4F5FA),
+                iconFg: _kInk2,
+                valueFg: _kInk,
+                isCost: true,
+                onTap: c.selectedView.value == 'ปีนี้'
+                    ? null
+                    : () => _showProductSalesDetail(
+                          context,
+                          c,
+                          'รายละเอียด: ต้นทุนรวม',
+                          true,
+                        ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'กำไรสุทธิ',
+                amount: '฿${c.formatNumber(c.netProfit.value)}',
+                trend: c.profitTrend.value,
+                trendLabel: c.getTrendTextLabel(),
+                icon: Icons.account_balance_wallet_rounded,
+                iconBg: _kGreenBg,
+                iconFg: _kGreenDark,
+                valueFg: _kGreenDark,
+                onTap: c.selectedView.value == 'ปีนี้'
+                    ? null
+                    : () => _showProductSalesDetail(
+                          context,
+                          c,
+                          'รายละเอียด: กำไรสุทธิ',
+                          false,
+                        ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _StatCard(
+                title: 'จำนวนรายการ',
+                amount: c.formatNumber(c.totalTransactions.value.toDouble()),
+                trend: c.transTrend.value,
+                trendLabel: c.getTrendTextLabel(),
+                icon: Icons.receipt_long_rounded,
+                iconBg: _kPurpleBg,
+                iconFg: _kPurple,
+                valueFg: _kInk,
+                onTap: c.selectedView.value == 'ปีนี้'
+                    ? null
+                    : () => _showTransactionsDetail(context, c),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── Bottom Sheet: Transactions ──────────────────────────────────────────────
+  void _showTransactionsDetail(
+      BuildContext context, SalesAccountController c) {
+    c.fetchTransactionsDetail();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(
+          textScaler: MediaQuery.of(ctx).textScaler
+              .clamp(maxScaleFactor: _kMaxTextScale),
+        ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (ctx2, scrollCtrl) => Container(
+            decoration: const BoxDecoration(
+              color: _kBg,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                _sheetHeader(
+                  'รายการบิลทั้งหมด',
+                  ctx2,
+                  Icons.receipt_long_rounded,
+                  _kPurple,
+                ),
+                Expanded(
+                  child: Obx(() {
+                    if (c.isDetailLoading.value) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                            color: _kBlue, strokeWidth: 2.5),
+                      );
+                    }
+                    if (c.transactionsList.isEmpty) {
+                      return _emptyState('ไม่มีรายการขายในช่วงเวลานี้');
+                    }
+                    return ListView.builder(
+                      controller: scrollCtrl,
+                      padding:
+                          const EdgeInsets.fromLTRB(14, 8, 14, 24),
+                      itemCount: c.transactionsList.length,
+                      itemBuilder: (_, i) {
+                        final item = c.transactionsList[i];
+                        Color mColor;
+                        IconData mIcon;
+                        if (item.paymentMethod == 'จ่ายเงินสด') {
+                          mColor = _kGreenDark;
+                          mIcon = Icons.payments_rounded;
+                        } else if (item.paymentMethod == 'โอนจ่าย') {
+                          mColor = _kBlue;
+                          mIcon = Icons.account_balance_rounded;
+                        } else {
+                          mColor = _kAmber;
+                          mIcon = Icons.pending_actions_rounded;
+                        }
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(13),
+                          decoration: BoxDecoration(
+                            color: _kSurface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _kBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color:
+                                      mColor.withValues(alpha: .1),
+                                  borderRadius:
+                                      BorderRadius.circular(11),
+                                ),
+                                child: Icon(mIcon,
+                                    color: mColor, size: 19),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'บิล #${item.saleId}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: _kInk,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${item.createdAt} ${item.createdTime ?? ''}',
+                                      style: const TextStyle(
+                                          fontSize: 12, color: _kInk3),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '฿${c.formatNumber(item.netPrice)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      color: _kInk,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          mColor.withValues(alpha: .1),
+                                      borderRadius:
+                                          BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      item.paymentMethod,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: mColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }),
                 ),
               ],
             ),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right, color: _kTextMuted),
-          onPressed: () => controller.navigatePeriod(1),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildStatCard({
-    required String title,
-    required String amount,
-    required double trend,
-    required String trendLabel,
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
-    bool isCost = false,
-    VoidCallback? onTap,
-  }) {
-    bool isPositive = trend >= 0;
-    Color trendColor;
-    if (isCost) {
-      trendColor = isPositive ? _kDangerRed : _kSuccessGreen;
-    } else {
-      trendColor = isPositive ? _kSuccessGreen : _kDangerRed;
-    }
-    if (trend == 0) trendColor = Colors.grey;
+  // ─── Bottom Sheet: Product Sales ─────────────────────────────────────────────
+  void _showProductSalesDetail(
+    BuildContext context,
+    SalesAccountController c,
+    String title,
+    bool isCost,
+  ) {
+    c.fetchProductSalesDetail();
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          decoration: BoxDecoration(
-            color: _kCardColor,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: iconBgColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, color: iconColor, size: 22),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 10.0),
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          color: _kTextMuted,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.visible,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  amount,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: _kTextDark,
-                  ),
+    IconData headerIcon;
+    Color headerColor;
+    if (title.contains('กำไร')) {
+      headerIcon = Icons.account_balance_wallet_rounded;
+      headerColor = _kGreenDark;
+    } else if (title.contains('ต้นทุน')) {
+      headerIcon = Icons.shopping_bag_rounded;
+      headerColor = _kAmber;
+    } else {
+      headerIcon = Icons.inventory_2_rounded;
+      headerColor = _kBlue;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => MediaQuery(
+        data: MediaQuery.of(ctx).copyWith(
+          textScaler: MediaQuery.of(ctx).textScaler
+              .clamp(maxScaleFactor: _kMaxTextScale),
+        ),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (ctx2, scrollCtrl) => Container(
+            decoration: const BoxDecoration(
+              color: _kBg,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                _sheetHeader(title, ctx2, headerIcon, headerColor),
+                Expanded(
+                  child: Obx(() {
+                    if (c.isDetailLoading.value) {
+                      return const Center(
+                        child: CircularProgressIndicator(
+                            color: _kBlue, strokeWidth: 2.5),
+                      );
+                    }
+                    if (c.productSalesList.isEmpty) {
+                      return _emptyState(
+                          'ไม่มีข้อมูลสินค้าในช่วงเวลานี้');
+                    }
+                    return ListView.builder(
+                      controller: scrollCtrl,
+                      padding:
+                          const EdgeInsets.fromLTRB(14, 8, 14, 24),
+                      itemCount: c.productSalesList.length,
+                      itemBuilder: (_, i) {
+                        final item = c.productSalesList[i];
+                        double mainAmt;
+                        Color mainColor;
+                        if (title.contains('ยอดขาย')) {
+                          mainAmt = item.totalSales;
+                          mainColor = _kBlue;
+                        } else if (title.contains('ต้นทุน')) {
+                          mainAmt = item.totalCost;
+                          mainColor = _kAmber;
+                        } else {
+                          mainAmt = item.profit;
+                          mainColor = _kGreenDark;
+                        }
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(13),
+                          decoration: BoxDecoration(
+                            color: _kSurface,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: _kBorder),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(12),
+                                  color: _kSurface2,
+                                  border:
+                                      Border.all(color: _kBorder),
+                                  image: item.imgProduct.isNotEmpty
+                                      ? DecorationImage(
+                                          image: NetworkImage(
+                                              item.imgProduct),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
+                                ),
+                                child: item.imgProduct.isEmpty
+                                    ? const Icon(
+                                        Icons.inventory_2_rounded,
+                                        color: _kInk3,
+                                        size: 22,
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.productName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: _kInk,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.shopping_cart_rounded,
+                                          size: 13,
+                                          color: _kInk4,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'ขายได้ ${item.totalQty} ชิ้น',
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: _kInk3),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: mainColor
+                                          .withValues(alpha: .1),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '฿${c.formatNumber(mainAmt)}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        color: mainColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    title.contains('กำไร')
+                                        ? 'ขาย: ฿${c.formatNumber(item.totalSales)}'
+                                        : 'กำไร: ฿${c.formatNumber(item.profit)}',
+                                    style: const TextStyle(
+                                        fontSize: 11, color: _kInk3),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }),
                 ),
-              ),
-              const SizedBox(height: 10),
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Icon(
-                      trend == 0
-                          ? Icons.remove
-                          : (isPositive ? Icons.trending_up : Icons.trending_down),
-                      color: trendColor,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${isPositive && trend != 0 ? '+' : ''}${trend.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        color: trendColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      trendLabel,
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // ----------------------------------------------------------------------
-  // Popups รายละเอียด (Transactions & Product Sales)
-  // ----------------------------------------------------------------------
-
-  void _showTransactionsDetail(BuildContext context, SalesAccountController controller) {
-    controller.fetchTransactionsDetail();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: MediaQuery.of(context).textScaler.clamp(maxScaleFactor: 1.25),
-          ),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              child: Column(
-                children: [
-                  _buildBottomSheetHeader('รายการบิลทั้งหมด', context, Icons.receipt_long, Colors.purple.shade600),
-                  Expanded(
-                    child: Obx(() {
-                      if (controller.isDetailLoading.value) {
-                        return const Center(child: CircularProgressIndicator(color: _kPrimaryBlue));
-                      }
-                      if (controller.transactionsList.isEmpty) {
-                        return _buildEmptyState('ไม่มีรายการขายในช่วงเวลานี้');
-                      }
-                      return ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        itemCount: controller.transactionsList.length,
-                        itemBuilder: (context, index) {
-                          final item = controller.transactionsList[index];
-                          
-                          // กำหนดสีและไอคอนตามวิธีการชำระเงิน
-                          Color methodColor;
-                          IconData methodIcon;
-                          if (item.paymentMethod == 'จ่ายเงินสด') {
-                            methodColor = _kSuccessGreen;
-                            methodIcon = Icons.payments;
-                          } else if (item.paymentMethod == 'โอนจ่าย') {
-                            methodColor = _kPrimaryBlue;
-                            methodIcon = Icons.account_balance;
-                          } else { // ค้างชำระ หรืออื่นๆ
-                            methodColor = Colors.orange.shade700;
-                            methodIcon = Icons.pending_actions;
-                          }
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 15),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.03),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                )
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: methodColor.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    methodIcon,
-                                    color: methodColor,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'บิล #${item.saleId}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _kTextDark),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${item.createdAt} ${item.createdTime ?? ''}',
-                                        style: const TextStyle(fontSize: 12, color: _kTextMuted),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '฿${controller.formatNumber(item.netPrice)}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _kTextDark),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: methodColor.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        item.paymentMethod,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: methodColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-        );
-      },
-    );
-  }
-
-  void _showProductSalesDetail(BuildContext context, SalesAccountController controller, String title, bool isCost) {
-    controller.fetchProductSalesDetail();
-    IconData headerIcon = Icons.inventory_2;
-    Color headerIconColor = _kPrimaryBlue;
-    if (title.contains('กำไร')) {
-      headerIcon = Icons.account_balance_wallet;
-      headerIconColor = _kSuccessGreen;
-    } else if (title.contains('ต้นทุน')) {
-      headerIcon = Icons.shopping_bag_outlined;
-      headerIconColor = Colors.orange.shade700;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaler: MediaQuery.of(context).textScaler.clamp(maxScaleFactor: 1.25),
-          ),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-              ),
-              child: Column(
-                children: [
-                  _buildBottomSheetHeader(title, context, headerIcon, headerIconColor),
-                  Expanded(
-                    child: Obx(() {
-                      if (controller.isDetailLoading.value) {
-                        return const Center(child: CircularProgressIndicator(color: _kPrimaryBlue));
-                      }
-                      if (controller.productSalesList.isEmpty) {
-                        return _buildEmptyState('ไม่มีข้อมูลสินค้าในช่วงเวลานี้');
-                      }
-                      return ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        itemCount: controller.productSalesList.length,
-                        itemBuilder: (context, index) {
-                          final item = controller.productSalesList[index];
-                          
-                          double mainAmount = item.profit;
-                          Color mainColor = _kSuccessGreen;
-                          if (title.contains('ยอดขาย')) {
-                            mainAmount = item.totalSales;
-                            mainColor = _kPrimaryBlue;
-                          } else if (title.contains('ต้นทุน')) {
-                            mainAmount = item.totalCost;
-                            mainColor = Colors.orange.shade700;
-                          }
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                )
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 55,
-                                  height: 55,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    color: Colors.grey.shade100,
-                                    border: Border.all(color: Colors.black.withOpacity(0.05)),
-                                    image: item.imgProduct.isNotEmpty
-                                        ? DecorationImage(
-                                            image: NetworkImage(item.imgProduct),
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
-                                  ),
-                                  child: item.imgProduct.isEmpty ? const Icon(Icons.inventory_2, color: Colors.grey) : null,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.productName,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: _kTextDark),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.shopping_cart, size: 14, color: Colors.grey.shade400),
-                                          const SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              'ขายได้ ${item.totalQty} ชิ้น',
-                                              style: const TextStyle(fontSize: 13, color: _kTextMuted),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: mainColor.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '฿${controller.formatNumber(mainAmount)}',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: mainColor),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      title.contains('กำไร') ? 'ขาย: ฿${controller.formatNumber(item.totalSales)}' : 'กำไร: ฿${controller.formatNumber(item.profit)}',
-                                      style: const TextStyle(fontSize: 11, color: _kTextMuted),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBottomSheetHeader(String title, BuildContext context, IconData icon, Color iconColor) {
+  // ─── Sheet helpers ───────────────────────────────────────────────────────────
+  Widget _sheetHeader(
+    String title,
+    BuildContext ctx,
+    IconData icon,
+    Color iconColor,
+  ) {
     return Column(
       children: [
-        const SizedBox(height: 12),
-        // Pill handle
+        const SizedBox(height: 10),
         Container(
-          width: 40,
-          height: 5,
+          width: 36,
+          height: 4,
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: _kInk4,
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 15),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, color: iconColor, size: 19),
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: iconColor.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(icon, color: iconColor, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Text(
-                        title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kTextDark),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: _kInk,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              InkWell(
-                onTap: () => Navigator.pop(context),
-                borderRadius: BorderRadius.circular(20),
+              GestureDetector(
+                onTap: () => Navigator.pop(ctx),
                 child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(color: Colors.grey.shade200, shape: BoxShape.circle),
-                  child: const Icon(Icons.close, size: 20, color: _kTextMuted),
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: _kSurface2,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: _kBorder),
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      size: 16, color: _kInk2),
                 ),
               ),
             ],
           ),
         ),
+        Container(height: 1, color: _kBorder),
       ],
     );
   }
 
-  Widget _buildEmptyState(String message) {
+  Widget _emptyState(String message) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_outlined, size: 60, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: const TextStyle(color: _kTextMuted, fontSize: 16),
-          ),
+          const Icon(Icons.inbox_outlined, size: 56, color: _kInk4),
+          const SizedBox(height: 12),
+          Text(message,
+              style: const TextStyle(color: _kInk3, fontSize: 15)),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String amount;
+  final double trend;
+  final String trendLabel;
+  final IconData icon;
+  final Color iconBg, iconFg, valueFg;
+  final bool isCost;
+  final VoidCallback? onTap;
+
+  const _StatCard({
+    required this.title,
+    required this.amount,
+    required this.trend,
+    required this.trendLabel,
+    required this.icon,
+    required this.iconBg,
+    required this.iconFg,
+    required this.valueFg,
+    this.isCost = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPos = trend >= 0;
+    Color trendColor;
+    if (trend == 0) {
+      trendColor = _kInk3;
+    } else if (isCost) {
+      trendColor = isPos ? _kRed : _kGreenDark;
+    } else {
+      trendColor = isPos ? _kGreenDark : _kRed;
+    }
+
+    final trendIcon = trend == 0
+        ? Icons.remove
+        : (isPos
+            ? Icons.trending_up_rounded
+            : Icons.trending_down_rounded);
+    final trendText =
+        '${isPos && trend != 0 ? '+' : ''}${trend.toStringAsFixed(1)}%';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _kBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: iconFg, size: 17),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _kInk2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (onTap != null)
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
+                    color: _kInk4,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: Text(
+                amount,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: valueFg,
+                  letterSpacing: -.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: trendColor.withValues(alpha: .1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(trendIcon, size: 12, color: trendColor),
+                  const SizedBox(width: 3),
+                  Text(
+                    trendText,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: trendColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              trendLabel,
+              style: const TextStyle(fontSize: 10, color: _kInk4),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
