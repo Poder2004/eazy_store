@@ -31,7 +31,7 @@ class LoginController extends GetxController {
     var res = await ApiAuth.login(request);
     isLoading.value = false;
 
-    if (res.token != null) {
+    if (res.effectiveToken != null) {
       // ✅ เคสที่ 1: Login สำเร็จ
       await _saveSession(res);
       _showSnackbar(
@@ -58,7 +58,13 @@ class LoginController extends GetxController {
 
   Future<void> _saveSession(dynamic res) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', res.token!);
+    await prefs.setString('token', res.effectiveToken!);
+    if (res.refreshToken != null) {
+      await prefs.setString('refresh_token', res.refreshToken!);
+    }
+    final int expiresIn = (res.expiresIn as int?) ?? 900;
+    final int expiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
+    await prefs.setInt('token_expires_at', expiresAt);
     await prefs.setInt('userId', res.user?.id ?? 0);
     await prefs.setString('username', res.user?.username ?? "");
   }

@@ -2,11 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 
 class ApiUser {
   // ✅ 1. ฟังก์ชันดึงข้อมูลโปรไฟล์ล่าสุด (GET)
   static Future<Map<String, dynamic>?> getUserProfile() async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -34,11 +36,34 @@ class ApiUser {
     }
   }
 
+  // ✅ 1.5 ตรวจสอบว่า token ยังใช้ได้อยู่ไหม
+  static Future<bool> verifyToken() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+      if (token == null || token.isEmpty) return false;
+
+      final url = Uri.parse('${AppConfig.baseUrl}/api/profile');
+      final response = await http.get(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print("verifyToken error: $e");
+      return false;
+    }
+  }
+
   // ✅ 2. ฟังก์ชันอัปเดตข้อมูลโปรไฟล์ (PUT)
   static Future<Map<String, dynamic>> updateProfile(
     Map<String, dynamic> updateData,
   ) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 

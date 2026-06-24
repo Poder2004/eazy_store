@@ -3,14 +3,16 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../model/response/shop_response.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 
 
 class ApiShop {
   // ไม่ต้องรับ File แยกแล้ว เพราะมันอยู่ใน request object แล้ว
   Future<bool> createShop(ShopResponse request) async {
-    final url = Uri.parse("${AppConfig.baseUrl}/api/shops"); 
+    final url = Uri.parse("${AppConfig.baseUrl}/api/shops");
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -25,14 +27,15 @@ class ApiShop {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // หากสร้างสำเร็จ อาจจะดึงข้อมูลร้านค้าที่สร้างเสร็จแล้วเก็บลงเครื่อง
-        // เช่น เก็บ shopId ลง SharedPreferences
         final responseData = json.decode(response.body);
         if (responseData['shop_id'] != null) {
-           await prefs.setInt('shopId', responseData['shop_id']);
+          await prefs.setInt('shopId', responseData['shop_id']);
         }
         return true;
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Error API: ${response.statusCode} - ${response.body}");
         return false;
       }
@@ -46,6 +49,7 @@ class ApiShop {
     final url = Uri.parse("${AppConfig.baseUrl}/api/shops");
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../api/api_user.dart';
+import '../../utils/auth_guard.dart';
 import '../auth/login.dart';
 import '../homepage/home_page.dart';
 import '../shop/myShop/myshop.dart';
@@ -44,13 +46,29 @@ class _SplashScreenState extends State<SplashScreen>
     int? shopId = prefs.getInt('shopId');
 
     if (token == null || token.isEmpty) {
-      // ไม่มี token → ไปหน้า Login
       Get.off(() => const LoginPage());
-    } else if (shopId == null || shopId == 0) {
-      // มี token แต่ยังไม่ได้เลือกร้านค้า → ไปหน้า MyShop
+      return;
+    }
+
+    // ถ้า token ใกล้หมดหรือหมดแล้ว ลอง refresh ก่อน
+    await AuthGuard.checkAndRefreshIfNeeded();
+
+    // ยืนยันกับ backend ว่า token ยังใช้ได้
+    bool isTokenValid = await ApiUser.verifyToken();
+    if (!isTokenValid) {
+      // Refresh ไม่ได้แล้ว → ล้าง session ไปหน้า Login
+      await prefs.remove('token');
+      await prefs.remove('refresh_token');
+      await prefs.remove('token_expires_at');
+      await prefs.remove('shopId');
+      await prefs.remove('shopName');
+      Get.off(() => const LoginPage());
+      return;
+    }
+
+    if (shopId == null || shopId == 0) {
       Get.off(() => const MyShopPage());
     } else {
-      // มีทั้ง token และ shopId → เข้าหน้า Home ได้เลย
       Get.off(() => const HomePage());
     }
   }

@@ -5,6 +5,7 @@ import 'package:eazy_store/model/response/advanced_report_response.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 
 class ApiDashboad {
   // ✅ ฟังก์ชัน สำหรับดึงข้อมูลสรุปยอดขาย วัน เดือน ปี
@@ -14,6 +15,7 @@ class ApiDashboad {
     String endDate,
   ) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -28,9 +30,11 @@ class ApiDashboad {
       );
 
       if (response.statusCode == 200) {
-        // นำ JSON ที่ได้ไปแปลงผ่าน Model
         return SalesSummaryModel.fromJson(jsonDecode(response.body));
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Summary API Error: ${response.body}");
         return null;
       }
@@ -47,6 +51,7 @@ class ApiDashboad {
     String endDate,
   ) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -63,8 +68,12 @@ class ApiDashboad {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final List<dynamic> list = data['transactions'] ?? [];
         return list.map((e) => TransactionDetailModel.fromJson(e)).toList();
+      } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
+        return [];
       }
-      return [];
     } catch (e) {
       print("Transaction Detail API Exception: $e");
       return [];
@@ -78,6 +87,7 @@ class ApiDashboad {
     String endDate,
   ) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -94,8 +104,12 @@ class ApiDashboad {
         final Map<String, dynamic> data = jsonDecode(response.body);
         final List<dynamic> list = data['product_details'] ?? [];
         return list.map((e) => ProductSalesDetailModel.fromJson(e)).toList();
+      } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
+        return [];
       }
-      return [];
     } catch (e) {
       print("Product Sales Detail API Exception: $e");
       return [];
@@ -108,6 +122,7 @@ class ApiDashboad {
     int saleId,
   ) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -123,6 +138,9 @@ class ApiDashboad {
       if (response.statusCode == 200) {
         return SaleDetailModel.fromJson(jsonDecode(response.body));
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Sale Items API Error: ${response.body}");
         return null;
       }
@@ -139,6 +157,7 @@ class ApiDashboad {
     String endDate,
   ) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -154,6 +173,9 @@ class ApiDashboad {
       if (response.statusCode == 200) {
         return AdvancedReportResponse.fromJson(jsonDecode(response.body));
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Advanced Report API Error: ${response.body}");
         return null;
       }

@@ -3,6 +3,7 @@ import 'dart:typed_data'; // สำหรับจัดการ Byte ข้อ
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 
 class ApiOrderList {
   // ฟังก์ชันยิง API เพื่อขอไฟล์ PDF
@@ -10,6 +11,7 @@ class ApiOrderList {
     final Uri url = Uri.parse('${AppConfig.baseUrl}/api/orderlist');
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -23,9 +25,11 @@ class ApiOrderList {
       );
 
       if (response.statusCode == 200) {
-        // คืนค่ากลับเป็น bytes เพื่อเอาไปเขียนไฟล์ในเครื่อง
         return response.bodyBytes;
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("API Error (Export PDF): ${response.statusCode}");
         return null;
       }

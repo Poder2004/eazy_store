@@ -3,6 +3,7 @@ import 'package:eazy_store/model/request/category_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 import '../model/request/product_request.dart';
 import '../model/response/product_response.dart';
 
@@ -14,7 +15,7 @@ class ApiProduct {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products');
 
     try {
-      // 1. ดึง Token จาก SharedPreferences
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -37,6 +38,9 @@ class ApiProduct {
           "data": ProductResponse.fromJson(responseData['data']),
         };
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         return {
           "success": false,
           "error": responseData['error'] ?? "ไม่สามารถบันทึกสินค้าได้",
@@ -51,6 +55,7 @@ class ApiProduct {
   static Future<List<CategoryModel>> getCategories() async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/categories');
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -91,6 +96,7 @@ class ApiProduct {
     final url = Uri.parse(urlString);
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -104,18 +110,17 @@ class ApiProduct {
 
       if (response.statusCode == 200) {
         var body = jsonDecode(response.body);
-
-        // 2. ตรวจสอบว่า body เป็น Map (Pagination) หรือ List (แบบปกติ)
         if (body is Map<String, dynamic> && body.containsKey('items')) {
-          // ใช้ Class ใหม่ที่เราเขียนต่อท้ายไว้
           return ProductPagedResponse.fromJson(body);
         } else if (body is List) {
-          // ส่งกลับเป็น List แบบเดิม (Backward Compatibility)
           return body.map((item) => ProductResponse.fromJson(item)).toList();
         }
         return [];
       } else {
-        return null; // หรือส่ง [] ตามความเหมาะสม
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
+        return null;
       }
     } catch (e) {
       print("Error fetching products: $e");
@@ -129,12 +134,12 @@ class ApiProduct {
     String keyword,
     int shopId,
   ) async {
-    // รับ shopId
     final url = Uri.parse(
       '${AppConfig.baseUrl}/api/products/search?keyword=$keyword&shop_id=$shopId',
     );
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -148,10 +153,11 @@ class ApiProduct {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return ProductResponse.fromJson(
-          data,
-        ); // <--- เรียกใช้ Model ที่คุณเพิ่งเขียน
+        return ProductResponse.fromJson(data);
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Product not found: ${response.body}");
         return null;
       }
@@ -166,6 +172,7 @@ class ApiProduct {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products/stock');
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -185,6 +192,9 @@ class ApiProduct {
       if (response.statusCode == 200) {
         return true;
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Update failed: ${response.body}");
         return false;
       }
@@ -202,6 +212,7 @@ class ApiProduct {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId');
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -218,6 +229,9 @@ class ApiProduct {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         return ProductResponse.fromJson(jsonResponse['data']);
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Update failed: ${response.body}");
         return null;
       }
@@ -269,6 +283,7 @@ class ApiProduct {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId');
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 

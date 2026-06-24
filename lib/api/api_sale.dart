@@ -3,10 +3,12 @@ import 'package:eazy_store/model/request/sales_model_request.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 
 class ApiSale {
   static Future<Map<String, dynamic>?> createSale(SaleRequest saleData) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -22,6 +24,9 @@ class ApiSale {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         print("Sale API Error: ${response.body}");
         return null;
       }
@@ -34,6 +39,7 @@ class ApiSale {
 
   static Future<Map<String, dynamic>?> createCreditSale(SaleRequest saleData) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -50,7 +56,9 @@ class ApiSale {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        // ดึง Error Message จากฝั่ง Go มาแสดง (เช่น "ยอดหนี้เกินวงเงิน")
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         final errorData = jsonDecode(response.body);
         print("Credit Sale Error: ${errorData['error']}");
         return {"error": errorData['error'] ?? "บันทึกไม่สำเร็จ"};

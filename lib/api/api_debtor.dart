@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 import '../model/request/debtor_request.dart';
 import '../model/response/debtor_response.dart';
 
@@ -12,6 +13,7 @@ class ApiDebtor {
     final url = Uri.parse('${AppConfig.baseUrl}/api/debtors');
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -35,6 +37,9 @@ class ApiDebtor {
           ), // ใช้ fromJson จาก Response Model
         };
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         return {
           "success": false,
           "message": responseData['error'] ?? "เกิดข้อผิดพลาด",
@@ -48,6 +53,7 @@ class ApiDebtor {
   // --- เพิ่มฟังก์ชันค้นหาลูกหนี้ ---
   static Future<List<DebtorResponse>> searchDebtor(String keyword) async {
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
       int? shopId = prefs.getInt('shopId'); // ดึง shopId จากเครื่อง
@@ -110,6 +116,7 @@ class ApiDebtor {
 
     final Uri url = Uri.parse(urlStr);
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -135,12 +142,12 @@ class ApiDebtor {
   }
 
   static Future<Map<String, dynamic>?> getDebtorHistory(int debtorId) async {
-    // สร้าง URL: /api/debtor/{id}/history
     final Uri url = Uri.parse(
       '${AppConfig.baseUrl}/api/debtors/$debtorId/history',
     );
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -177,6 +184,7 @@ class ApiDebtor {
     final url = Uri.parse('${AppConfig.baseUrl}/api/debtors/$debtorId');
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 

@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 // Imports ของโปรเจกต์ (เช็ค path ให้ตรงกับของคุณนะครับ)
 import 'package:eazy_store/page/homepage/home_page.dart';
+import 'package:eazy_store/page/homepage/home_controller.dart';
 import '../../../model/response/shop_response.dart';
 import '../../../api/api_shop.dart';
 import '../set_shop_pin_page.dart';
@@ -429,6 +430,15 @@ class CreateShopController extends GetxController {
       isLoading.value = false;
 
       if (isSuccess) {
+        // หา shopId ของร้านที่เพิ่งสร้างจาก getShops()
+        final shops = await ApiShop().getShops();
+        for (var shop in shops) {
+          if (shop.name == shopNameController.text) {
+            await prefs.setInt('shopId', shop.shopId);
+            break;
+          }
+        }
+        await prefs.setString('shopName', shopNameController.text);
         _showShopCreatedSuccessDialog();
       } else {
         Get.snackbar("ล้มเหลว", "สร้างร้านค้าไม่สำเร็จ");
@@ -486,6 +496,7 @@ class CreateShopController extends GetxController {
                 child: ElevatedButton(
                   onPressed: () {
                     Get.back();
+                    Get.delete<HomeController>();
                     Get.offAll(() => const HomePage());
                   },
                   style: ElevatedButton.styleFrom(
