@@ -9,7 +9,9 @@ import 'scan_barcode_controller.dart';
 // 2. The View: หน้าจอ UI
 // ----------------------------------------------------------------------
 class ScanBarcodePage extends StatelessWidget {
-  const ScanBarcodePage({super.key});
+  final bool showBookButton;
+
+  const ScanBarcodePage({super.key, this.showBookButton = false});
 
   @override
   Widget build(BuildContext context) {
@@ -159,47 +161,33 @@ class ScanBarcodePage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 20,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 40, height: 40),
-                      // ปุ่มถ่ายรูป (Shutter)
-                      GestureDetector(
-                        onTap: controller.onCapturePressed,
-                        child: Container(
-                          height: 70,
-                          width: 70,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.grey.withOpacity(0.5),
-                              width: 4,
+                if (showBookButton)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 20,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // ปุ่มสมุด
+                        GestureDetector(
+                          onTap: controller.goToListPage,
+                          child: Container(
+                            height: 50,
+                            width: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
                             ),
+                            child: const Icon(Icons.book, color: Colors.white),
                           ),
                         ),
-                      ),
-                      // ปุ่มสมุด
-                      GestureDetector(
-                        onTap: controller.goToListPage,
-                        child: Container(
-                          height: 50,
-                          width: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.book, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                      ],
+                    ),
+                  )
+                else
+                  const SizedBox(height: 20),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -209,10 +197,12 @@ class ScanBarcodePage extends StatelessWidget {
                       top: Radius.circular(20),
                     ),
                   ),
-                  child: const Text(
-                    "สแกนบาร์โค้ด ดูราคาสินค้า\nหรือ เปิดสมุดลิสต์ของที่ไม่มีบาร์โค้ด",
+                  child: Text(
+                    showBookButton
+                        ? "สแกนบาร์โค้ด ดูราคาสินค้า\nหรือ เปิดสมุดลิสต์ของที่ไม่มีบาร์โค้ด"
+                        : "จัดบาร์โค้ดให้อยู่ในกรอบเพื่อทำการสแกน",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                    style: const TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 ),
               ],

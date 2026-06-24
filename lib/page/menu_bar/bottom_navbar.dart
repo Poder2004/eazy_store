@@ -78,7 +78,7 @@ class BottomNavBar extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () async {
-            var barcode = await Get.to(() => const ScanBarcodePage());
+            var barcode = await Get.to(() => const ScanBarcodePage(showBookButton: true));
 
             if (barcode != null && barcode is String) {
               CheckoutController ctrl;

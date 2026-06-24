@@ -175,8 +175,15 @@ class LoginController extends GetxController {
 // ----------------------------------------------------------------------
 // 2. The View (หน้า UI ที่ปรับปรุงให้รองรับคนตั้งฟอนต์ใหญ่โดยเฉพาะ)
 // ----------------------------------------------------------------------
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -258,6 +265,17 @@ class LoginPage extends StatelessWidget {
                           controller: controller.passwordController,
                           hintText: "กรอกรหัสผ่าน",
                           isPassword: true,
+                          obscureText: _obscurePassword,
+                          onPressStart: () {
+                            setState(() {
+                              _obscurePassword = false;
+                            });
+                          },
+                          onPressEnd: () {
+                            setState(() {
+                              _obscurePassword = true;
+                            });
+                          },
                           icon: Icons.lock_outline,
                         ),
 
@@ -366,6 +384,9 @@ class LoginPage extends StatelessWidget {
     required String hintText,
     bool isPassword = false,
     IconData? icon,
+    bool obscureText = false,
+    VoidCallback? onPressStart,
+    VoidCallback? onPressEnd,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -382,7 +403,7 @@ class LoginPage extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
-        obscureText: isPassword,
+        obscureText: isPassword ? obscureText : false,
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,
@@ -390,6 +411,24 @@ class LoginPage extends StatelessWidget {
           prefixIcon: icon != null ? Icon(icon, color: Colors.grey[400]) : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(20),
+          suffixIcon: isPassword
+              ? Listener(
+                  behavior: HitTestBehavior.opaque,
+                  onPointerDown: (_) => onPressStart?.call(),
+                  onPointerUp: (_) => onPressEnd?.call(),
+                  onPointerCancel: (_) => onPressEnd?.call(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 12,
+                    ),
+                    child: Icon(
+                      obscureText ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                  ),
+                )
+              : null,
         ),
       ),
     );

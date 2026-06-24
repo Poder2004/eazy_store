@@ -241,7 +241,7 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> openInternalScanner() async {
-    var result = await Get.to(() => const ScanBarcodePage());
+    var result = await Get.to(() => const ScanBarcodePage(showBookButton: true));
     if (result != null && result is String) {
       await addProductByBarcode(result);
     }

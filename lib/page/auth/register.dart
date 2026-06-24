@@ -1,5 +1,4 @@
 import 'package:eazy_store/api/api_auth.dart';
-import 'package:eazy_store/page/auth/login.dart';
 import 'package:eazy_store/page/auth/verify_register.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,8 +44,8 @@ class SignupController extends GetxController {
       _showWarning("แจ้งเตือน", "เบอร์โทรต้องมี 10 หลัก");
       return;
     }
-    if (password.length <= 5) {
-      _showWarning("แจ้งเตือน", "รหัสผ่านต้องมากกว่า 5 ตัว");
+    if (password.length < 6) {
+      _showWarning("แจ้งเตือน", "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
       return;
     }
     if (password != confirmPassword) {
@@ -138,9 +137,63 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  late final SignupController controller;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(SignupController());
+    controller.nameController.addListener(_onTextChanged);
+    controller.phoneController.addListener(_onTextChanged);
+    controller.emailController.addListener(_onTextChanged);
+    controller.passwordController.addListener(_onTextChanged);
+    controller.confirmPasswordController.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    controller.nameController.removeListener(_onTextChanged);
+    controller.phoneController.removeListener(_onTextChanged);
+    controller.emailController.removeListener(_onTextChanged);
+    controller.passwordController.removeListener(_onTextChanged);
+    controller.confirmPasswordController.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    setState(() {});
+  }
+
+  // --- Dynamic Validation Color Helpers ---
+  bool? _isNameValid(String text) {
+    if (text.isEmpty) return null;
+    return text.trim().isNotEmpty;
+  }
+
+  bool? _isPhoneValid(String text) {
+    if (text.isEmpty) return null;
+    return text.length == 10;
+  }
+
+  bool? _isEmailValid(String text) {
+    if (text.isEmpty) return null;
+    return GetUtils.isEmail(text);
+  }
+
+  bool? _isPasswordValid(String text) {
+    if (text.isEmpty) return null;
+    return text.length >= 6;
+  }
+
+  bool? _isConfirmPasswordValid(String text, String password) {
+    if (text.isEmpty) return null;
+    return text == password;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final SignupController controller = Get.put(SignupController());
     const Color primaryGreen = Color(0xFF00C853);
 
     return Scaffold(
@@ -179,6 +232,7 @@ class _SignupPageState extends State<SignupPage> {
                 label: "ชื่อ นามสกุล",
                 hint: "กรอกชื่อ-นามสกุลของคุณ",
                 controller: controller.nameController,
+                isValid: _isNameValid(controller.nameController.text),
               ),
 
               _buildLineInput(
@@ -187,6 +241,7 @@ class _SignupPageState extends State<SignupPage> {
                 controller: controller.phoneController,
                 inputType: TextInputType.number,
                 isPhone: true,
+                isValid: _isPhoneValid(controller.phoneController.text),
               ),
 
               _buildLineInput(
@@ -194,6 +249,7 @@ class _SignupPageState extends State<SignupPage> {
                 hint: "example@email.com",
                 controller: controller.emailController,
                 inputType: TextInputType.emailAddress,
+                isValid: _isEmailValid(controller.emailController.text),
               ),
 
               _buildLineInput(
@@ -201,6 +257,18 @@ class _SignupPageState extends State<SignupPage> {
                 hint: "อย่างน้อย 6 ตัวอักษร",
                 controller: controller.passwordController,
                 isPassword: true,
+                obscureText: _obscurePassword,
+                onPressStart: () {
+                  setState(() {
+                    _obscurePassword = false;
+                  });
+                },
+                onPressEnd: () {
+                  setState(() {
+                    _obscurePassword = true;
+                  });
+                },
+                isValid: _isPasswordValid(controller.passwordController.text),
                 onChanged: (val) {
                   if (controller.confirmPasswordController.text.isNotEmpty) {
                     controller.validateConfirmPassword(
@@ -216,6 +284,21 @@ class _SignupPageState extends State<SignupPage> {
                   hint: "กรอกรหัสผ่านให้ตรงกัน",
                   controller: controller.confirmPasswordController,
                   isPassword: true,
+                  obscureText: _obscureConfirmPassword,
+                  onPressStart: () {
+                    setState(() {
+                      _obscureConfirmPassword = false;
+                    });
+                  },
+                  onPressEnd: () {
+                    setState(() {
+                      _obscureConfirmPassword = true;
+                    });
+                  },
+                  isValid: _isConfirmPasswordValid(
+                    controller.confirmPasswordController.text,
+                    controller.passwordController.text,
+                  ),
                   isLast: true,
                   errorText: controller.confirmPasswordError.value,
                   onChanged: (val) => controller.validateConfirmPassword(val),
@@ -272,12 +355,24 @@ class _SignupPageState extends State<SignupPage> {
     required String hint,
     required TextEditingController controller,
     bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? onPressStart,
+    VoidCallback? onPressEnd,
     bool isLast = false,
     bool isPhone = false,
     TextInputType inputType = TextInputType.text,
     Function(String)? onChanged,
     String? errorText,
+    bool? isValid,
   }) {
+    Color borderSideColor = Colors.grey[300]!;
+    Color focusedBorderSideColor = const Color(0xFF00C853);
+
+    if (isValid == false) {
+      borderSideColor = Colors.redAccent;
+      focusedBorderSideColor = Colors.redAccent;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -291,7 +386,7 @@ class _SignupPageState extends State<SignupPage> {
         ),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? obscureText : false,
           keyboardType: inputType,
           onChanged: onChanged,
           maxLength: isPhone ? 10 : null,
@@ -307,10 +402,10 @@ class _SignupPageState extends State<SignupPage> {
             counterText: "",
             contentPadding: const EdgeInsets.symmetric(vertical: 12),
             enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.grey[300]!),
+              borderSide: BorderSide(color: borderSideColor),
             ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF00C853), width: 2),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: focusedBorderSideColor, width: 2),
             ),
             errorBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.redAccent, width: 1),
@@ -318,6 +413,21 @@ class _SignupPageState extends State<SignupPage> {
             focusedErrorBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.redAccent, width: 2),
             ),
+            suffixIcon: isPassword
+                ? Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (_) => onPressStart?.call(),
+                    onPointerUp: (_) => onPressEnd?.call(),
+                    onPointerCancel: (_) => onPressEnd?.call(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      child: Icon(
+                        obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  )
+                : null,
           ),
         ),
         if (!isLast) const SizedBox(height: 20),
