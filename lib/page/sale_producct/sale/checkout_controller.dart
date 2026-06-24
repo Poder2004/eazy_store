@@ -7,6 +7,7 @@ import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/sales_model_request.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
 import 'package:eazy_store/page/debt/debtSale/debt_sale.dart';
+import 'package:eazy_store/page/sale_producct/sale/park_order_controller.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -366,6 +367,61 @@ class CheckoutController extends GetxController {
   }
 
   void clearAll() => cartItems.clear();
+
+  ParkOrderController get _parkCtrl => Get.find<ParkOrderController>();
+
+  void parkOrder() {
+    if (cartItems.isEmpty) {
+      Get.snackbar(
+        'แจ้งเตือน',
+        'ตะกร้าว่างเปล่า ไม่มีออเดอร์ที่จะพัก',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+    _parkCtrl.parkCurrentOrder(cartItems.toList());
+    clearAll();
+    noteController.clear();
+    receivedAmountController.clear();
+    Get.snackbar(
+      'พักออเดอร์แล้ว',
+      'เริ่มออเดอร์ใหม่ได้เลย',
+      backgroundColor: const Color(0xFFF59E0B),
+      colorText: Colors.white,
+      duration: const Duration(seconds: 1),
+    );
+  }
+
+  Future<void> resumeOrder(String parkId) async {
+    if (cartItems.isNotEmpty) {
+      _parkCtrl.parkCurrentOrder(cartItems.toList());
+      clearAll();
+    }
+    final parked = _parkCtrl.retrieveOrder(parkId);
+    if (parked == null) return;
+
+    if (allProducts.isEmpty) await _loadAllProducts();
+
+    for (final pi in parked.items) {
+      final match = allProducts.firstWhereOrNull(
+        (p) => p.productId.toString() == pi.id,
+      );
+      final effectiveMaxStock = match?.stock ?? pi.maxStock;
+      final qty = pi.quantity.clamp(0, effectiveMaxStock);
+      for (int i = 0; i < qty; i++) {
+        cartItems.add(ProductItem(
+          id: pi.id,
+          name: pi.name,
+          price: pi.price,
+          category: pi.category,
+          imagePath: pi.imagePath,
+          maxStock: effectiveMaxStock,
+        ));
+      }
+    }
+  }
 
   double get totalPrice => cartItems.fold(0, (sum, item) => sum + item.price);
 
