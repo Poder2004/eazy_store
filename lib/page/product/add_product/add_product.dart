@@ -1,12 +1,10 @@
 import 'package:dotted_border/dotted_border.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
-import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'add_product_controller.dart'; // ✅ นำเข้า Controller ที่แยกไว้
-
 
 // 🎨 Theme Constants
 const Color _kPrimaryColor = Color(0xFF6B8E23);
@@ -70,7 +68,7 @@ class AddProductScreen extends StatelessWidget {
                     icon: Icons.shopping_bag_outlined,
                   ),
                   const SizedBox(height: 15),
-                  _buildCategoryDropdown(controller),
+                  _buildCategoryDropdown(context, controller),
                   const SizedBox(height: 15),
                   _buildBarcodeField(controller),
                 ],
@@ -120,7 +118,9 @@ class AddProductScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 15),
-                      Expanded(child: _buildUnitHybridField(controller)),
+                      Expanded(
+                        child: _buildUnitHybridField(context, controller),
+                      ),
                     ],
                   ),
                 ],
@@ -280,7 +280,10 @@ class AddProductScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryDropdown(AddProductController controller) {
+  Widget _buildCategoryDropdown(
+    BuildContext context,
+    AddProductController controller,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -293,31 +296,31 @@ class AddProductScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: _kInputFillColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: Obx(
-              () => DropdownButton<CategoryModel>(
-                isExpanded: true,
-                value: controller.selectedCategoryObject.value,
-                hint: Text(
-                  "เลือกหมวดหมู่",
-                  style: TextStyle(color: Colors.grey[400], fontSize: 14),
-                ),
-                items: controller.categoryList
-                    .map(
-                      (cat) =>
-                          DropdownMenuItem(value: cat, child: Text(cat.name)),
-                    )
-                    .toList(),
-                onChanged: (val) {
-                  controller.selectedCategoryObject.value = val;
-                },
-              ),
+        GestureDetector(
+          onTap: () => _showCategoryBottomSheet(context, controller),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: _kInputFillColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Obx(() {
+                  final selected = controller.selectedCategoryObject.value;
+                  return Text(
+                    selected != null ? selected.name : "เลือกหมวดหมู่",
+                    style: TextStyle(
+                      color: selected != null
+                          ? Colors.black87
+                          : Colors.grey[400],
+                      fontSize: 14,
+                    ),
+                  );
+                }),
+                const Icon(Icons.arrow_drop_down, color: Colors.grey),
+              ],
             ),
           ),
         ),
@@ -325,7 +328,184 @@ class AddProductScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUnitHybridField(AddProductController controller) {
+  void _showCategoryBottomSheet(
+    BuildContext context,
+    AddProductController controller,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final RxString searchQuery = "".obs;
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "เลือกหมวดหมู่",
+                    style: GoogleFonts.prompt(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        onChanged: (val) {
+                          searchQuery.value = val.trim();
+                        },
+                        style: GoogleFonts.prompt(fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: "ค้นหาหมวดหมู่...",
+                          hintStyle: GoogleFonts.prompt(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: Obx(() {
+                      final query = searchQuery.value.toLowerCase();
+                      final filteredList = controller.categoryList.where((cat) {
+                        return cat.name.toLowerCase().contains(query);
+                      }).toList();
+
+                      if (filteredList.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.category_outlined,
+                                size: 48,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "ไม่พบหมวดหมู่",
+                                style: GoogleFonts.prompt(
+                                  color: Colors.grey[500],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        controller: scrollController,
+                        itemCount: filteredList.length,
+                        itemBuilder: (context, index) {
+                          final cat = filteredList[index];
+                          final isSelected =
+                              controller
+                                  .selectedCategoryObject
+                                  .value
+                                  ?.categoryId ==
+                              cat.categoryId;
+
+                          return InkWell(
+                            onTap: () {
+                              controller.selectedCategoryObject.value = cat;
+                              Navigator.pop(context);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(color: Colors.grey[100]!),
+                                ),
+                                color: isSelected
+                                    ? _kPrimaryColor.withOpacity(0.05)
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    cat.name,
+                                    style: GoogleFonts.prompt(
+                                      fontSize: 15,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: isSelected
+                                          ? _kPrimaryColor
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: _kPrimaryColor,
+                                      size: 20,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildUnitHybridField(
+    BuildContext context,
+    AddProductController controller,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -354,19 +534,111 @@ class AddProductScreen extends StatelessWidget {
                 horizontal: 16,
                 vertical: 14,
               ),
-              suffixIcon: PopupMenuButton<String>(
-                icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                onSelected: (val) {
-                  controller.unitController.text = val;
-                },
-                itemBuilder: (ctx) => controller.unitOptions
-                    .map((e) => PopupMenuItem(value: e, child: Text(e)))
-                    .toList(),
+              suffixIcon: GestureDetector(
+                onTap: () => _showUnitBottomSheet(context, controller),
+                child: const Icon(Icons.arrow_drop_down, color: Colors.grey),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  void _showUnitBottomSheet(
+    BuildContext context,
+    AddProductController controller,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "เลือกหน่วยนับ",
+                style: GoogleFonts.prompt(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: controller.unitOptions.length,
+                  itemBuilder: (context, index) {
+                    final unit = controller.unitOptions[index];
+                    final isSelected = controller.unitController.text == unit;
+
+                    return InkWell(
+                      onTap: () {
+                        controller.unitController.text = unit;
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[100]!),
+                          ),
+                          color: isSelected
+                              ? _kPrimaryColor.withOpacity(0.05)
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              unit,
+                              style: GoogleFonts.prompt(
+                                fontSize: 15,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected
+                                    ? _kPrimaryColor
+                                    : Colors.black87,
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: _kPrimaryColor,
+                                size: 20,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 
