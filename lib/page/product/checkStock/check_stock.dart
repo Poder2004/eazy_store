@@ -1,4 +1,5 @@
 import 'package:eazy_store/page/product/checkStock/check_stock_controller.dart';
+import 'package:eazy_store/widgets/pagination_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -90,7 +91,10 @@ class CheckStockScreen extends StatelessWidget {
             ),
 
             // ✨ ส่วนควบคุมการแบ่งหน้า (Pagination Bar)
-            _buildPaginationControls(controller, primaryColor),
+            PaginationControls(
+              controller: controller,
+              primaryColor: primaryColor,
+            ),
           ],
         ),
       ),
@@ -100,166 +104,6 @@ class CheckStockScreen extends StatelessWidget {
           // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
           print("Tab tapped: $index");
         },
-      ),
-    );
-  }
-
-  // --- เพิ่ม Widget สำหรับคุมหน้าหน้าสินค้า ---
-  Widget _buildPaginationControls(
-    CheckStockController controller,
-    Color primaryColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        // ✨ ใช้ FittedBox ป้องกันปุ่มเลื่อนหน้าเบียดกันทะลุขอบเมื่อฟอนต์ใหญ่
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // --- ส่วนที่ 1: เลือกจำนวนรายการต่อหน้า (Limit) ---
-              Row(
-                children: [
-                  const Text(
-                    "แสดง: ",
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(width: 5),
-                  Container(
-                    width: 45,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Obx(
-                      () => TextField(
-                        controller:
-                            TextEditingController(
-                                text: controller.itemsPerPage.value.toString(),
-                              )
-                              ..selection = TextSelection.collapsed(
-                                offset: controller.itemsPerPage.value
-                                    .toString()
-                                    .length,
-                              ),
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 8),
-                        ),
-                        onSubmitted: (val) {
-                          int? limit = int.tryParse(val);
-                          if (limit != null && limit > 0) {
-                            controller.updateLimit(limit);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  PopupMenuButton<int>(
-                    icon: const Icon(
-                      Icons.arrow_drop_down,
-                      color: Colors.grey,
-                      size: 24,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 60),
-                    onSelected: (int value) => controller.updateLimit(value),
-                    itemBuilder: (BuildContext context) =>
-                        <PopupMenuEntry<int>>[
-                          const PopupMenuItem<int>(
-                            value: 10,
-                            child: Text('10'),
-                          ),
-                          const PopupMenuItem<int>(
-                            value: 20,
-                            child: Text('20'),
-                          ),
-                          const PopupMenuItem<int>(
-                            value: 30,
-                            child: Text('30'),
-                          ),
-                          const PopupMenuItem<int>(
-                            value: 50,
-                            child: Text('50'),
-                          ),
-                        ],
-                  ),
-                  const Text(
-                    "รายการ",
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 20),
-
-              // --- ส่วนที่ 2: ปุ่มเลื่อนหน้า (ย้อนกลับ - ถัดไป) ---
-              Obx(
-                () => Row(
-                  children: [
-                    IconButton(
-                      onPressed: controller.currentPage.value > 1
-                          ? () => controller.changePage(
-                              controller.currentPage.value - 1,
-                            )
-                          : null,
-                      icon: Icon(
-                        Icons.arrow_back_ios,
-                        size: 18,
-                        color: controller.currentPage.value > 1
-                            ? primaryColor
-                            : Colors.grey,
-                      ),
-                    ),
-                    Text(
-                      "${controller.currentPage.value} / ${controller.totalPages.value}",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed:
-                          controller.currentPage.value <
-                              controller.totalPages.value
-                          ? () => controller.changePage(
-                              controller.currentPage.value + 1,
-                            )
-                          : null,
-                      icon: Icon(
-                        Icons.arrow_forward_ios,
-                        size: 18,
-                        color:
-                            controller.currentPage.value <
-                                controller.totalPages.value
-                            ? primaryColor
-                            : Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
