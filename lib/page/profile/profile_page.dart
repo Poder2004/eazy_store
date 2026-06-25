@@ -24,7 +24,7 @@ class ProfilePage extends StatelessWidget {
         ),
         child: RefreshIndicator(
           onRefresh: controller.loadProfileData,
-          color: const Color(0xFF4F46E5),
+          color: const Color.fromARGB(255, 167, 163, 248),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
@@ -153,7 +153,7 @@ class ProfilePage extends StatelessWidget {
           height: 210,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+              colors: [Color(0xFF6B9FFF), Color(0xFF8B52FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

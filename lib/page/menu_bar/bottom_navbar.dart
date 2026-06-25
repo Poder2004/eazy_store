@@ -74,7 +74,7 @@ class BottomNavBar extends StatelessWidget {
     const int index = 2;
     return Expanded(
       child: Transform.translate(
-        offset: const Offset(0, -20),
+        offset: const Offset(0, -15),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () async {
@@ -215,7 +215,7 @@ class BottomNavBar extends StatelessWidget {
           top: false,
           child: Padding(
             // เปลี่ยนจาก (16, 12, 16, 24) เป็น (10, 12, 10, 12) เพราะ SafeArea ดันขอบล่างให้แล้ว
-            padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+            padding: const EdgeInsets.fromLTRB(10, 4, 10, 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               crossAxisAlignment:
