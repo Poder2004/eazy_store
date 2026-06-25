@@ -92,7 +92,11 @@ class CheckStockScreen extends StatelessWidget {
 
             // ✨ ส่วนควบคุมการแบ่งหน้า (Pagination Bar)
             PaginationControls(
-              controller: controller,
+              currentPage: controller.currentPage,
+              totalPages: controller.totalPages,
+              itemsPerPage: controller.itemsPerPage,
+              updateLimit: controller.updateLimit,
+              changePage: controller.changePage,
               primaryColor: primaryColor,
             ),
           ],
