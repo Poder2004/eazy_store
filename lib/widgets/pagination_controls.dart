@@ -12,93 +12,57 @@ class PaginationControls extends StatelessWidget {
     required this.primaryColor,
   });
 
+  static const double _controlHeight = 32;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Row(
+        children: [
+          _buildLimitSelector(),
+          const Spacer(),
+          _buildPageNavigation(),
         ],
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(child: _buildLimitSelector()),
-            const SizedBox(width: 12),
-            Expanded(child: _buildPageNavigation()),
-          ],
-        ),
       ),
     );
   }
 
   Widget _buildLimitSelector() {
     return Obx(
-      () => Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: primaryColor.withOpacity(0.18)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'แสดง',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            PopupMenuButton<int>(
-              initialValue: controller.itemsPerPage.value,
-              onSelected: controller.updateLimit,
-              itemBuilder: (BuildContext context) => [
-                _buildPopupItem(10),
-                _buildPopupItem(20),
-                _buildPopupItem(30),
-                _buildPopupItem(50),
-              ],
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: primaryColor.withOpacity(0.2)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      controller.itemsPerPage.value.toString(),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.expand_more,
-                      size: 18,
-                      color: primaryColor,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      () => Material(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(20),
+        child: PopupMenuButton<int>(
+          padding: EdgeInsets.zero,
+          offset: const Offset(0, -160),
+          initialValue: controller.itemsPerPage.value,
+          onSelected: controller.updateLimit,
+          itemBuilder: (BuildContext context) => [
+            _buildPopupItem(10),
+            _buildPopupItem(20),
+            _buildPopupItem(30),
+            _buildPopupItem(50),
           ],
+          child: Container(
+            height: _controlHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'แสดง  ${controller.itemsPerPage.value}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Icon(Icons.expand_more, size: 16, color: Colors.grey.shade700),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -106,45 +70,53 @@ class PaginationControls extends StatelessWidget {
 
   Widget _buildPageNavigation() {
     return Obx(
-      () => Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: primaryColor.withOpacity(0.18)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      () {
+        final canPrev = controller.currentPage.value > 1;
+        final canNext =
+            controller.currentPage.value < controller.totalPages.value;
+
+        return Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _buildNavButton(
               icon: Icons.chevron_left,
-              onPressed: controller.currentPage.value > 1
-                  ? () => controller.changePage(controller.currentPage.value - 1)
+              onPressed: canPrev
+                  ? () =>
+                      controller.changePage(controller.currentPage.value - 1)
                   : null,
-              isEnabled: controller.currentPage.value > 1,
+              isEnabled: canPrev,
             ),
-            Text(
-              '${controller.currentPage.value}/${controller.totalPages.value}',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: primaryColor,
+            const SizedBox(width: 6),
+            Container(
+              height: _controlHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Text(
+                '${controller.currentPage.value} / ${controller.totalPages.value}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                ),
               ),
             ),
+            const SizedBox(width: 6),
             _buildNavButton(
               icon: Icons.chevron_right,
-              onPressed:
-                  controller.currentPage.value < controller.totalPages.value
-                      ? () => controller
-                          .changePage(controller.currentPage.value + 1)
-                      : null,
-              isEnabled:
-                  controller.currentPage.value < controller.totalPages.value,
+              onPressed: canNext
+                  ? () =>
+                      controller.changePage(controller.currentPage.value + 1)
+                  : null,
+              isEnabled: canNext,
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -154,22 +126,18 @@ class PaginationControls extends StatelessWidget {
     required bool isEnabled,
   }) {
     return Material(
-      color: Colors.transparent,
+      color: Colors.grey.shade200,
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isEnabled ? Colors.white : Colors.grey[150],
-            borderRadius: BorderRadius.circular(8),
-          ),
+        child: SizedBox(
+          width: _controlHeight,
+          height: _controlHeight,
           child: Icon(
             icon,
-            size: 20,
-            color: isEnabled ? primaryColor : Colors.grey[400],
+            size: 18,
+            color: isEnabled ? primaryColor : Colors.grey.shade400,
           ),
         ),
       ),
