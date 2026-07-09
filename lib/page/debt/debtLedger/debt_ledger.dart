@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 // --- Imports ไฟล์ของคุณ ---
 import 'package:eazy_store/page/debt/debtorDetail/debtor_detail.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/widgets/pagination_controls.dart';
 import '../../../model/response/debtor_response.dart';
 
 // --- Import Controller ---
@@ -359,7 +360,14 @@ class DebtLedgerScreen extends StatelessWidget {
             ),
 
             // 3. ส่วน Pagination Controls วางไว้ล่างสุดเหนือ Navbar
-            _buildPaginationControls(),
+            PaginationControls(
+              currentPage: controller.currentPage,
+              totalPages: controller.totalPages,
+              itemsPerPage: controller.itemsPerPage,
+              updateLimit: controller.updateLimit,
+              changePage: controller.changePage,
+              primaryColor: _kPrimaryColor,
+            ),
           ],
         ),
       ),

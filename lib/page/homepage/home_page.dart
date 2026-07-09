@@ -17,7 +17,11 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color headerBgColor = Color(0xFFE55D30);
+    const LinearGradient headerBgGradient = LinearGradient(
+      colors: [Color(0xFFE85C5C), Color(0xFFFFB84D)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
     const Color scaffoldBgColor = Color(0xFFF8FAFC);
     const Color iconColor = Color(0xFF10B981);
 
@@ -34,13 +38,13 @@ class HomePage extends StatelessWidget {
         ),
         child: RefreshIndicator(
           onRefresh: () async => controller.fetchTodaySales(),
-          color: headerBgColor,
+          color: const Color(0xFFF4A4A4),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               children: [
                 // --- ส่วน Header สีแดง + กล่องยอดขาย ---
-                _buildHeader(context, controller, headerBgColor: headerBgColor),
+                _buildHeader(context, controller, headerBgGradient: headerBgGradient),
 
                 // --- ส่วนเมนูด้านล่าง ---
                 Container(
@@ -109,7 +113,7 @@ class HomePage extends StatelessWidget {
   Widget _buildHeader(
     BuildContext context,
     HomeController controller, {
-    required Color headerBgColor,
+    required LinearGradient headerBgGradient,
   }) {
     final CheckoutController checkoutCtrl =
         Get.isRegistered<CheckoutController>()
@@ -126,7 +130,7 @@ class HomePage extends StatelessWidget {
           bottom: 60, // ปล่อยให้การ์ดสีขาวห้อยทะลุลงมา 60px
           child: Container(
             decoration: BoxDecoration(
-              color: headerBgColor,
+              gradient: headerBgGradient,
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(20),
                 bottomRight: Radius.circular(20),
@@ -158,8 +162,10 @@ class HomePage extends StatelessWidget {
                           const Text(
                             "ยินดีต้อนรับเข้าสู่",
                             style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: 0.3,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -181,8 +187,9 @@ class HomePage extends StatelessWidget {
                               const Text(
                                 "เฮง เฮง เฮง รวยๆ",
                                 style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
+                                  color: Color.fromARGB(255, 255, 255, 255),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ],
