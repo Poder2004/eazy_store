@@ -1,9 +1,9 @@
 class LoginResponse {
   final String message;
-  final String? token;         // backward compat (token เดิม)
-  final String? accessToken;   // access_token จาก spec ใหม่
-  final String? refreshToken;  // refresh_token
-  final int? expiresIn;        // expires_in (วินาที)
+  final String? token; // backward compat (token เดิม)
+  final String? accessToken; // access_token จาก spec ใหม่
+  final String? refreshToken; // refresh_token
+  final int? expiresIn; // expires_in (วินาที)
   final UserData? user;
   final String? error;
   final String? email;

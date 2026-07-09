@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -8,6 +9,9 @@ import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_bar
 // 1. Controller: จัดการ Logic การสแกน
 // ----------------------------------------------------------------------
 class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
+  // Method Channel สำหรับเชื่อมต่อเล่นเสียงฝั่ง Native
+  static const MethodChannel _soundChannel = MethodChannel('com.example.eazy_store/sound');
+
   // ⚠️ เปลี่ยนเป็น late เพื่อกำหนดค่าใน onInit
   late MobileScannerController cameraController;
 
@@ -74,6 +78,12 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
       if (barcode.rawValue != null) {
         isScanned.value = true;
         print('สแกนเจอแล้ว: ${barcode.rawValue}');
+
+        // 1. สั่นเพื่อตอบสนอง (Haptic Feedback)
+        HapticFeedback.lightImpact();
+
+        // 2. ส่งเสียง Beep ระบบผ่าน Native Method Channel
+        _soundChannel.invokeMethod('playBeep');
 
         Get.back(result: barcode.rawValue);
         break;
