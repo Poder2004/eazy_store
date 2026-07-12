@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -6,17 +7,24 @@ import 'package:eazy_store/config/app_config.dart';
 import 'package:eazy_store/page/auth/login.dart';
 
 class AuthGuard {
-  // ป้องกันการ refresh ซ้อนกัน
-  static bool _isRefreshing = false;
+  // ป้องกันการ refresh ซ้อนกันโดยใช้ Completer เพื่อให้ request อื่นรอผลลัพธ์
+  static Completer<bool>? _refreshCompleter;
 
   /// เรียก /api/auth/refresh เพื่อขอ access_token ใหม่
   static Future<bool> refreshToken() async {
-    if (_isRefreshing) return false;
-    _isRefreshing = true;
+    if (_refreshCompleter != null) {
+      return _refreshCompleter!.future;
+    }
+
+    _refreshCompleter = Completer<bool>();
+
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? refreshToken = prefs.getString('refresh_token');
-      if (refreshToken == null || refreshToken.isEmpty) return false;
+      if (refreshToken == null || refreshToken.isEmpty) {
+        _refreshCompleter!.complete(false);
+        return false;
+      }
 
       final response = await http.post(
         Uri.parse('${AppConfig.baseUrl}/api/auth/refresh'),
@@ -28,19 +36,25 @@ class AuthGuard {
         final data = jsonDecode(response.body);
         final newToken = data['access_token'] as String?;
         final expiresIn = (data['expires_in'] as int?) ?? 900;
-        if (newToken == null) return false;
+        if (newToken == null) {
+          _refreshCompleter!.complete(false);
+          return false;
+        }
 
         final expiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
         await prefs.setString('token', newToken);
         await prefs.setInt('token_expires_at', expiresAt);
+        _refreshCompleter!.complete(true);
         return true;
       }
+      _refreshCompleter!.complete(false);
       return false;
     } catch (e) {
       print("refreshToken error: $e");
+      _refreshCompleter!.complete(false);
       return false;
     } finally {
-      _isRefreshing = false;
+      _refreshCompleter = null;
     }
   }
 
