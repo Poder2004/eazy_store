@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/config/app_config.dart';
 import 'package:eazy_store/model/response/product_response.dart';
+import 'package:eazy_store/widgets/product_filter_sheet.dart';
+import 'package:eazy_store/widgets/pagination_controls.dart';
 import '../buyProducts/buy_products_controller.dart';
 import '../order_List/order_list.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart'; // แก้ path ให้ตรง
@@ -49,7 +51,7 @@ class BuyProductsScreen extends StatelessWidget {
                 );
               }
 
-              if (controller.products.isEmpty) {
+              if (controller.allProducts.isEmpty) {
                 return const Center(child: Text('ไม่พบรายการสินค้า'));
               }
 
@@ -65,6 +67,15 @@ class BuyProductsScreen extends StatelessWidget {
                 },
               );
             }),
+          ),
+
+          PaginationControls(
+            currentPage: controller.currentPage,
+            totalPages: controller.totalPages,
+            itemsPerPage: controller.itemsPerPage,
+            updateLimit: controller.updateLimit,
+            changePage: controller.changePage,
+            primaryColor: const Color(0xFF6B8E23),
           ),
 
           // 🛒 ปุ่มยืนยันด้านล่าง (เช็คสถานะการเลือก)
@@ -84,133 +95,61 @@ class BuyProductsScreen extends StatelessWidget {
   // --- Widgets ย่อย ---
 
   Widget _buildTopActions(BuyProductsController controller) {
-    const Color themeGreen = Color(0xFF6B8E23); // กำหนดสีที่ใช้
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-      child: Column(
-        // เปลี่ยนเป็น Column เพื่อให้ Dropdown อยู่ข้างล่าง Search
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 3,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  // แก้ไขเฉพาะส่วน TextField ใน _buildTopActions
-                  child: TextField(
-                    controller: controller.searchCtrl, // ✅ เชื่อม Controller
-                    onChanged: (v) => controller.searchQuery.value = v,
-                    decoration: InputDecoration(
-                      hintText: 'ค้นหาหรือสแกนบาร์โค้ด',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: Color(0xFFB0B0B0),
-                      ),
-                      // ✅ แก้ไขส่วนปุ่มสแกน
-                      suffixIcon: IconButton(
-                        icon: const Icon(
-                          Icons.qr_code_scanner_outlined,
-                          color: Colors.grey,
-                        ),
-                        onPressed: () =>
-                            controller.openScanner(), // ✅ กดแล้วเปิดกล้อง
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 14.0,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // ปุ่ม Sort (PopupMenu)
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.swap_vert, color: themeGreen, size: 30),
-                onSelected: (v) => controller.sortType.value = v,
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'stock_asc',
-                    child: Text('สต็อก: น้อยไปมาก'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'stock_desc',
-                    child: Text('สต็อก: มากไปน้อย'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'name_asc',
-                    child: Text('ชื่อ: ก-ฮ'),
+          Expanded(
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12), // เว้นระยะห่างเล็กน้อย
-
-          // ✅ เพิ่ม Dropdown หมวดหมู่ตรงนี้
-          Align(
-            alignment: Alignment.centerLeft,
-            child: SizedBox(
-              width: 150, // ความกว้างคงที่ตามที่คุณต้องการ
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Obx(
-                  () => DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      value: controller.selectedCategoryId.value,
-                      isExpanded:
-                          true, // ขยายเนื้อหาให้เต็มความกว้าง 150 ของ SizedBox
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down,
-                        color: Color(0xFF6B8E23),
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFF6B8E23),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      onChanged: (val) {
-                        if (val != null) {
-                          controller.selectedCategoryId.value = val;
-                        }
-                      },
-                      items: [
-                        const DropdownMenuItem(
-                          value: 0,
-                          child: Text("หมวดหมู่"),
-                        ),
-                        ...controller.categories.map(
-                          (cat) => DropdownMenuItem(
-                            value: cat.categoryId,
-                            child: Text(
-                              cat.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+              child: TextField(
+                controller: controller.searchCtrl,
+                onChanged: (v) => controller.searchQuery.value = v,
+                decoration: InputDecoration(
+                  hintText: 'ค้นหาหรือสแกนบาร์โค้ด',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(0xFFB0B0B0),
                   ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(
+                      Icons.qr_code_scanner_outlined,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () => controller.openScanner(),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Obx(
+            () => ProductFilterButton(
+              categories: controller.categories,
+              selectedCategoryId: controller.selectedCategoryId.value,
+              sortOptions: defaultProductSortOptions,
+              selectedSortValue: controller.sortType.value,
+              defaultSortValue: 'stock_asc',
+              onApply: (categoryId, sortValue) => controller.applyFilter(
+                categoryId: categoryId,
+                sortValue: sortValue,
+              ),
+              onClear: controller.clearFilter,
             ),
           ),
         ],
