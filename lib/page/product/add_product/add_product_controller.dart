@@ -4,6 +4,7 @@ import 'package:eazy_store/api/api_service_image.dart';
 import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/model/request/product_request.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,15 +16,9 @@ class AddProductController extends GetxController {
   final _picker = ImagePicker();
   var categoryList = <CategoryModel>[].obs;
 
-  final List<String> unitOptions = [
-    'ชิ้น',
-    'กล่อง',
-    'ลัง',
-    'ขวด',
-    'ซอง',
-    'กิโลกรัม',
-    'แพ็ค',
-  ];
+  final List<String> unitOptions =
+      ['ชิ้น', 'กล่อง', 'ลัง', 'ขวด', 'ซอง', 'กิโลกรัม', 'แพ็ค']
+        ..sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
 
   final nameController = TextEditingController();
   final costController = TextEditingController();
@@ -56,6 +51,7 @@ class AddProductController extends GetxController {
   // ---------------- Functions ----------------
   Future<void> fetchCategories() async {
     final list = await ApiProduct.getCategories();
+    list.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
     categoryList.value = list;
   }
 

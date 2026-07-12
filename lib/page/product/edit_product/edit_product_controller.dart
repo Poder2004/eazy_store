@@ -5,6 +5,7 @@ import 'package:eazy_store/api/api_service_image.dart';
 import 'package:eazy_store/model/request/product_request.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/category_model.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -74,6 +75,7 @@ class EditProductController extends GetxController {
   Future<void> fetchCategories() async {
     try {
       var list = await ApiProduct.getCategories();
+      list.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
       categories.assignAll(list);
 
       if (originalProduct.categoryId != 0) {

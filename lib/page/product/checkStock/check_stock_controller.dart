@@ -3,6 +3,7 @@ import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,10 +14,12 @@ class CheckStockController extends GetxController {
   var products = <ProductResponse>[].obs;
   var filteredProducts = <ProductResponse>[].obs;
   var selectedIndex = 0.obs;
-  var isAscending = true.obs;
+
+  // ค่าตรงกับที่ backend รองรับ: name_asc, name_desc, stock_asc, stock_desc
+  var selectedSortOption = "name_asc".obs;
 
   var categories = <CategoryModel>[].obs;
-  var selectedCategoryId = 0.obs; // 0 คือ "ทั้งหมด"
+  var selectedCategoryId = 0.obs;
   var isLoadingCategories = false.obs;
 
   // Pagination Variables
@@ -42,7 +45,6 @@ class CheckStockController extends GetxController {
 
   // ---------------- API Functions ----------------
 
-  /// 🚀 1. ดึงข้อมูลแบบรายการปกติ (Pagination)
   Future<void> fetchStockData() async {
     isLoading.value = true;
     try {
@@ -54,9 +56,9 @@ class CheckStockController extends GetxController {
           shopId,
           page: currentPage.value,
           limit: itemsPerPage.value,
-          search: "", // แยก Search ไปใช้ searchProduct API แทน
+          search: "",
           categoryId: selectedCategoryId.value != 0 ? selectedCategoryId.value : null,
-          sort: isAscending.value ? "asc" : "desc",
+          sort: selectedSortOption.value,
         );
 
         if (result is ProductPagedResponse) {
@@ -66,8 +68,7 @@ class CheckStockController extends GetxController {
         } else if (result is List<ProductResponse>) {
           products.assignAll(result);
         }
-        
-        // กรองและเรียงลำดับข้อมูลที่ได้มา
+
         _applySortAndFilter();
       }
     } catch (e) {
@@ -77,11 +78,10 @@ class CheckStockController extends GetxController {
     }
   }
 
-  /// 🔍 2. ค้นหาสินค้าเจาะจงด้วย API searchProduct (สำหรับ Search Bar & Scan)
   Future<void> searchProduct(String query) async {
     if (query.isEmpty) {
       currentPage.value = 1;
-      fetchStockData(); // ถ้าลบคำค้นหา ให้กลับไปดึงแบบ Pagination ปกติ
+      fetchStockData();
       return;
     }
 
@@ -90,18 +90,14 @@ class CheckStockController extends GetxController {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
-      // ✨ เรียกใช้ API ค้นหาโดยตรง
       ProductResponse? result = await ApiProduct.searchProduct(query, shopId);
 
       if (result != null) {
-        // กรองเฉพาะสถานะที่เป็น true (ถ้าต้องการ)
         if (result.status == true) {
           filteredProducts.assignAll([result]);
         } else {
           filteredProducts.clear();
         }
-        
-        // ปรับ Metadata ของ Pagination ให้สอดคล้องกับผลการค้นหา
         totalPages.value = 1;
         totalItems.value = filteredProducts.length;
       } else {
@@ -116,11 +112,13 @@ class CheckStockController extends GetxController {
     }
   }
 
-  /// 🏷️ 3. ดึงข้อมูลหมวดหมู่สินค้า
   Future<void> fetchCategories() async {
     isLoadingCategories.value = true;
     try {
       var result = await ApiProduct.getCategories();
+      result.sort(
+        (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
+      );
       categories.assignAll(result);
     } catch (e) {
       print("Error fetching categories: $e");
@@ -131,14 +129,12 @@ class CheckStockController extends GetxController {
 
   // ---------------- UI Support Functions ----------------
 
-  /// 🔢 เปลี่ยนจำนวนรายการต่อหน้า (Items Per Page)
   void updateLimit(int limit) {
     itemsPerPage.value = limit;
-    currentPage.value = 1; // รีเซ็ตไปหน้า 1 เสมอ
+    currentPage.value = 1;
     fetchStockData();
   }
 
-  /// 📄 เปลี่ยนหน้า (Next/Previous Page)
   void changePage(int page) {
     if (page >= 1 && page <= totalPages.value) {
       currentPage.value = page;
@@ -146,37 +142,49 @@ class CheckStockController extends GetxController {
     }
   }
 
-  /// 📷 เปิดกล้องสแกนบาร์โค้ด
   Future<void> openScanner() async {
     var result = await Get.to(() => const ScanBarcodePage());
     if (result != null && result is String) {
       searchCtrl.text = result;
-      searchProduct(result); // เรียก API ค้นหาทันที
+      searchProduct(result);
     }
   }
 
-  /// 🧹 กรองและเรียงลำดับ Local List
   void _applySortAndFilter() {
     var result = products.where((p) => p.status == true).toList();
 
-    if (isAscending.value) {
-      result.sort((a, b) => a.stock.compareTo(b.stock));
-    } else {
-      result.sort((a, b) => b.stock.compareTo(a.stock));
+    switch (selectedSortOption.value) {
+      case "name_desc":
+        result.sort(
+          (a, b) => thaiSortKey(b.name).compareTo(thaiSortKey(a.name)),
+        );
+        break;
+      case "stock_asc":
+        result.sort((a, b) => a.stock.compareTo(b.stock));
+        break;
+      case "stock_desc":
+        result.sort((a, b) => b.stock.compareTo(a.stock));
+        break;
+      case "name_asc":
+      default:
+        result.sort(
+          (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
+        );
+        break;
     }
     filteredProducts.assignAll(result);
   }
 
-  /// 🗂️ กรองตามหมวดหมู่
-  void filterByCategory(int? id) {
-    selectedCategoryId.value = id ?? 0;
+  void applyFilter({required int categoryId, required String sortOption}) {
+    selectedCategoryId.value = categoryId;
+    selectedSortOption.value = sortOption;
     currentPage.value = 1;
     fetchStockData();
   }
 
-  /// 🔃 สลับการเรียงลำดับ (น้อยไปมาก / มากไปน้อย)
-  void toggleSort() {
-    isAscending.value = !isAscending.value;
+  void clearFilter() {
+    selectedCategoryId.value = 0;
+    selectedSortOption.value = "name_asc";
     currentPage.value = 1;
     fetchStockData();
   }

@@ -1,5 +1,6 @@
-import 'package:eazy_store/page/product/checkStock/check_stock_controller.dart';
+﻿import 'package:eazy_store/page/product/checkStock/check_stock_controller.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
+import 'package:eazy_store/widgets/product_filter_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -28,7 +29,6 @@ class CheckStockScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      // ✨ 1. หุ้มด้วย MediaQuery จำกัดการขยายฟอนต์สูงสุด 1.2 เท่า
       body: MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: MediaQuery.textScalerOf(
@@ -41,9 +41,27 @@ class CheckStockScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
                 children: [
-                  _buildSearchBar(controller, primaryColor),
-                  const SizedBox(height: 15),
-                  _buildFilterAndSortRow(controller),
+                  Row(
+                    children: [
+                      Expanded(child: _buildSearchBar(controller, primaryColor)),
+                      const SizedBox(width: 12),
+                      Obx(
+                        () => ProductFilterButton(
+                          categories: controller.categories,
+                          selectedCategoryId: controller.selectedCategoryId.value,
+                          sortOptions: defaultProductSortOptions,
+                          selectedSortValue: controller.selectedSortOption.value,
+                          defaultSortValue: 'name_asc',
+                          onApply: (categoryId, sortValue) =>
+                              controller.applyFilter(
+                                categoryId: categoryId,
+                                sortOption: sortValue,
+                              ),
+                          onClear: controller.clearFilter,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                 ],
               ),
@@ -90,7 +108,6 @@ class CheckStockScreen extends StatelessWidget {
               }),
             ),
 
-            // ✨ ส่วนควบคุมการแบ่งหน้า (Pagination Bar)
             PaginationControls(
               currentPage: controller.currentPage,
               totalPages: controller.totalPages,
@@ -103,115 +120,16 @@ class CheckStockScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
+        currentIndex: -1,
         onTap: (index) {
-          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
           print("Tab tapped: $index");
         },
       ),
     );
   }
 
-  Widget _buildFilterAndSortRow(CheckStockController controller) {
-    const Color themeGreen = Color(0xFF6B8E23);
-    return Row(
-      children: [
-        // Dropdown หมวดหมู่
-        Expanded(
-          flex: 5,
-          child: Obx(
-            () => Container(
-              // ✨ ถอด height: 42 ออก ใช้ Padding แทน ให้มันขยายตามฟอนต์
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(
-                  color: themeGreen.withOpacity(0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<int>(
-                  value: controller.selectedCategoryId.value,
-                  isExpanded: true,
-                  icon: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: themeGreen,
-                  ),
-                  style: const TextStyle(
-                    color: themeGreen,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  onChanged: (val) => controller.filterByCategory(val),
-                  items: [
-                    const DropdownMenuItem(value: 0, child: Text("หมวดหมู่")),
-                    ...controller.categories.map(
-                      (cat) => DropdownMenuItem(
-                        value: cat.categoryId,
-                        child: Text(cat.name, overflow: TextOverflow.ellipsis),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        // ✨ ห่อปุ่มเรียงลำดับด้วย Expanded ป้องกันมันโดนเบียดตกจอ
-        Expanded(
-          flex: 4,
-          child: InkWell(
-            onTap: controller.toggleSort,
-            borderRadius: BorderRadius.circular(25),
-            child: Obx(
-              () => Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(
-                    color: themeGreen.withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
-                // ✨ ใส่ FittedBox เพื่อย่อตัวหนังสือถ้ามันยาวไป
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        controller.isAscending.value
-                            ? "น้อย → มาก"
-                            : "มาก → น้อย",
-                        style: const TextStyle(
-                          color: themeGreen,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.swap_vert, size: 18, color: themeGreen),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSearchBar(CheckStockController controller, Color primaryColor) {
     return Container(
-      // ✨ ปลด height: 50 ออก
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15.0),
@@ -232,7 +150,7 @@ class CheckStockScreen extends StatelessWidget {
             onPressed: controller.openScanner,
           ),
           border: InputBorder.none,
-          isDense: true, // ทำให้ช่องไม่สูงเกินไปเวลาถอด height ออก
+          isDense: true,
           contentPadding: const EdgeInsets.symmetric(
             vertical: 14.0,
             horizontal: 12.0,
