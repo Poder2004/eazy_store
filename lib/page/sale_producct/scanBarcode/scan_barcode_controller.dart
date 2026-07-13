@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
 
@@ -9,8 +10,22 @@ import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_bar
 // 1. Controller: จัดการ Logic การสแกน
 // ----------------------------------------------------------------------
 class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
-  // Method Channel สำหรับเชื่อมต่อเล่นเสียงฝั่ง Native
-  static const MethodChannel _soundChannel = MethodChannel('com.example.eazy_store/sound');
+  // สมาชิกเล่นเสียง Beep ผ่าน AudioPool (ใช้ static เพื่อเล่นได้ทันทีแบบไม่มีดีเลย์ และเล่นซ้ำได้เรื่อยๆ)
+  static AudioPool? _audioPool;
+
+  static Future<void> _initAudioPool() async {
+    if (_audioPool == null) {
+      try {
+        _audioPool = await AudioPool.create(
+          source: AssetSource('sound/beep.mp3'),
+          minPlayers: 1,
+          maxPlayers: 3,
+        );
+      } catch (e) {
+        print('Error initializing AudioPool: $e');
+      }
+    }
+  }
 
   // ⚠️ เปลี่ยนเป็น late เพื่อกำหนดค่าใน onInit
   late MobileScannerController cameraController;
@@ -24,7 +39,10 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
     // ✅ 1. เริ่มดักจับสถานะแอป (เช่น ตอนพับจอ)
     WidgetsBinding.instance.addObserver(this);
 
-    // ✅ 2. สร้าง Controller ตรงนี้เพื่อให้มั่นใจว่าใหม่เสมอเมื่อเข้าหน้า
+    // ✅ 2. โหลดเสียงเตรียมไว้ล่วงหน้า
+    _initAudioPool();
+
+    // ✅ 3. สร้าง Controller ตรงนี้เพื่อให้มั่นใจว่าใหม่เสมอเมื่อเข้าหน้า
     cameraController = MobileScannerController(
       detectionSpeed: DetectionSpeed.noDuplicates,
       facing: CameraFacing.back,
@@ -82,8 +100,13 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
         // 1. สั่นเพื่อตอบสนอง (Haptic Feedback)
         HapticFeedback.lightImpact();
 
-        // 2. ส่งเสียง Beep ระบบผ่าน Native Method Channel
-        _soundChannel.invokeMethod('playBeep');
+        // 2. ส่งเสียง Beep ด้วยไฟล์เสียงที่เราเลือกไว้ (เล่นจาก AudioPool เพื่อความลื่นไหลและไร้ดีเลย์)
+        if (_audioPool != null) {
+          _audioPool!.start();
+        } else {
+          // fallback ในกรณีสแกนเร็วมากก่อนที่ Pool จะโหลดเสร็จ
+          AudioPlayer().play(AssetSource('sound/beep.mp3'), mode: PlayerMode.lowLatency);
+        }
 
         Get.back(result: barcode.rawValue);
         break;

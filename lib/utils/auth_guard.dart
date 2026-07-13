@@ -72,40 +72,65 @@ class AuthGuard {
     }
   }
 
+  static DateTime? _lastSnackbarTime;
+  static bool _isLoggingOut = false;
+
   /// เรียกเมื่อได้รับ 401 — ลอง refresh ก่อน ถ้าไม่ได้ค่อย logout
   static Future<void> handleUnauthorized() async {
     bool refreshed = await refreshToken();
     if (refreshed) {
-      Get.snackbar(
-        "Session ต่ออายุแล้ว",
-        "กรุณาลองใหม่อีกครั้ง",
-        backgroundColor: Get.theme.colorScheme.surface,
-        duration: const Duration(seconds: 3),
-      );
+      final now = DateTime.now();
+      // แสดง Snackbar จำกัดสูงสุด 1 ครั้งทุกๆ 10 วินาที เพื่อป้องกันการเปิดค้างหรือแสดงซ้อนกันหลายๆ อัน (Snackbar Storm)
+      if (_lastSnackbarTime == null || now.difference(_lastSnackbarTime!) > const Duration(seconds: 10)) {
+        _lastSnackbarTime = now;
+        Get.closeAllSnackbars(); // ล้างคิว Snackbar ที่ค้างอยู่ทั้งหมดออกไปก่อน
+        Get.snackbar(
+          "Session ต่ออายุแล้ว",
+          "กรุณาลองใหม่อีกครั้ง",
+          backgroundColor: Get.theme.colorScheme.surface,
+          duration: const Duration(seconds: 3),
+        );
+      }
     } else {
       await _clearSessionAndLogout();
     }
   }
 
   static Future<void> _clearSessionAndLogout() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    // แจ้ง backend ให้ยกเลิก refresh token ด้วย (best effort)
-    try {
-      final token = prefs.getString('token');
-      if (token != null) {
-        await http.post(
-          Uri.parse('${AppConfig.baseUrl}/api/auth/logout'),
-          headers: {"Authorization": "Bearer $token"},
-        ).timeout(const Duration(seconds: 3));
-      }
-    } catch (_) {}
+    if (_isLoggingOut) return;
+    _isLoggingOut = true;
 
-    await prefs.remove('token');
-    await prefs.remove('refresh_token');
-    await prefs.remove('token_expires_at');
-    await prefs.remove('shopId');
-    await prefs.remove('shopName');
-    Get.offAll(() => const LoginPage());
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final refreshToken = prefs.getString('refresh_token');
+
+      // ถ้าออกจากระบบไปแล้ว (ไม่มี Token ทั้งสองตัว) ไม่ต้องประมวลผลซ้ำ
+      if (token == null && refreshToken == null) {
+        return;
+      }
+
+      // แจ้ง backend ให้ยกเลิก refresh token ด้วย (best effort)
+      try {
+        if (token != null) {
+          await http.post(
+            Uri.parse('${AppConfig.baseUrl}/api/auth/logout'),
+            headers: {"Authorization": "Bearer $token"},
+          ).timeout(const Duration(seconds: 3));
+        }
+      } catch (_) {}
+
+      await prefs.remove('token');
+      await prefs.remove('refresh_token');
+      await prefs.remove('token_expires_at');
+      await prefs.remove('shopId');
+      await prefs.remove('shopName');
+      
+      Get.closeAllSnackbars(); // ล้าง Snackbar ทั้งหมดเมื่อสลับไปหน้าล็อคอิน
+      Get.offAll(() => const LoginPage());
+    } finally {
+      _isLoggingOut = false;
+    }
   }
 
   static bool isUnauthorized(int statusCode) => statusCode == 401;
