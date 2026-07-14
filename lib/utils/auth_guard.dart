@@ -35,6 +35,7 @@ class AuthGuard {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final newToken = data['access_token'] as String?;
+        final newRefreshToken = data['refresh_token'] as String?;
         final expiresIn = (data['expires_in'] as int?) ?? 900;
         if (newToken == null) {
           _refreshCompleter!.complete(false);
@@ -44,6 +45,9 @@ class AuthGuard {
         final expiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
         await prefs.setString('token', newToken);
         await prefs.setInt('token_expires_at', expiresAt);
+        if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+          await prefs.setString('refresh_token', newRefreshToken);
+        }
         _refreshCompleter!.complete(true);
         return true;
       }

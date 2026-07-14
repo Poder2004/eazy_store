@@ -31,6 +31,7 @@ class ApiOrderList {
           await AuthGuard.handleUnauthorized();
         }
         print("API Error (Export PDF): ${response.statusCode}");
+        print("API Error Response Body (Export PDF): ${response.body}");
         return null;
       }
     } catch (e) {

@@ -257,6 +257,7 @@ class ApiProduct {
     final url = Uri.parse(urlString);
 
     try {
+      await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
@@ -271,6 +272,9 @@ class ApiProduct {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
         throw Exception("Failed to load products: ${response.statusCode}");
       }
     } catch (e) {
