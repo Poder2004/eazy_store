@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // ✅ Import Controller ที่แยกออกไป
 import 'scan_barcode_controller.dart';
@@ -28,19 +29,36 @@ class ScanBarcodePage extends StatelessWidget {
             onDetect: controller.onDetect,
             fit: BoxFit.cover,
             errorBuilder: (context, error) {
+              // กรณีผู้ใช้ปฏิเสธสิทธิ์กล้อง ให้มีปุ่มพาไปเปิดในตั้งค่า
+              final isPermissionDenied =
+                  error.errorCode == MobileScannerErrorCode.permissionDenied;
               return Container(
                 color: Colors.black,
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error, color: Colors.red, size: 50),
+                      Icon(
+                        isPermissionDenied ? Icons.no_photography : Icons.error,
+                        color: Colors.red,
+                        size: 50,
+                      ),
                       const SizedBox(height: 10),
                       Text(
-                        "ไม่สามารถเปิดกล้องได้\n${error.errorCode}",
+                        isPermissionDenied
+                            ? "กรุณาอนุญาตให้แอปเข้าถึงกล้อง\nเพื่อใช้งานการสแกนบาร์โค้ด"
+                            : "ไม่สามารถเปิดกล้องได้\n${error.errorCode}",
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.white),
                       ),
+                      if (isPermissionDenied) ...[
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: openAppSettings,
+                          icon: const Icon(Icons.settings),
+                          label: const Text("เปิดการตั้งค่า"),
+                        ),
+                      ],
                     ],
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ImagePickerSheet extends StatelessWidget {
   final Function(ImageSource source) onImagePicked;
@@ -21,6 +22,54 @@ class ImagePickerSheet extends StatelessWidget {
       ImagePickerSheet(onImagePicked: onImagePicked, title: title ?? "เลือกรูปภาพ"),
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+    );
+  }
+
+  // ขอสิทธิ์ก่อนเปิดกล้อง/คลังรูปภาพ (จุดเดียว ใช้ร่วมกันทุกหน้า)
+  static Future<bool> _ensurePermission(ImageSource source) async {
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (status.isGranted) return true;
+
+      if (status.isPermanentlyDenied) {
+        _showOpenSettingsDialog(
+          "ไม่ได้รับสิทธิ์เข้าถึงกล้อง",
+          "กรุณาเปิดสิทธิ์กล้องในการตั้งค่า เพื่อใช้งานการถ่ายภาพ",
+        );
+      } else {
+        Get.snackbar("สิทธิ์ถูกปฏิเสธ", "คุณต้องอนุญาตให้เข้าถึงกล้องก่อน");
+      }
+      return false;
+    }
+
+    // Gallery: Android 13+ ใช้ photos, รุ่นเก่าใช้ storage
+    var status = await Permission.photos.request();
+    if (status.isGranted || status.isLimited) return true;
+    status = await Permission.storage.request();
+    if (status.isGranted) return true;
+
+    if (status.isPermanentlyDenied) {
+      _showOpenSettingsDialog(
+        "ไม่ได้รับสิทธิ์เข้าถึงรูปภาพ",
+        "กรุณาเปิดสิทธิ์รูปภาพในการตั้งค่า เพื่อเลือกรูปจากคลังรูปภาพ",
+      );
+      return false;
+    }
+    // บางอุปกรณ์ picker ของระบบเปิดได้โดยไม่ต้องใช้สิทธิ์ ให้ลองเปิดต่อ
+    return true;
+  }
+
+  static void _showOpenSettingsDialog(String title, String message) {
+    Get.defaultDialog(
+      title: title,
+      middleText: message,
+      textCancel: "ยกเลิก",
+      textConfirm: "เปิดการตั้งค่า",
+      confirmTextColor: Colors.white,
+      onConfirm: () {
+        Get.back();
+        openAppSettings();
+      },
     );
   }
 
@@ -57,18 +106,22 @@ class ImagePickerSheet extends StatelessWidget {
                 icon: Icons.camera_alt_rounded,
                 label: "ถ่ายภาพ",
                 color: Colors.blueAccent,
-                onTap: () {
+                onTap: () async {
                   Get.back(); // ปิด sheet
-                  onImagePicked(ImageSource.camera);
+                  if (await _ensurePermission(ImageSource.camera)) {
+                    onImagePicked(ImageSource.camera);
+                  }
                 },
               ),
               _buildPickerButton(
                 icon: Icons.photo_library_rounded,
                 label: "คลังรูปภาพ",
                 color: Colors.purpleAccent,
-                onTap: () {
+                onTap: () async {
                   Get.back(); // ปิด sheet
-                  onImagePicked(ImageSource.gallery);
+                  if (await _ensurePermission(ImageSource.gallery)) {
+                    onImagePicked(ImageSource.gallery);
+                  }
                 },
               ),
             ],
