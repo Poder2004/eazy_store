@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
 
 // ----------------------------------------------------------------------
@@ -33,6 +35,9 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
   var isFlashOn = false.obs;
   var isScanned = false.obs;
 
+  // ✅ สถานะสิทธิ์กล้อง: จะเปิดกล้องก็ต่อเมื่อได้รับอนุญาตแล้วเท่านั้น
+  var hasPermission = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -43,11 +48,90 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
     _initAudioPool();
 
     // ✅ 3. สร้าง Controller ตรงนี้เพื่อให้มั่นใจว่าใหม่เสมอเมื่อเข้าหน้า
+    // autoStart: false เพราะเราจะขอสิทธิ์เองก่อน แล้วค่อยสั่ง start
+    // (ถ้าปล่อยให้ mobile_scanner ขอเอง จะเกิด dialog เด้งวนตอนถูกปฏิเสธ)
     cameraController = MobileScannerController(
+      autoStart: false,
       detectionSpeed: DetectionSpeed.noDuplicates,
       facing: CameraFacing.back,
       torchEnabled: false,
       returnImage: false,
+    );
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
+    // ✅ ขอสิทธิ์กล้องหลังหน้าจอแสดงผลแล้ว
+    requestCameraPermission();
+  }
+
+  // ✅ ขอสิทธิ์กล้อง: ได้รับ -> เปิดกล้อง / ถูกปฏิเสธ -> ถามผู้ใช้ว่าจะขออีกครั้งไหม
+  Future<void> requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    if (status.isGranted) {
+      _startCamera();
+      return;
+    }
+
+    // ⚠️ Quirk ของ Android: ถ้าผู้ใช้เคยปฏิเสธครบ 2 ครั้ง ระบบจะไม่แสดง dialog
+    // ขอสิทธิ์อีกเลย แต่ request() บางเครื่องยังคืนค่า denied เฉยๆ
+    // (ไม่ใช่ permanentlyDenied) ทำให้ปุ่ม "ขอสิทธิ์อีกครั้ง" กดแล้วเงียบ
+    // จึงเช็ค shouldShowRequestRationale เพิ่ม: ถ้า false = ระบบไม่ให้ขอซ้ำแล้ว
+    bool isPermanent = status.isPermanentlyDenied;
+    if (!isPermanent && GetPlatform.isAndroid) {
+      isPermanent = !(await Permission.camera.shouldShowRequestRationale);
+    }
+    _showPermissionDialog(isPermanentlyDenied: isPermanent);
+  }
+
+  void _startCamera() {
+    if (hasPermission.value) return; // กันสั่ง start ซ้ำ
+    hasPermission.value = true;
+    cameraController.start();
+  }
+
+  // ✅ Dialog เมื่อถูกปฏิเสธสิทธิ์
+  // - ปฏิเสธธรรมดา: ปุ่ม "ขอสิทธิ์อีกครั้ง"
+  // - ปฏิเสธถาวร: ปุ่ม "เปิดการตั้งค่า" (ระบบไม่ยอมให้ขอซ้ำแล้ว)
+  // - ปุ่ม "ยกเลิก": กลับไปหน้า Home
+  void _showPermissionDialog({required bool isPermanentlyDenied}) {
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("ไม่ได้รับสิทธิ์กล้อง"),
+        content: Text(
+          isPermanentlyDenied
+              ? "แอปต้องใช้กล้องเพื่อสแกนบาร์โค้ด\nกรุณาไปเปิดสิทธิ์กล้องในการตั้งค่า"
+              : "แอปต้องใช้กล้องเพื่อสแกนบาร์โค้ด\nต้องการขอสิทธิ์อีกครั้งหรือไม่?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back(); // ปิด dialog
+              Get.offAll(() => const HomePage()); // กลับหน้า Home
+            },
+            child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFC0392B),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Get.back(); // ปิด dialog
+              if (isPermanentlyDenied) {
+                // กลับมาจากหน้าตั้งค่าแล้ว จะเช็คสิทธิ์ใหม่ใน didChangeAppLifecycleState
+                openAppSettings();
+              } else {
+                requestCameraPermission();
+              }
+            },
+            child: Text(isPermanentlyDenied ? "เปิดการตั้งค่า" : "ขอสิทธิ์อีกครั้ง"),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
     );
   }
 
@@ -64,20 +148,26 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
 
   // ✅ 5. ฟังก์ชันจัดการเมื่อ user พับจอ หรือสลับแอป
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!cameraController.value.isInitialized) return;
-
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     switch (state) {
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
         return;
       case AppLifecycleState.resumed:
-        // กลับมาหน้าแอป -> สั่งเริ่มกล้องใหม่ (ป้องกันจอดำ)
-        cameraController.start();
+        if (hasPermission.value) {
+          // กลับมาหน้าแอป -> สั่งเริ่มกล้องใหม่ (ป้องกันจอดำ)
+          cameraController.start();
+        } else {
+          // ⚠️ ยังไม่ได้สิทธิ์: ห้าม request ตรงนี้เด็ดขาด
+          // (dialog ขอสิทธิ์ของระบบทำให้แอป inactive->resumed วนไม่รู้จบ)
+          // แค่เช็คสถานะเฉยๆ เผื่อผู้ใช้เพิ่งกลับมาจากหน้าตั้งค่าหลังเปิดสิทธิ์ให้แล้ว
+          final status = await Permission.camera.status;
+          if (status.isGranted) _startCamera();
+        }
         break;
       case AppLifecycleState.inactive:
-        // พับจอ/สลับแอป -> หยุดกล้องชั่วคราว
+        // พับจอ/สลับแอป -> หยุดกล้องชั่วคราว (stop มี guard ภายใน ปลอดภัยแม้ยังไม่เปิด)
         cameraController.stop();
         break;
     }

@@ -31,7 +31,14 @@ class ImagePickerSheet extends StatelessWidget {
       final status = await Permission.camera.request();
       if (status.isGranted) return true;
 
-      if (status.isPermanentlyDenied) {
+      // Android จะไม่แสดง dialog ขอสิทธิ์อีกหลังถูกปฏิเสธ 2 ครั้ง แต่บางเครื่อง
+      // คืนค่า denied เฉยๆ (ไม่ใช่ permanentlyDenied) ต้องเช็ค rationale เพิ่ม
+      bool isPermanent = status.isPermanentlyDenied;
+      if (!isPermanent && GetPlatform.isAndroid) {
+        isPermanent = !(await Permission.camera.shouldShowRequestRationale);
+      }
+
+      if (isPermanent) {
         _showOpenSettingsDialog(
           "ไม่ได้รับสิทธิ์เข้าถึงกล้อง",
           "กรุณาเปิดสิทธิ์กล้องในการตั้งค่า เพื่อใช้งานการถ่ายภาพ",

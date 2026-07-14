@@ -24,46 +24,54 @@ class ScanBarcodePage extends StatelessWidget {
       body: Stack(
         children: [
           // --- 1. Camera Layer ---
-          MobileScanner(
-            controller: controller.cameraController,
-            onDetect: controller.onDetect,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error) {
-              // กรณีผู้ใช้ปฏิเสธสิทธิ์กล้อง ให้มีปุ่มพาไปเปิดในตั้งค่า
-              final isPermissionDenied =
-                  error.errorCode == MobileScannerErrorCode.permissionDenied;
-              return Container(
-                color: Colors.black,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isPermissionDenied ? Icons.no_photography : Icons.error,
-                        color: Colors.red,
-                        size: 50,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        isPermissionDenied
-                            ? "กรุณาอนุญาตให้แอปเข้าถึงกล้อง\nเพื่อใช้งานการสแกนบาร์โค้ด"
-                            : "ไม่สามารถเปิดกล้องได้\n${error.errorCode}",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      if (isPermissionDenied) ...[
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: openAppSettings,
-                          icon: const Icon(Icons.settings),
-                          label: const Text("เปิดการตั้งค่า"),
+          // ✅ แสดงกล้องเฉพาะเมื่อได้รับสิทธิ์แล้ว (Controller เป็นคนขอสิทธิ์เอง)
+          // ระหว่างรอสิทธิ์จะเป็นจอดำ และมี Dialog ขอสิทธิ์ลอยอยู่ด้านบน
+          Obx(
+            () => controller.hasPermission.value
+                ? MobileScanner(
+                    controller: controller.cameraController,
+                    onDetect: controller.onDetect,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error) {
+                      // กรณีผู้ใช้ปฏิเสธสิทธิ์กล้อง ให้มีปุ่มพาไปเปิดในตั้งค่า
+                      final isPermissionDenied = error.errorCode ==
+                          MobileScannerErrorCode.permissionDenied;
+                      return Container(
+                        color: Colors.black,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPermissionDenied
+                                    ? Icons.no_photography
+                                    : Icons.error,
+                                color: Colors.red,
+                                size: 50,
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                isPermissionDenied
+                                    ? "กรุณาอนุญาตให้แอปเข้าถึงกล้อง\nเพื่อใช้งานการสแกนบาร์โค้ด"
+                                    : "ไม่สามารถเปิดกล้องได้\n${error.errorCode}",
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              if (isPermissionDenied) ...[
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  onPressed: openAppSettings,
+                                  icon: const Icon(Icons.settings),
+                                  label: const Text("เปิดการตั้งค่า"),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
+                      );
+                    },
+                  )
+                : Container(color: Colors.black),
           ),
 
           // --- 2. Overlay Layer ---
