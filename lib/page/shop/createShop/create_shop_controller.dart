@@ -5,7 +5,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 // Imports ของโปรเจกต์ (เช็ค path ให้ตรงกับของคุณนะครับ)
 import 'package:eazy_store/page/homepage/home_page.dart';
@@ -31,23 +30,7 @@ class CreateShopController extends GetxController {
 
   Future<void> pickImage(ImageSource source, {required bool isProfile}) async {
     try {
-      // --- เพิ่มส่วนนี้เพื่อขออนุญาตก่อน ---
-      if (source == ImageSource.camera) {
-        var status = await Permission.camera.request();
-        if (status.isDenied) {
-          Get.snackbar("สิทธิ์ถูกปฏิเสธ", "คุณต้องอนุญาตให้เข้าถึงกล้องก่อน");
-          return;
-        }
-      } else {
-        // สำหรับ Gallery (เช็คตามเวอร์ชัน Android)
-        var status = await Permission.photos.request();
-        if (status.isDenied) {
-          // บางรุ่นใช้ storage
-          await Permission.storage.request();
-        }
-      }
-      // ---------------------------------
-
+      // การขอสิทธิ์กล้อง/รูปภาพ ถูกจัดการรวมไว้ใน ImagePickerSheet แล้ว
       final XFile? image = await _picker.pickImage(
         source: source,
         imageQuality: 80,
