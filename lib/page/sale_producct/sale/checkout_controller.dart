@@ -162,6 +162,7 @@ class CheckoutController extends GetxController {
         if (searchController.text.isNotEmpty) {
           onSearchChanged(searchController.text);
         }
+        await _fetchShopData(); // ✅ รีเฟรช QR Code ทุกครั้งที่เปิดหน้า
       }
     } catch (e) {
       print("❌ Error fetching fresh products: $e");
@@ -183,7 +184,10 @@ class CheckoutController extends GetxController {
     try {
       ShopResponse? shop = await ApiShop().getCurrentShop();
       if (shop != null && shop.imgQrcode.isNotEmpty) {
-        shopQrCodeUrl.value = shop.imgQrcode;
+        // ✅ แนบ timestamp เพื่อล้างแคชรูปภาพเก่า (Prevent caching)
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final url = shop.imgQrcode;
+        shopQrCodeUrl.value = url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
       }
     } catch (e) {
       print("Error loading shop data: $e");

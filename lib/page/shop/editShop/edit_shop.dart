@@ -131,15 +131,95 @@ class EditShopScreen extends StatelessWidget {
               ),
               const SizedBox(height: 15),
 
+              // --- ส่วนรูปภาพ QR Code ---
+              _buildLabel("รูปภาพ QR Code สำหรับสแกนจ่าย"),
+              Center(
+                child: Stack(
+                  children: [
+                    Obx(() {
+                      ImageProvider? qrImageProvider;
+                      if (controller.selectedQrImage.value != null) {
+                        qrImageProvider = FileImage(
+                          controller.selectedQrImage.value!,
+                        );
+                      } else if (shop.imgQrcode.isNotEmpty) {
+                        qrImageProvider = NetworkImage(shop.imgQrcode);
+                      }
+
+                      return Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.grey.shade300,
+                            width: 2,
+                          ),
+                          image: qrImageProvider != null
+                              ? DecorationImage(
+                                  image: qrImageProvider,
+                                  fit: BoxFit.cover,
+                                )
+                              : null,
+                        ),
+                        child: qrImageProvider == null
+                            ? Icon(
+                                Icons.qr_code_2_rounded,
+                                size: 60,
+                                color: Colors.grey[400],
+                              )
+                            : null,
+                      );
+                    }),
+
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          controller.showQrImagePickerOptions();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryGreen,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 15),
+
               _buildLabel("รหัส Pin Code (สำหรับยืนยัน)"),
-              _buildTextField(
+              Obx(() => _buildTextField(
                 controller.pinCodeController,
                 Icons.lock,
                 inputType: TextInputType.number,
-                isPassword: true,
+                obscureText: !controller.isPinVisible.value,
                 maxLength: 6,
                 isNumberOnly: true,
-              ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    controller.isPinVisible.value
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () {
+                    controller.isPinVisible.value = !controller.isPinVisible.value;
+                  },
+                ),
+              )),
 
               const SizedBox(height: 40),
 
@@ -204,16 +284,17 @@ class EditShopScreen extends StatelessWidget {
     TextEditingController controller,
     IconData icon, {
     TextInputType inputType = TextInputType.text,
-    bool isPassword = false,
+    bool obscureText = false,
     int maxLines = 1,
     int? maxLength,
     String? hint,
     bool isNumberOnly = false,
+    Widget? suffixIcon,
   }) {
     return TextField(
       controller: controller,
       keyboardType: inputType,
-      obscureText: isPassword,
+      obscureText: obscureText,
       maxLines: maxLines,
       maxLength: maxLength,
       inputFormatters: isNumberOnly
@@ -224,6 +305,7 @@ class EditShopScreen extends StatelessWidget {
         fillColor: Colors.grey[50],
         hintText: hint,
         prefixIcon: Icon(icon, color: Colors.grey),
+        suffixIcon: suffixIcon,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,

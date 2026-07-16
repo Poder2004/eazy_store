@@ -7,24 +7,25 @@ import 'sales_account_controller.dart';
 import 'package:eazy_store/model/response/dashboard_detail_response.dart';
 
 // ─── Light Theme Tokens ───────────────────────────────────────────────────────
-const _kBg       = Color(0xFFEDEEF2);
-const _kCard     = Colors.white;
-const _kCard2    = Color(0xFFF5F6FA);
-const _kBorder   = Color(0xFFE8EAF0);
+const _kBg = Color(0xFFEDEEF2);
+const _kCard = Colors.white;
+const _kCard2 = Color(0xFFF5F6FA);
+const _kBorder = Color(0xFFE8EAF0);
 
-const _kGreen    = Color(0xFF00A86B);
+const _kGreen = Color(0xFF00A86B);
 const _kGreenDim = Color(0xFFE8FDF5);
-const _kBlue     = Color(0xFF4A7EFF);
-const _kBlueDim  = Color(0xFFEBF3FF);
-const _kOrange   = Color(0xFFFFB340);
-const _kOrangeDim= Color(0xFFFFF8EC);
-const _kRed      = Color(0xFFD93F4C);
-const _kPurple   = Color(0xFF8B5CF6);
-const _kPurpleDim= Color(0xFFF3F0FF);
+const _kBlue = Color(0xFF4A7EFF);
+const _kBlueDim = Color(0xFFEBF3FF);
+const _kOrange = Color(0xFFFFB340);
+const _kOrangeDim = Color(0xFFFFF8EC);
+const _kRed = Color(0xFFD93F4C);
+const _kRedDim = Color(0xFFFFF0F1);
+const _kPurple = Color(0xFF8B5CF6);
+const _kPurpleDim = Color(0xFFF3F0FF);
 
-const _kInk      = Color(0xFF0D1730);
-const _kSub      = Color(0xFF6B7A99);
-const _kMuted    = Color(0xFF9AA4BF);
+const _kInk = Color(0xFF0D1730);
+const _kSub = Color(0xFF6B7A99);
+const _kMuted = Color(0xFF9AA4BF);
 
 const _kMaxTextScale = 1.25;
 
@@ -39,8 +40,10 @@ class SalesAccountScreen extends StatelessWidget {
     final mq = MediaQuery.of(context);
     return MediaQuery(
       data: mq.copyWith(
-        textScaler: mq.textScaler
-            .clamp(minScaleFactor: 1.0, maxScaleFactor: _kMaxTextScale),
+        textScaler: mq.textScaler.clamp(
+          minScaleFactor: 1.0,
+          maxScaleFactor: _kMaxTextScale,
+        ),
       ),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
@@ -56,7 +59,7 @@ class SalesAccountScreen extends StatelessWidget {
                   backgroundColor: _kCard,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     child: Column(
                       children: [
                         _buildPeriodNav(context, c),
@@ -64,7 +67,7 @@ class SalesAccountScreen extends StatelessWidget {
                         Obx(() {
                           if (c.isLoading.value) {
                             return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 70),
+                              padding: EdgeInsets.symmetric(vertical: 60),
                               child: Center(
                                 child: CircularProgressIndicator(
                                   color: _kBlue,
@@ -104,29 +107,25 @@ class SalesAccountScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'ภาพรวมบัญชี',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: _kInk,
-                            letterSpacing: -.4,
-                            height: 1.1,
-                          ),
-                        ),
-                       
-                      ],
+                  const Expanded(
+                    child: Text(
+                      'ภาพรวมบัญชี',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: _kInk,
+                        letterSpacing: -.4,
+                        height: 1.1,
+                      ),
                     ),
                   ),
                   GestureDetector(
                     onTap: () => Get.to(() => const AdvancedReportPage()),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [_kBlue, Color(0xFF185FA5)],
@@ -135,13 +134,16 @@ class SalesAccountScreen extends StatelessWidget {
                         ),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.bar_chart_rounded,
-                              size: 14, color: Colors.white),
-                          const SizedBox(width: 5),
-                          const Text(
+                          Icon(
+                            Icons.bar_chart_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
                             'รายงานเชิงลึก',
                             style: TextStyle(
                               fontSize: 12,
@@ -247,9 +249,11 @@ class SalesAccountScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.touch_app_rounded,
-                            size: 10,
-                            color: _kBlue.withValues(alpha: .6)),
+                        Icon(
+                          Icons.touch_app_rounded,
+                          size: 10,
+                          color: _kBlue.withValues(alpha: .6),
+                        ),
                         const SizedBox(width: 3),
                         const Text(
                           'แตะเพื่อเลือกช่วงเวลา',
@@ -286,59 +290,37 @@ class SalesAccountScreen extends StatelessWidget {
 
   // ─── KPI Layout ──────────────────────────────────────────────────────────────
   Widget _buildKpiLayout(BuildContext context, SalesAccountController c) {
-    // ปีนี้ → ไม่มีข้อมูล detail จาก API ไม่ให้กดดูรายละเอียด
     final canDrill = c.selectedView.value != 'ปีนี้';
     final trendLabel = c.getTrendTextLabel();
     return Column(
       children: [
-        // ─── Hero: กำไรสุทธิ ───────────────────────────────────────────────
-        _HeroCard(
-          label: 'กำไรสุทธิ',
-          amount: '฿${c.formatNumber(c.netProfit.value)}',
-          trend: c.profitTrend.value,
+        // ─── แถว 1: กำไรสุทธิ + ยอดขายรวม + ต้นทุนรวม (การ์ดรวม) ────────
+        _ProfitSalesCard(
+          netProfit: c.netProfit.value,
+          profitTrend: c.profitTrend.value,
+          totalSales: c.totalSales.value,
+          salesTrend: c.salesTrend.value,
+          totalCost: c.totalCost.value,
+          costTrend: c.costTrend.value,
           trendLabel: trendLabel,
-          iconData: Icons.account_balance_wallet_rounded,
-          iconBg: _kGreenDim,
-          iconFg: _kGreen,
-          onTap: canDrill
-              ? () => _showAllProductStats(context, c)
-              : null,
+          onTap: canDrill ? () => _showAllProductStats(context, c) : null,
+          formatNumber: c.formatNumber,
         ),
         const SizedBox(height: 12),
-        // ─── Row: ยอดขายรวม + ต้นทุนรวม ──────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: _CompactCard(
-                label: 'ยอดขายรวม',
-                amount: '฿${c.formatNumber(c.totalSales.value)}',
-                trend: c.salesTrend.value,
-                iconData: Icons.attach_money_rounded,
-                iconBg: _kBlueDim,
-                iconFg: _kBlue,
-                onTap: canDrill
-                    ? () => _showAllProductStats(context, c)
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _CompactCard(
-                label: 'ต้นทุนรวม',
-                amount: '฿${c.formatNumber(c.totalCost.value)}',
-                trend: c.costTrend.value,
-                iconData: Icons.shopping_bag_rounded,
-                iconBg: _kOrangeDim,
-                iconFg: _kOrange,
-                isCost: true,
-                onTap: canDrill
-                    ? () => _showAllProductStats(context, c)
-                    : null,
-              ),
-            ),
-          ],
+
+        // ─── แถว 2: ยอดหนี้รวม (ซ้าย) + เก็บหนี้ได้ (ขวา) ───────────────
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _DebtCompactCard(c: c)),
+              const SizedBox(width: 12),
+              Expanded(child: _CollectedDebtCard(c: c)),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
+
         // ─── Full-width: จำนวนรายการ ──────────────────────────────────────
         _TransactionCard(
           count: c.formatNumber(c.totalTransactions.value.toDouble()),
@@ -352,8 +334,7 @@ class SalesAccountScreen extends StatelessWidget {
   }
 
   // ─── Bottom Sheet: รายการบิล ─────────────────────────────────────────────────
-  void _showTransactionsDetail(
-      BuildContext context, SalesAccountController c) {
+  void _showTransactionsDetail(BuildContext context, SalesAccountController c) {
     c.fetchTransactionsDetail();
     showModalBottomSheet(
       context: context,
@@ -366,11 +347,14 @@ class SalesAccountScreen extends StatelessWidget {
         contentBuilder: (scrollCtrl) => Obx(() {
           if (c.isDetailLoading.value) {
             return const Center(
-                child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 60),
-              child: CircularProgressIndicator(
-                  color: _kBlue, strokeWidth: 2.5),
-            ));
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 60),
+                child: CircularProgressIndicator(
+                  color: _kBlue,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            );
           }
           if (c.transactionsList.isEmpty) {
             return _emptyState('ไม่มีรายการขายในช่วงเวลานี้');
@@ -431,7 +415,9 @@ class SalesAccountScreen extends StatelessWidget {
                             Text(
                               _formatThaiDate(item.createdAt, item.createdTime),
                               style: const TextStyle(
-                                  fontSize: 12, color: _kSub),
+                                fontSize: 12,
+                                color: _kSub,
+                              ),
                             ),
                           ],
                         ),
@@ -452,7 +438,9 @@ class SalesAccountScreen extends StatelessWidget {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: mColor.withValues(alpha: .15),
                                   borderRadius: BorderRadius.circular(6),
@@ -467,8 +455,11 @@ class SalesAccountScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.chevron_right_rounded,
-                                  size: 16, color: _kMuted),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                size: 16,
+                                color: _kMuted,
+                              ),
                             ],
                           ),
                         ],
@@ -505,7 +496,9 @@ class SalesAccountScreen extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 60),
                 child: CircularProgressIndicator(
-                    color: _kBlue, strokeWidth: 2.5),
+                  color: _kBlue,
+                  strokeWidth: 2.5,
+                ),
               ),
             );
           }
@@ -517,32 +510,32 @@ class SalesAccountScreen extends StatelessWidget {
             controller: scrollCtrl,
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
             children: [
-              // ─── Bill summary header ─────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: _kPurple.withValues(alpha: .08),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: _kPurple.withValues(alpha: .2)),
+                  border: Border.all(color: _kPurple.withValues(alpha: .2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Date + payment method badge
                     Row(
                       children: [
                         Expanded(
                           child: Text(
                             _formatThaiDate(
-                                detail.createdAt, detail.createdTime),
-                            style: const TextStyle(
-                                fontSize: 12, color: _kSub),
+                              detail.createdAt,
+                              detail.createdTime,
+                            ),
+                            style: const TextStyle(fontSize: 12, color: _kSub),
                           ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: _kPurple.withValues(alpha: .15),
                             borderRadius: BorderRadius.circular(20),
@@ -559,7 +552,6 @@ class SalesAccountScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // 3 financial columns
                     Row(
                       children: [
                         Expanded(
@@ -570,7 +562,11 @@ class SalesAccountScreen extends StatelessWidget {
                             isLarge: true,
                           ),
                         ),
-                        Container(width: 1, height: 36, color: _kPurple.withValues(alpha: .2)),
+                        Container(
+                          width: 1,
+                          height: 36,
+                          color: _kPurple.withValues(alpha: .2),
+                        ),
                         Expanded(
                           child: _BillSummaryCol(
                             label: 'รับเงิน',
@@ -578,7 +574,11 @@ class SalesAccountScreen extends StatelessWidget {
                             valueColor: _kBlue,
                           ),
                         ),
-                        Container(width: 1, height: 36, color: _kPurple.withValues(alpha: .2)),
+                        Container(
+                          width: 1,
+                          height: 36,
+                          color: _kPurple.withValues(alpha: .2),
+                        ),
                         Expanded(
                           child: _BillSummaryCol(
                             label: 'ทอนเงิน',
@@ -594,13 +594,13 @@ class SalesAccountScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // ─── Item list ───────────────────────────────────────────
               ...detail.items.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final item = entry.value;
                 return Container(
                   margin: EdgeInsets.only(
-                      bottom: idx < detail.items.length - 1 ? 8 : 0),
+                    bottom: idx < detail.items.length - 1 ? 8 : 0,
+                  ),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: _kCard2,
@@ -624,8 +624,11 @@ class SalesAccountScreen extends StatelessWidget {
                               : null,
                         ),
                         child: item.imgProduct.isEmpty
-                            ? const Icon(Icons.inventory_2_rounded,
-                                color: _kMuted, size: 20)
+                            ? const Icon(
+                                Icons.inventory_2_rounded,
+                                color: _kMuted,
+                                size: 20,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -647,7 +650,9 @@ class SalesAccountScreen extends StatelessWidget {
                             Text(
                               '฿${c.formatNumber(item.unitPrice)} × ${item.qty} ชิ้น',
                               style: const TextStyle(
-                                  fontSize: 12, color: _kSub),
+                                fontSize: 12,
+                                color: _kSub,
+                              ),
                             ),
                           ],
                         ),
@@ -671,7 +676,7 @@ class SalesAccountScreen extends StatelessWidget {
     );
   }
 
-  // ─── Bottom Sheet: สรุปยอดขายแยกรายสินค้า (ยอดขาย + ต้นทุน + กำไร) ─────────
+  // ─── Bottom Sheet: สรุปยอดขายแยกรายสินค้า ─────────────────────────────────
   void _showAllProductStats(BuildContext context, SalesAccountController c) {
     c.fetchProductSalesDetail();
     showModalBottomSheet(
@@ -679,141 +684,292 @@ class SalesAccountScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DetailSheet(
-        title: 'ยอดขายแยกรายสินค้า',
-        icon: Icons.inventory_2_rounded,
+        title: 'ยอดขายรายการสินค้า',
+        icon: Icons.table_chart_rounded,
         iconColor: _kBlue,
         contentBuilder: (scrollCtrl) => Obx(() {
           if (c.isDetailLoading.value) {
             return const Center(
-                child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 60),
-              child: CircularProgressIndicator(
-                  color: _kBlue, strokeWidth: 2.5),
-            ));
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 60),
+                child: CircularProgressIndicator(
+                  color: _kBlue,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            );
           }
           if (c.productSalesList.isEmpty) {
             return _emptyState('ไม่มีข้อมูลสินค้าในช่วงเวลานี้');
           }
-          return ListView.builder(
-            controller: scrollCtrl,
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
-            itemCount: c.productSalesList.length,
-            itemBuilder: (_, i) {
-              final item = c.productSalesList[i];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
+
+          final items = c.productSalesList;
+
+          // คำนวณยอดรวมทั้งหมด
+          double sumSales = 0;
+          double sumCost = 0;
+          double sumProfit = 0;
+          int sumQty = 0;
+          for (var item in items) {
+            sumSales += item.totalSales;
+            sumCost += item.totalCost;
+            sumProfit += item.profit;
+            sumQty += item.totalQty;
+          }
+
+          return Column(
+            children: [
+              // ── หัวตาราง (Table Header) ───────────────────────────
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: _kCard2,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _kBorder),
+                  color: _kBlueDim,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Product image
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: _kCard,
-                        border: Border.all(color: _kBorder),
-                        image: item.imgProduct.isNotEmpty
-                            ? DecorationImage(
-                                image: NetworkImage(item.imgProduct),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: item.imgProduct.isEmpty
-                          ? const Icon(Icons.inventory_2_rounded,
-                              color: _kMuted, size: 22)
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
+                  children: const [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Product name + qty
-                          Text(
-                            item.productName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: _kInk,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              const Icon(Icons.shopping_cart_rounded,
-                                  size: 13, color: _kMuted),
-                              const SizedBox(width: 4),
-                              Text(
-                                'ขายได้ ${item.totalQty} ชิ้น',
-                                style: const TextStyle(
-                                    fontSize: 12, color: _kSub),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          // 3 metrics row
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: _kCard,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: _kBorder),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: _MetricCol(
-                                    label: 'ยอดขาย',
-                                    value:
-                                        '฿${c.formatNumber(item.totalSales)}',
-                                    color: _kBlue,
-                                  ),
-                                ),
-                                Container(
-                                    width: 1,
-                                    height: 28,
-                                    color: _kBorder),
-                                Expanded(
-                                  child: _MetricCol(
-                                    label: 'ต้นทุน',
-                                    value:
-                                        '฿${c.formatNumber(item.totalCost)}',
-                                    color: _kOrange,
-                                  ),
-                                ),
-                                Container(
-                                    width: 1,
-                                    height: 28,
-                                    color: _kBorder),
-                                Expanded(
-                                  child: _MetricCol(
-                                    label: 'กำไร',
-                                    value:
-                                        '฿${c.formatNumber(item.profit)}',
-                                    color: _kGreen,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      flex: 3,
+                      child: Text(
+                        'ชื่อสินค้า / จำนวน',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _kBlue,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'ยอดขาย',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'ต้นทุน',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        'กำไร',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _kInk,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+              // ── รายการสินค้า (Table Body Rows) ────────────────────
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                  itemCount: items.length + 1, // เพิ่มแถวรวมยอดท้ายตาราง
+                  itemBuilder: (_, i) {
+                    // แถวสุดท้ายเป็นแถวสรุปยอดรวม (Total Row)
+                    if (i == items.length) {
+                      return Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _kBg,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: _kBorder),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'รวมทั้งหมด',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: _kInk,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'รวม $sumQty ชิ้น',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: _kSub,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '฿${c.formatNumber(sumSales)}',
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: _kBlue,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '฿${c.formatNumber(sumCost)}',
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: _kOrange,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                '฿${c.formatNumber(sumProfit)}',
+                                textAlign: TextAlign.right,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: sumProfit >= 0 ? _kGreen : _kRed,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    // แถวสินค้าปกติ
+                    final item = items[i];
+                    final isEven = i % 2 == 0;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isEven ? _kCard : _kCard2,
+                        border: Border(
+                          bottom: BorderSide(color: _kBorder, width: 0.8),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          // คอลัมน์ ชื่อสินค้า / จำนวน
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.productName,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: _kInk,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.shopping_cart_rounded,
+                                      size: 11,
+                                      color: _kSub,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'ขายได้ ${item.totalQty} ชิ้น',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: _kSub,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          // คอลัมน์ ยอดขาย
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '฿${c.formatNumber(item.totalSales)}',
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _kBlue,
+                              ),
+                            ),
+                          ),
+                          // คอลัมน์ ต้นทุน
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '฿${c.formatNumber(item.totalCost)}',
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: _kOrange,
+                              ),
+                            ),
+                          ),
+                          // คอลัมน์ กำไร
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '฿${c.formatNumber(item.profit)}',
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: item.profit >= 0 ? _kGreen : _kRed,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         }),
       ),
@@ -823,8 +979,19 @@ class SalesAccountScreen extends StatelessWidget {
   // ─── Thai date helper ────────────────────────────────────────────────────────
   static String _formatThaiDate(String isoDate, String? time) {
     const months = [
-      '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+      '',
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
     ];
     try {
       final d = DateTime.parse(isoDate);
@@ -845,13 +1012,575 @@ class SalesAccountScreen extends StatelessWidget {
           children: [
             const Icon(Icons.inbox_outlined, size: 56, color: _kMuted),
             const SizedBox(height: 12),
-            Text(msg,
-                style: const TextStyle(color: _kSub, fontSize: 15)),
+            Text(msg, style: const TextStyle(color: _kSub, fontSize: 15)),
           ],
         ),
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// แถว 1: การ์ดรวม กำไรสุทธิ + ยอดขายรวม + ต้นทุนรวม
+// ─────────────────────────────────────────────────────────────────────────────
+class _ProfitSalesCard extends StatelessWidget {
+  final double netProfit, profitTrend;
+  final double totalSales, salesTrend;
+  final double totalCost, costTrend;
+  final String trendLabel;
+  final VoidCallback? onTap;
+  final String Function(double) formatNumber;
+
+  const _ProfitSalesCard({
+    required this.netProfit,
+    required this.profitTrend,
+    required this.totalSales,
+    required this.salesTrend,
+    required this.totalCost,
+    required this.costTrend,
+    required this.trendLabel,
+    required this.formatNumber,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPos = profitTrend >= 0;
+    final trendColor = profitTrend == 0 ? _kSub : (isPos ? _kGreen : _kRed);
+    final trendText =
+        '${isPos && profitTrend != 0 ? '+' : ''}${profitTrend.toStringAsFixed(1)}%';
+    final trendIcon = profitTrend == 0
+        ? Icons.remove
+        : (isPos ? Icons.trending_up_rounded : Icons.trending_down_rounded);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─── Header row: icon + label + trend badge ───────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: const BoxDecoration(
+                    color: _kGreenDim,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: _kGreen,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: const Text(
+                      'กำไรสุทธิ',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: _kInk,
+                      ),
+                    ),
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: trendColor.withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: trendColor.withValues(alpha: .4),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(trendIcon, size: 13, color: trendColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            trendText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: trendColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      trendLabel,
+                      style: const TextStyle(fontSize: 11, color: _kSub),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // ─── Big profit amount ────────────────────────────────
+            FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '฿${formatNumber(netProfit)}',
+                style: const TextStyle(
+                  fontSize: 46,
+                  fontWeight: FontWeight.w800,
+                  color: _kInk,
+                  letterSpacing: -1.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            // ─── Dashed divider ───────────────────────────────────
+            LayoutBuilder(
+              builder: (_, cons) {
+                const dw = 6.0, dh = 1.5, gap = 4.0;
+                final n = (cons.maxWidth / (dw + gap)).floor();
+                return Row(
+                  children: List.generate(
+                    n,
+                    (_) => Container(
+                      width: dw,
+                      height: dh,
+                      margin: const EdgeInsets.only(right: gap),
+                      color: _kBorder,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 14),
+            // ─── ยอดขายรวม | ต้นทุนรวม ───────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: _SalesCostCol(
+                    label: 'ยอดขายรวม',
+                    amount: '฿${formatNumber(totalSales)}',
+                    trend: salesTrend,
+                    iconBg: _kBlueDim,
+                    iconFg: _kBlue,
+                    iconData: Icons.attach_money_rounded,
+                    isCost: false,
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 52,
+                  color: _kBorder,
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                Expanded(
+                  child: _SalesCostCol(
+                    label: 'ต้นทุนรวม',
+                    amount: '฿${formatNumber(totalCost)}',
+                    trend: costTrend,
+                    iconBg: _kOrangeDim,
+                    iconFg: _kOrange,
+                    iconData: Icons.shopping_bag_rounded,
+                    isCost: true,
+                  ),
+                ),
+              ],
+            ),
+            // ─── Popup hint ───────────────────────────────────────
+            if (onTap != null) ...[
+              const SizedBox(height: 10),
+              const Row(
+                children: [
+                  Icon(Icons.touch_app_rounded, size: 11, color: _kMuted),
+                  SizedBox(width: 4),
+                  Text(
+                    'แตะเพื่อดูรายละเอียดรายสินค้า',
+                    style: TextStyle(fontSize: 11, color: _kMuted),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Sales/Cost Column ภายใน _ProfitSalesCard ─────────────────────────────────
+class _SalesCostCol extends StatelessWidget {
+  final String label, amount;
+  final double trend;
+  final Color iconBg, iconFg;
+  final IconData iconData;
+  final bool isCost;
+
+  const _SalesCostCol({
+    required this.label,
+    required this.amount,
+    required this.trend,
+    required this.iconBg,
+    required this.iconFg,
+    required this.iconData,
+    this.isCost = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPos = trend >= 0;
+    Color trendColor;
+    if (trend == 0) {
+      trendColor = _kMuted;
+    } else if (isCost) {
+      trendColor = isPos ? _kRed : _kGreen;
+    } else {
+      trendColor = isPos ? _kGreen : _kRed;
+    }
+    final trendText =
+        '${isPos && trend != 0 ? '+' : ''}${trend.toStringAsFixed(1)}%';
+    final trendIcon = trend == 0
+        ? Icons.remove
+        : (isPos ? Icons.north_east_rounded : Icons.south_east_rounded);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ─── Label + Trend (same row) ─────────────────────────────
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _kInk,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: trendColor.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(trendIcon, size: 8, color: trendColor),
+                  const SizedBox(width: 1),
+                  Text(
+                    trendText,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: trendColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        // ─── Amount ───────────────────────────────────────────────
+        FittedBox(
+          alignment: Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Text(
+            amount,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: _kInk,
+              letterSpacing: -.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// แถว 2 ซ้าย: ยอดหนี้รวม
+// ─────────────────────────────────────────────────────────────────────────────
+class _DebtCompactCard extends StatelessWidget {
+  final SalesAccountController c;
+  const _DebtCompactCard({required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final amount = c.totalDebt.value;
+      final isLoading = c.isLoading.value;
+      final periodLabel = c.selectedView.value;
+
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: _kRedDim,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.money_off_rounded,
+                    color: _kRed,
+                    size: 19,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _kRedDim,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _kRed.withValues(alpha: .3)),
+                  ),
+                  child: Text(
+                    periodLabel,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: _kRed,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'ยอดหนี้รวม',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: _kInk,
+              ),
+            ),
+            const SizedBox(height: 4),
+            isLoading
+                ? const SizedBox(
+                    height: 20,
+                    child: LinearProgressIndicator(
+                      color: _kRed,
+                      backgroundColor: _kRedDim,
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                  )
+                : FittedBox(
+                    alignment: Alignment.centerLeft,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '฿${_fmt(amount)}',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: _kRed,
+                        letterSpacing: -.5,
+                      ),
+                    ),
+                  ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  amount > 0
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle_rounded,
+                  color: amount > 0 ? _kRed : _kGreen,
+                  size: 12,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    amount > 0 ? 'มีหนี้ค้างชำระ' : 'ปลอดหนี้',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: amount > 0 ? _kRed : _kGreen,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  String _fmt(double v) => v >= 1000000
+      ? '${(v / 1000000).toStringAsFixed(1)}M'
+      : v >= 1000
+      ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K'
+      : v.toStringAsFixed(v == v.truncate() ? 0 : 2);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// แถว 2 ขวา: เก็บหนี้ได้
+// ─────────────────────────────────────────────────────────────────────────────
+class _CollectedDebtCard extends StatelessWidget {
+  final SalesAccountController c;
+  const _CollectedDebtCard({required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final amount = c.totalCollectedDebt.value;
+      final isLoading = c.isLoading.value;
+      final periodLabel = c.selectedView.value;
+
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _kCard,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _kBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: _kGreenDim,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.savings_rounded,
+                    color: _kGreen,
+                    size: 19,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _kGreenDim,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _kGreen.withValues(alpha: .3)),
+                  ),
+                  child: Text(
+                    periodLabel,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: _kGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'เก็บหนี้ได้',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: _kInk,
+              ),
+            ),
+            const SizedBox(height: 4),
+            isLoading
+                ? const SizedBox(
+                    height: 20,
+                    child: LinearProgressIndicator(
+                      color: _kGreen,
+                      backgroundColor: _kGreenDim,
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                    ),
+                  )
+                : FittedBox(
+                    alignment: Alignment.centerLeft,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      '฿${_fmt(amount)}',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: _kGreen,
+                        letterSpacing: -.5,
+                      ),
+                    ),
+                  ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  amount > 0
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  color: amount > 0 ? _kGreen : _kMuted,
+                  size: 12,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    amount > 0 ? 'มีการเก็บหนี้' : 'ยังไม่มีการเก็บ',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: amount > 0 ? _kGreen : _kMuted,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  String _fmt(double v) => v >= 1000000
+      ? '${(v / 1000000).toStringAsFixed(1)}M'
+      : v >= 1000
+      ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K'
+      : v.toStringAsFixed(v == v.truncate() ? 0 : 2);
 }
 
 // ─── Metric Column (used in product stats sheet) ──────────────────────────────
@@ -883,16 +1612,13 @@ class _MetricCol extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: _kMuted),
-        ),
+        Text(label, style: const TextStyle(fontSize: 10, color: _kMuted)),
       ],
     );
   }
 }
 
-// ─── Bill Summary Column (used in bill detail header) ─────────────────────────
+// ─── Bill Summary Column ──────────────────────────────────────────────────────
 class _BillSummaryCol extends StatelessWidget {
   final String label;
   final String value;
@@ -911,10 +1637,7 @@ class _BillSummaryCol extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: _kMuted),
-        ),
+        Text(label, style: const TextStyle(fontSize: 11, color: _kMuted)),
         const SizedBox(height: 3),
         FittedBox(
           fit: BoxFit.scaleDown,
@@ -950,8 +1673,9 @@ class _DetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
-        textScaler: MediaQuery.of(context).textScaler
-            .clamp(maxScaleFactor: _kMaxTextScale),
+        textScaler: MediaQuery.of(
+          context,
+        ).textScaler.clamp(maxScaleFactor: _kMaxTextScale),
       ),
       child: DraggableScrollableSheet(
         initialChildSize: 0.75,
@@ -960,8 +1684,7 @@ class _DetailSheet extends StatelessWidget {
         builder: (ctx, scrollCtrl) => Container(
           decoration: const BoxDecoration(
             color: _kCard,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
@@ -1010,8 +1733,11 @@ class _DetailSheet extends StatelessWidget {
                           borderRadius: BorderRadius.circular(9),
                           border: Border.all(color: _kBorder),
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            size: 16, color: _kSub),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: _kSub,
+                        ),
                       ),
                     ),
                   ],
@@ -1027,281 +1753,7 @@ class _DetailSheet extends StatelessWidget {
   }
 }
 
-// ─── Hero Card: กำไรสุทธิ ──────────────────────────────────────────────────────
-class _HeroCard extends StatelessWidget {
-  final String label, amount;
-  final double trend;
-  final String trendLabel;
-  final IconData iconData;
-  final Color iconBg, iconFg;
-  final VoidCallback? onTap;
-
-  const _HeroCard({
-    required this.label,
-    required this.amount,
-    required this.trend,
-    required this.trendLabel,
-    required this.iconData,
-    required this.iconBg,
-    required this.iconFg,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isPos = trend >= 0;
-    final trendColor =
-        trend == 0 ? _kSub : (isPos ? _kGreen : _kRed);
-    final trendText =
-        '${isPos && trend != 0 ? '+' : ''}${trend.toStringAsFixed(1)}%';
-    final trendIcon = trend == 0
-        ? Icons.remove
-        : (isPos
-            ? Icons.trending_up_rounded
-            : Icons.trending_down_rounded);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: _kBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(iconData, color: iconFg, size: 26),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      label,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: _kInk,
-                      ),
-                    ),
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: trendColor.withValues(alpha: .15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: trendColor.withValues(alpha: .4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(trendIcon, size: 13, color: trendColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            trendText,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: trendColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      trendLabel,
-                      style: const TextStyle(fontSize: 11, color: _kSub),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            FittedBox(
-              alignment: Alignment.centerLeft,
-              fit: BoxFit.scaleDown,
-              child: Text(
-                amount,
-                style: const TextStyle(
-                  fontSize: 46,
-                  fontWeight: FontWeight.w800,
-                  color: _kInk,
-                  letterSpacing: -1.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Dashed divider
-            LayoutBuilder(builder: (_, cons) {
-              const dw = 6.0, dh = 1.5, gap = 4.0;
-              final n = (cons.maxWidth / (dw + gap)).floor();
-              return Row(
-                children: List.generate(
-                  n,
-                  (_) => Container(
-                    width: dw,
-                    height: dh,
-                    margin: const EdgeInsets.only(right: gap),
-                    color: _kBorder,
-                  ),
-                ),
-              );
-            }),
-            if (onTap != null) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: const [
-                  Icon(Icons.touch_app_rounded,
-                      size: 11, color: _kMuted),
-                  SizedBox(width: 4),
-                  Text(
-                    'แตะเพื่อดูรายละเอียดแยกรายสินค้า',
-                    style: TextStyle(fontSize: 11, color: _kMuted),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Compact Card: ยอดขายรวม / ต้นทุนรวม ─────────────────────────────────────
-class _CompactCard extends StatelessWidget {
-  final String label, amount;
-  final double trend;
-  final IconData iconData;
-  final Color iconBg, iconFg;
-  final bool isCost;
-  final VoidCallback? onTap;
-
-  const _CompactCard({
-    required this.label,
-    required this.amount,
-    required this.trend,
-    required this.iconData,
-    required this.iconBg,
-    required this.iconFg,
-    this.isCost = false,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isPos = trend >= 0;
-    Color trendColor;
-    if (trend == 0) {
-      trendColor = _kSub;
-    } else if (isCost) {
-      trendColor = isPos ? _kRed : _kGreen;
-    } else {
-      trendColor = isPos ? _kGreen : _kRed;
-    }
-    final trendText =
-        '${isPos && trend != 0 ? '+' : ''}${trend.toStringAsFixed(1)}%';
-    final trendIcon = trend == 0
-        ? Icons.remove
-        : (isPos
-            ? Icons.north_east_rounded
-            : Icons.south_east_rounded);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _kCard,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _kBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(iconData, color: iconFg, size: 20),
-                ),
-                const Spacer(),
-                if (onTap != null)
-                  const Icon(Icons.chevron_right_rounded,
-                      size: 16, color: _kMuted),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: _kSub,
-              ),
-            ),
-            const SizedBox(height: 4),
-            FittedBox(
-              alignment: Alignment.centerLeft,
-              fit: BoxFit.scaleDown,
-              child: Text(
-                amount,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
-                  color: _kInk,
-                  letterSpacing: -.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(trendIcon, size: 14, color: trendColor),
-                const SizedBox(width: 4),
-                Text(
-                  trendText,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: trendColor,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Transaction Card: จำนวนรายการ ───────────────────────────────────────────
+// ─── Transaction Card ─────────────────────────────────────────────────────────
 class _TransactionCard extends StatelessWidget {
   final String count, trendLabel, selectedView;
   final double trend;
@@ -1318,24 +1770,18 @@ class _TransactionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPos = trend >= 0;
-    final trendColor =
-        trend == 0 ? _kSub : (isPos ? _kGreen : _kRed);
+    final trendColor = trend == 0 ? _kSub : (isPos ? _kGreen : _kRed);
     final trendText =
         '${isPos && trend != 0 ? '+' : ''}${trend.toStringAsFixed(1)}%';
     final trendIcon = trend == 0
         ? Icons.remove
-        : (isPos
-            ? Icons.north_east_rounded
-            : Icons.south_east_rounded);
+        : (isPos ? Icons.north_east_rounded : Icons.south_east_rounded);
 
-    final String subtitle;
-    if (selectedView == 'วันนี้') {
-      subtitle = 'จำนวนรายการวันนี้';
-    } else if (selectedView == 'เดือนนี้') {
-      subtitle = 'จำนวนรายการเดือนนี้';
-    } else {
-      subtitle = 'จำนวนรายการปีนี้';
-    }
+    final String subtitle = selectedView == 'วันนี้'
+        ? 'จำนวนรายการวันนี้'
+        : selectedView == 'เดือนนี้'
+        ? 'จำนวนรายการเดือนนี้'
+        : 'จำนวนรายการปีนี้';
 
     return GestureDetector(
       onTap: onTap,
@@ -1355,8 +1801,11 @@ class _TransactionCard extends StatelessWidget {
                 color: _kPurpleDim,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.receipt_long_rounded,
-                  color: _kPurple, size: 22),
+              child: const Icon(
+                Icons.receipt_long_rounded,
+                color: _kPurple,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1381,13 +1830,11 @@ class _TransactionCard extends StatelessWidget {
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: trendColor.withValues(alpha: .15),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: trendColor.withValues(alpha: .35)),
+                border: Border.all(color: trendColor.withValues(alpha: .35)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

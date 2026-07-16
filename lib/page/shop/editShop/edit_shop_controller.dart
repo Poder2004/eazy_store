@@ -24,6 +24,8 @@ class EditShopController extends GetxController {
   late TextEditingController pinCodeController;
 
   var selectedImage = Rxn<File>();
+  var selectedQrImage = Rxn<File>(); // ✅ เพิ่มรูป QR Code
+  var isPinVisible = false.obs; // ✅ Toggle สำหรับรหัส PIN
   final ImagePicker _picker = ImagePicker();
 
   var isLoading = false.obs;
@@ -70,6 +72,31 @@ class EditShopController extends GetxController {
     }
   }
 
+  // ✅ ฟังก์ชันแสดงตัวเลือกการเลือกรูป QR Code
+  void showQrImagePickerOptions() {
+    ImagePickerSheet.show(
+      title: "เปลี่ยนรูปภาพ QR Code",
+      onImagePicked: (source) {
+        pickQrImage(source);
+      },
+    );
+  }
+
+  // ✅ ฟังก์ชันเลือกรูป QR Code
+  Future<void> pickQrImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+      if (image != null) {
+        selectedQrImage.value = File(image.path);
+      }
+    } catch (e) {
+      print("Error picking QR image: $e");
+    }
+  }
+
   Future<void> saveShop() async {
     String phone = phoneController.text.trim();
     // 1. เช็คข้อมูลว่าง
@@ -92,8 +119,9 @@ class EditShopController extends GetxController {
     isLoading.value = true;
     try {
       String imageUrl = shop.imgShop;
+      String qrImageUrl = shop.imgQrcode;
 
-      // 3. จัดการอัปโหลดรูปภาพ
+      // 3. จัดการอัปโหลดรูปภาพร้านค้า
       if (selectedImage.value != null) {
         String? uploadedUrl = await _uploadService.uploadImage(
           selectedImage.value!,
@@ -104,7 +132,24 @@ class EditShopController extends GetxController {
           isLoading.value = false;
           _showWarningDialog(
             "อัปโหลดล้มเหลว",
-            "ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่",
+            "ไม่สามารถอัปโหลดรูปภาพร้านค้าได้ กรุณาลองใหม่",
+          );
+          return;
+        }
+      }
+
+      // ✅ จัดการอัปโหลดรูป QR Code
+      if (selectedQrImage.value != null) {
+        String? uploadedUrl = await _uploadService.uploadImage(
+          selectedQrImage.value!,
+        );
+        if (uploadedUrl != null) {
+          qrImageUrl = uploadedUrl;
+        } else {
+          isLoading.value = false;
+          _showWarningDialog(
+            "อัปโหลดล้มเหลว",
+            "ไม่สามารถอัปโหลดรูป QR Code ได้ กรุณาลองใหม่",
           );
           return;
         }
@@ -117,7 +162,7 @@ class EditShopController extends GetxController {
         "address": addressController.text,
         "pin_code": pinCodeController.text,
         "img_shop": imageUrl,
-        "img_qrcode": shop.imgQrcode,
+        "img_qrcode": qrImageUrl,
       };
 
       // 5. เรียก API Update
