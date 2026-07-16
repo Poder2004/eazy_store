@@ -2,13 +2,13 @@
 import 'dart:io';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_service_image.dart';
-import 'package:eazy_store/model/request/product_request.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widgets/image_picker_sheet.dart';
 
 class EditProductController extends GetxController {
@@ -74,14 +74,28 @@ class EditProductController extends GetxController {
 
   Future<void> fetchCategories() async {
     try {
-      var list = await ApiProduct.getCategories();
-      list.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
-      categories.assignAll(list);
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? originalProduct.shopId;
+      var list = await ApiProduct.getCategories(shopId);
+      
+      // Remove duplicates by categoryId
+      final seen = <int>{};
+      final uniqueList = list.where((cat) => seen.add(cat.categoryId)).toList();
+      
+      uniqueList.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
+      final preferredCategoryId =
+          selectedCategory.value?.categoryId ?? originalProduct.categoryId;
+      categories.assignAll(uniqueList);
 
-      if (originalProduct.categoryId != 0) {
+      if (preferredCategoryId != 0) {
         selectedCategory.value = categories.firstWhere(
-          (cat) => cat.categoryId == originalProduct.categoryId,
-          orElse: () => CategoryModel(categoryId: 0, name: "ไม่ระบุ"),
+          (cat) => cat.categoryId == preferredCategoryId,
+          orElse: () => CategoryModel(
+            categoryId: 0,
+            shopId: originalProduct.shopId,
+            name: "ไม่ระบุ",
+            status: true,
+          ),
         );
       }
     } catch (e) {
@@ -290,6 +304,148 @@ class EditProductController extends GetxController {
     } catch (e) {
       isLoading.value = false;
       Get.snackbar("Error", "เกิดข้อผิดพลาด: $e", backgroundColor: Colors.red);
+    }
+  }
+
+  Future<bool> addNewCategory(String categoryName) async {
+    try {
+      final name = categoryName.trim();
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? originalProduct.shopId;
+
+      if (shopId == 0) {
+        throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
+      }
+
+      final result = await ApiProduct.createCategory(shopId: shopId, name: name);
+      if (result['success'] != true) {
+        throw Exception(result['error'] ?? "เพิ่มหมวดหมู่ไม่สำเร็จ");
+      }
+
+      final created = CategoryModel.fromJson(
+        result['data'] as Map<String, dynamic>,
+      );
+      selectedCategory.value = created;
+
+      Get.snackbar(
+        "เพิ่มหมวดหมู่แล้ว",
+        "บันทึกหมวดหมู่ $name สำเร็จ",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+
+      await fetchCategories();
+      return true;
+    } catch (e) {
+      Get.snackbar(
+        "ผิดพลาด",
+        "เพิ่มหมวดหมู่ไม่สำเร็จ: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> editCategory(int categoryId, String newName) async {
+    try {
+      final name = newName.trim();
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? originalProduct.shopId;
+
+      if (shopId == 0) {
+        throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
+      }
+
+      final result = await ApiProduct.updateCategory(
+        categoryId: categoryId,
+        shopId: shopId,
+        name: name,
+      );
+      if (result['success'] != true) {
+        throw Exception(result['error'] ?? "แก้ไขหมวดหมู่ไม่สำเร็จ");
+      }
+
+      if (selectedCategory.value?.categoryId == categoryId) {
+        selectedCategory.value = CategoryModel(
+          categoryId: categoryId,
+          shopId: shopId,
+          name: name,
+          status: true,
+        );
+      }
+
+      Get.snackbar(
+        "แก้ไขแล้ว",
+        "บันทึกชื่อหมวดหมู่สำเร็จ",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+
+      await fetchCategories();
+      return true;
+    } catch (e) {
+      Get.snackbar(
+        "ผิดพลาด",
+        "แก้ไขหมวดหมู่ไม่สำเร็จ: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+  }
+
+  Future<int> getCategoryProductCount(int categoryId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final shopId = prefs.getInt('shopId') ?? originalProduct.shopId;
+    if (shopId == 0) return 0;
+    return ApiProduct.getCategoryProductCount(
+      shopId: shopId,
+      categoryId: categoryId,
+    );
+  }
+
+  Future<bool> disableCategory(CategoryModel category) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? originalProduct.shopId;
+
+      if (shopId == 0) {
+        throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
+      }
+
+      final result = await ApiProduct.deleteCategory(
+        categoryId: category.categoryId,
+        shopId: shopId,
+      );
+      if (result['success'] != true) {
+        throw Exception(result['error'] ?? "ปิดใช้งานหมวดหมู่ไม่สำเร็จ");
+      }
+
+      if (selectedCategory.value?.categoryId == category.categoryId) {
+        selectedCategory.value = null;
+      }
+
+      Get.snackbar(
+        "ปิดใช้งานหมวดหมู่แล้ว",
+        "หมวดหมู่ ${category.name} จะไม่แสดงให้เลือกอีก",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+
+      await fetchCategories();
+      return true;
+    } catch (e) {
+      Get.snackbar(
+        "ผิดพลาด",
+        "ปิดใช้งานหมวดหมู่ไม่สำเร็จ: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
     }
   }
 }

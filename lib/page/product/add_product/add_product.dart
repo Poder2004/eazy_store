@@ -1,6 +1,10 @@
 import 'package:dotted_border/dotted_border.dart';
+import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
+import 'package:eazy_store/widgets/category_bottom_sheet.dart';
+import 'package:eazy_store/widgets/category_disable_dialog.dart';
+import 'package:eazy_store/widgets/inactive_categories_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -297,7 +301,9 @@ class AddProductScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         GestureDetector(
-          onTap: () => _showCategoryBottomSheet(context, controller),
+          onTap: () {
+            _showCategoryBottomSheet(context, controller);
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
@@ -332,173 +338,304 @@ class AddProductScreen extends StatelessWidget {
     BuildContext context,
     AddProductController controller,
   ) {
-    showModalBottomSheet(
+    CategoryBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final RxString searchQuery = "".obs;
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      categories: controller.categoryList,
+      selectedCategory: controller.selectedCategoryObject,
+      onCategorySelected: (cat) {
+        controller.selectedCategoryObject.value = cat;
+      },
+      onAddCategory: () {
+        _showAddCategoryDialog(context, controller);
+      },
+      onEditCategory: (cat) {
+        _showEditCategoryDialog(context, controller, cat);
+      },
+      onDisableCategory: (cat) {
+        _showDisableCategoryDialog(context, controller, cat);
+      },
+      onManageInactiveCategories: () {
+        InactiveCategoriesSheet.show(
+          context: context,
+          onCategoriesChanged: controller.fetchCategories,
+        );
+      },
+    );
+  }
+
+  Future<void> _showDisableCategoryDialog(
+    BuildContext context,
+    AddProductController controller,
+    CategoryModel category,
+  ) async {
+    final productCount = await controller.getCategoryProductCount(
+      category.categoryId,
+    );
+    if (!context.mounted) return;
+
+    await CategoryDisableDialog.show(
+      context: context,
+      category: category,
+      productCount: productCount,
+      onDisable: () => controller.disableCategory(category),
+      onRefreshCategories: controller.fetchCategories,
+      onReopenBottomSheet: () {
+        if (context.mounted) {
+          _showCategoryBottomSheet(context, controller);
+        }
+      },
+    );
+  }
+
+  void _showAddCategoryDialog(
+    BuildContext context,
+    AddProductController controller,
+  ) {
+    final nameCtrl = TextEditingController();
+
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add_rounded,
+                  size: 42,
+                  color: _kPrimaryColor,
+                ),
               ),
-              child: Column(
+              const SizedBox(height: 15),
+              const Text(
+                "เพิ่มหมวดหมู่ใหม่",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  hintText: "ชื่อหมวดหมู่",
+                  filled: true,
+                  fillColor: const Color(0xFFF7F8FA),
+                  prefixIcon: const Icon(
+                    Icons.category_outlined,
+                    color: _kPrimaryColor,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: _kPrimaryColor,
+                      width: 1.4,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 25),
+              Row(
                 children: [
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "เลือกหมวดหมู่",
-                    style: GoogleFonts.prompt(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        onChanged: (val) {
-                          searchQuery.value = val.trim();
-                        },
-                        style: GoogleFonts.prompt(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: "ค้นหาหมวดหมู่...",
-                          hintStyle: GoogleFonts.prompt(
-                            color: Colors.grey[400],
-                            fontSize: 14,
-                          ),
-                          prefixIcon: const Icon(
-                            Icons.search,
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   Expanded(
-                    child: Obx(() {
-                      final query = searchQuery.value.toLowerCase();
-                      final filteredList = controller.categoryList.where((cat) {
-                        return cat.name.toLowerCase().contains(query);
-                      }).toList();
-
-                      if (filteredList.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.category_outlined,
-                                size: 48,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "ไม่พบหมวดหมู่",
-                                style: GoogleFonts.prompt(
-                                  color: Colors.grey[500],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey[300]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text("ยกเลิก"),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (nameCtrl.text.isEmpty) {
+                          Get.snackbar("แจ้งเตือน", "กรุณากรอกชื่อหมวดหมู่");
+                          return;
+                        }
+                        // เรียก API เพิ่มหมวดหมู่
+                        final ok = await controller.addNewCategory(
+                          nameCtrl.text,
                         );
-                      }
-
-                      return ListView.builder(
-                        controller: scrollController,
-                        itemCount: filteredList.length,
-                        itemBuilder: (context, index) {
-                          final cat = filteredList[index];
-                          final isSelected =
-                              controller
-                                  .selectedCategoryObject
-                                  .value
-                                  ?.categoryId ==
-                              cat.categoryId;
-
-                          return InkWell(
-                            onTap: () {
-                              controller.selectedCategoryObject.value = cat;
-                              Navigator.pop(context);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(color: Colors.grey[100]!),
-                                ),
-                                color: isSelected
-                                    ? _kPrimaryColor.withOpacity(0.05)
-                                    : null,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    cat.name,
-                                    style: GoogleFonts.prompt(
-                                      fontSize: 15,
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: isSelected
-                                          ? _kPrimaryColor
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  if (isSelected)
-                                    const Icon(
-                                      Icons.check_circle_rounded,
-                                      color: _kPrimaryColor,
-                                      size: 20,
-                                    ),
-                                ],
-                              ),
-                            ),
+                        if (ok) {
+                          Navigator.of(context, rootNavigator: true).pop();
+                          await Future.delayed(
+                            const Duration(milliseconds: 180),
                           );
-                        },
-                      );
-                    }),
+                          if (context.mounted) {
+                            _showCategoryBottomSheet(context, controller);
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        "เพิ่ม",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
                   ),
                 ],
               ),
-            );
-          },
-        );
-      },
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditCategoryDialog(
+    BuildContext context,
+    AddProductController controller,
+    CategoryModel category,
+  ) {
+    final nameCtrl = TextEditingController(text: category.name);
+
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.edit_rounded,
+                  size: 36,
+                  color: _kPrimaryColor,
+                ),
+              ),
+              const SizedBox(height: 15),
+              const Text(
+                "แก้ไขหมวดหมู่",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  hintText: "ชื่อหมวดหมู่",
+                  filled: true,
+                  fillColor: const Color(0xFFF7F8FA),
+                  prefixIcon: const Icon(
+                    Icons.category_outlined,
+                    color: _kPrimaryColor,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: _kPrimaryColor,
+                      width: 1.4,
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 25),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey[300]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text("ยกเลิก"),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (nameCtrl.text.isEmpty) {
+                          Get.snackbar("แจ้งเตือน", "กรุณากรอกชื่อหมวดหมู่");
+                          return;
+                        }
+                        // เรียก API แก้ไขหมวดหมู่
+                        final ok = await controller.editCategory(
+                          category.categoryId,
+                          nameCtrl.text,
+                        );
+                        if (ok) {
+                          Navigator.of(context, rootNavigator: true).pop();
+                          await Future.delayed(
+                            const Duration(milliseconds: 180),
+                          );
+                          if (context.mounted) {
+                            _showCategoryBottomSheet(context, controller);
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        "บันทึก",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -115,11 +115,16 @@ class CheckStockController extends GetxController {
   Future<void> fetchCategories() async {
     isLoadingCategories.value = true;
     try {
-      var result = await ApiProduct.getCategories();
-      result.sort(
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+      var result = await ApiProduct.getCategories(shopId);
+      // Remove duplicates by categoryId
+      final seen = <int>{};
+      final uniqueList = result.where((cat) => seen.add(cat.categoryId)).toList();
+      uniqueList.sort(
         (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
       );
-      categories.assignAll(result);
+      categories.assignAll(uniqueList);
     } catch (e) {
       print("Error fetching categories: $e");
     } finally {

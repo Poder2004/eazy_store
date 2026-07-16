@@ -52,26 +52,269 @@ class ApiProduct {
   }
 
   //หมวดสินค้า
-  static Future<List<CategoryModel>> getCategories() async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/categories');
+  static Future<List<CategoryModel>> getCategories(
+    int shopId, {
+    bool includeInactive = false,
+  }) async {
+    if (shopId == 0) return [];
     try {
       await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
+      if (token == null || token.isEmpty) {
+        await AuthGuard.handleUnauthorized();
+        return [];
+      }
+      final url = Uri.parse('${AppConfig.baseUrl}/api/categories').replace(
+        queryParameters: {
+          'shop_id': '$shopId',
+          if (includeInactive) 'include_inactive': 'true',
+        },
+      );
 
-      final response = await http.get(
+      var response = await http.get(
         url,
         headers: {"Authorization": "Bearer $token"},
       );
+
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+        prefs = await SharedPreferences.getInstance();
+        token = prefs.getString('token');
+        if (token == null || token.isEmpty) return [];
+
+        response = await http.get(
+          url,
+          headers: {"Authorization": "Bearer $token"},
+        );
+      }
 
       if (response.statusCode == 200) {
         List<dynamic> body = jsonDecode(response.body);
         return body.map((item) => CategoryModel.fromJson(item)).toList();
       }
+      print("Fetch categories failed: ${response.statusCode} ${response.body}");
       return [];
     } catch (e) {
       print("Error fetching categories: $e");
       return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> createCategory({
+    required int shopId,
+    required String name,
+  }) async {
+    return _sendCategoryRequest(
+      method: 'POST',
+      shopId: shopId,
+      name: name,
+    );
+  }
+
+  static Future<Map<String, dynamic>> updateCategory({
+    required int categoryId,
+    required int shopId,
+    required String name,
+  }) async {
+    return _sendCategoryRequest(
+      method: 'PUT',
+      categoryId: categoryId,
+      shopId: shopId,
+      name: name,
+    );
+  }
+
+  static Future<Map<String, dynamic>> deleteCategory({
+    required int categoryId,
+    required int shopId,
+  }) async {
+    return _sendCategoryRequest(
+      method: 'DELETE',
+      categoryId: categoryId,
+      shopId: shopId,
+    );
+  }
+
+  static Future<List<CategoryModel>> getInactiveCategories(int shopId) async {
+    if (shopId == 0) return [];
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+      if (token == null || token.isEmpty) {
+        await AuthGuard.handleUnauthorized();
+        return [];
+      }
+
+      final url = Uri.parse('${AppConfig.baseUrl}/api/categories/inactive')
+          .replace(queryParameters: {'shop_id': '$shopId'});
+
+      var response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+        prefs = await SharedPreferences.getInstance();
+        token = prefs.getString('token');
+        if (token == null || token.isEmpty) return [];
+        response = await http.get(
+          url,
+          headers: {"Authorization": "Bearer $token"},
+        );
+      }
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as List<dynamic>;
+        return body.map((item) => CategoryModel.fromJson(item)).toList();
+      }
+      print(
+        "Fetch inactive categories failed: ${response.statusCode} ${response.body}",
+      );
+      return [];
+    } catch (e) {
+      print("Error fetching inactive categories: $e");
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> restoreCategory({
+    required int categoryId,
+    required int shopId,
+  }) async {
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final url = Uri.parse(
+        '${AppConfig.baseUrl}/api/categories/$categoryId/restore',
+      );
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'shop_id': shopId}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': data};
+      }
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {
+        'success': false,
+        'error': data['error'] ?? 'ไม่สามารถกู้คืนหมวดหมู่ได้',
+      };
+    } catch (e) {
+      return {'success': false, 'error': 'การเชื่อมต่อขัดข้อง: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> moveCategoryProducts({
+    required int fromCategoryId,
+    required int toCategoryId,
+    required int shopId,
+    List<int>? productIds,
+  }) async {
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final url = Uri.parse(
+        '${AppConfig.baseUrl}/api/categories/$fromCategoryId/move-products',
+      );
+      final body = <String, dynamic>{
+        'shop_id': shopId,
+        'target_category_id': toCategoryId,
+      };
+      if (productIds != null && productIds.isNotEmpty) {
+        body['product_ids'] = productIds;
+      }
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': data};
+      }
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {
+        'success': false,
+        'error': data['error'] ?? 'ไม่สามารถย้ายสินค้าได้',
+      };
+    } catch (e) {
+      return {'success': false, 'error': 'การเชื่อมต่อขัดข้อง: $e'};
+    }
+  }
+
+  static Future<int> getCategoryProductCount({
+    required int shopId,
+    required int categoryId,
+  }) async {
+    final result = await getProductsByShop(
+      shopId,
+      page: 1,
+      limit: 1,
+      categoryId: categoryId,
+    );
+    if (result is ProductPagedResponse) {
+      return result.totalItems;
+    }
+    if (result is List) {
+      return result.length;
+    }
+    return 0;
+  }
+
+  static Future<Map<String, dynamic>> _sendCategoryRequest({
+    required String method,
+    required int shopId,
+    int? categoryId,
+    String? name,
+  }) async {
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final path = categoryId == null ? '/api/categories' : '/api/categories/$categoryId';
+      final requestMethod = method;
+      final url = Uri.parse('${AppConfig.baseUrl}$path').replace(
+        queryParameters: method == 'DELETE'
+            ? {'shop_id': '$shopId'}
+            : null,
+      );
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final body = name == null ? null : jsonEncode({'shop_id': shopId, 'name': name});
+      final response = switch (requestMethod) {
+        'POST' => await http.post(url, headers: headers, body: body),
+        'PUT' => await http.put(url, headers: headers, body: body),
+        _ => await http.delete(url, headers: headers),
+      };
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': data};
+      }
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {'success': false, 'error': data['error'] ?? 'ไม่สามารถจัดการหมวดหมู่ได้'};
+    } catch (e) {
+      return {'success': false, 'error': 'การเชื่อมต่อขัดข้อง: $e'};
     }
   }
 

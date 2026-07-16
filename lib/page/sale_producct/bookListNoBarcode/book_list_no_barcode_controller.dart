@@ -49,11 +49,16 @@ class ManualListController extends GetxController {
 
   Future<void> fetchCategories() async {
     try {
-      final categoryData = await ApiProduct.getCategories();
-      if (categoryData.isNotEmpty) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+      var categoryData = await ApiProduct.getCategories(shopId);
+      // Remove duplicates by categoryId
+      final seen = <int>{};
+      final uniqueList = categoryData.where((cat) => seen.add(cat.categoryId)).toList();
+      if (uniqueList.isNotEmpty) {
         categoryMap.clear();
         categories.value = ["หมวดหมู่"];
-        for (var c in categoryData) {
+        for (var c in uniqueList) {
           final name = c.name.toString().trim();
           categories.add(name);
           categoryMap[name] = c.categoryId;

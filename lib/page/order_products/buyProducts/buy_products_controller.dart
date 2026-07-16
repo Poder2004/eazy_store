@@ -66,9 +66,14 @@ class BuyProductsController extends GetxController {
   }
 
   Future<void> loadCategories() async {
-    var res = await ApiProduct.getCategories();
-    res.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
-    categories.assignAll(res);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int shopId = prefs.getInt('shopId') ?? 0;
+    var res = await ApiProduct.getCategories(shopId);
+    // Remove duplicates by categoryId
+    final seen = <int>{};
+    final uniqueList = res.where((cat) => seen.add(cat.categoryId)).toList();
+    uniqueList.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
+    categories.assignAll(uniqueList);
   }
 
   Future<void> fetchProducts() async {

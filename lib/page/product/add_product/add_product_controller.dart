@@ -50,9 +50,16 @@ class AddProductController extends GetxController {
 
   // ---------------- Functions ----------------
   Future<void> fetchCategories() async {
-    final list = await ApiProduct.getCategories();
-    list.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
-    categoryList.value = list;
+    final prefs = await SharedPreferences.getInstance();
+    final shopId = prefs.getInt('shopId') ?? 0;
+    final list = await ApiProduct.getCategories(shopId);
+    
+    // Remove duplicates by categoryId
+    final seen = <int>{};
+    final uniqueList = list.where((cat) => seen.add(cat.categoryId)).toList();
+    
+    uniqueList.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
+    categoryList.value = uniqueList;
   }
 
   void showImagePickerOptions() {
@@ -228,5 +235,147 @@ class AddProductController extends GetxController {
     idController.clear();
     selectedCategoryObject.value = null;
     imageFile.value = null;
+  }
+
+  Future<bool> addNewCategory(String categoryName) async {
+    try {
+      final name = categoryName.trim();
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId == 0) {
+        throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
+      }
+
+      final result = await ApiProduct.createCategory(shopId: shopId, name: name);
+      if (result['success'] != true) {
+        throw Exception(result['error'] ?? "เพิ่มหมวดหมู่ไม่สำเร็จ");
+      }
+
+      final created = CategoryModel.fromJson(
+        result['data'] as Map<String, dynamic>,
+      );
+      selectedCategoryObject.value = created;
+
+      Get.snackbar(
+        "เพิ่มหมวดหมู่แล้ว",
+        "บันทึกหมวดหมู่ $name สำเร็จ",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+
+      await fetchCategories();
+      return true;
+    } catch (e) {
+      Get.snackbar(
+        "ผิดพลาด",
+        "เพิ่มหมวดหมู่ไม่สำเร็จ: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> editCategory(int categoryId, String newName) async {
+    try {
+      final name = newName.trim();
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId == 0) {
+        throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
+      }
+
+      final result = await ApiProduct.updateCategory(
+        categoryId: categoryId,
+        shopId: shopId,
+        name: name,
+      );
+      if (result['success'] != true) {
+        throw Exception(result['error'] ?? "แก้ไขหมวดหมู่ไม่สำเร็จ");
+      }
+
+      if (selectedCategoryObject.value?.categoryId == categoryId) {
+        selectedCategoryObject.value = CategoryModel(
+          categoryId: categoryId,
+          shopId: shopId,
+          name: name,
+          status: true,
+        );
+      }
+
+      Get.snackbar(
+        "แก้ไขแล้ว",
+        "บันทึกชื่อหมวดหมู่สำเร็จ",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+
+      await fetchCategories();
+      return true;
+    } catch (e) {
+      Get.snackbar(
+        "ผิดพลาด",
+        "แก้ไขหมวดหมู่ไม่สำเร็จ: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
+  }
+
+  Future<int> getCategoryProductCount(int categoryId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final shopId = prefs.getInt('shopId') ?? 0;
+    if (shopId == 0) return 0;
+    return ApiProduct.getCategoryProductCount(
+      shopId: shopId,
+      categoryId: categoryId,
+    );
+  }
+
+  Future<bool> disableCategory(CategoryModel category) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId == 0) {
+        throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
+      }
+
+      final result = await ApiProduct.deleteCategory(
+        categoryId: category.categoryId,
+        shopId: shopId,
+      );
+      if (result['success'] != true) {
+        throw Exception(result['error'] ?? "ปิดใช้งานหมวดหมู่ไม่สำเร็จ");
+      }
+
+      if (selectedCategoryObject.value?.categoryId == category.categoryId) {
+        selectedCategoryObject.value = null;
+      }
+
+      Get.snackbar(
+        "ปิดใช้งานหมวดหมู่แล้ว",
+        "หมวดหมู่ ${category.name} จะไม่แสดงให้เลือกอีก",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 5),
+      );
+
+      await fetchCategories();
+      return true;
+    } catch (e) {
+      Get.snackbar(
+        "ผิดพลาด",
+        "ปิดใช้งานหมวดหมู่ไม่สำเร็จ: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    }
   }
 }

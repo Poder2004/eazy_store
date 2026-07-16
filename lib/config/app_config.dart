@@ -14,6 +14,6 @@ class AppConfig {
   //   return 'http://192.168.6.1:8080';
   // }
 
-  // static const String baseUrl = "https://eazystoreapi.onrender.com";
-  static const String baseUrl = "https://eazy-store-api.vercel.app";
+  static const String baseUrl = "https://eazystoreapi.onrender.com";
+  // static const String baseUrl = "https://eazy-store-api.vercel.app";
 }
