@@ -1,8 +1,11 @@
 import 'package:eazy_store/page/homepage/home_page.dart';
+import 'package:eazy_store/page/homepage/home_controller.dart'; // ✅ Import HomeController
 import 'package:eazy_store/page/debt/debtLedger/debt_ledger.dart';
+import 'package:eazy_store/page/debt/debtLedger/debt_ledger_controller.dart'; // ✅ Import DebtLedgerController
 import 'package:eazy_store/page/my_blank/sales_account.dart'; // ตรวจสอบ path นี้ให้ตรงด้วยนะครับ
 import 'package:eazy_store/page/my_blank/sales_account_controller.dart';
 import 'package:eazy_store/page/profile/profile_page.dart';
+import 'package:eazy_store/page/profile/profile_controller.dart'; // ✅ Import ProfileController
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
@@ -157,9 +160,13 @@ class BottomNavBar extends StatelessWidget {
 
   void _navigateToPage(int index) {
     if (index == 0) {
+      // ✅ รีเฟรชข้อมูลหน้า Home ก่อนข้ามหน้า
+      if (Get.isRegistered<HomeController>()) {
+        Get.find<HomeController>().fetchTodaySales();
+      }
       Get.to(() => const HomePage());
     } else if (index == 1) {
-      // 🔥 รีเซ็ตวันที่ให้กลับมาเป็น "ปัจจุบัน" ทุกครั้งที่กดเข้าหน้าบัญชี
+      // ✅ รีเซ็ตวันที่ให้กลับมาเป็น "ปัจจุบัน" ทุกครั้งที่กดเข้าหน้าบัญชี
       if (Get.isRegistered<SalesAccountController>()) {
         final ctrl = Get.find<SalesAccountController>();
         ctrl.selectedView.value = 'วันนี้'; // กลับมาหน้าวัน
@@ -168,8 +175,16 @@ class BottomNavBar extends StatelessWidget {
       }
       Get.to(() => const SalesAccountScreen());
     } else if (index == 3) {
+      // ✅ รีเฟรชข้อมูลหน้า คนค้างชำระ (DebtLedger) ก่อนข้ามหน้า
+      if (Get.isRegistered<DebtLedgerController>()) {
+        Get.find<DebtLedgerController>().initialData();
+      }
       Get.to(() => DebtLedgerScreen());
     } else if (index == 4) {
+      // ✅ รีเฟรชข้อมูลหน้า โปรไฟล์ ก่อนข้ามหน้า
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().loadProfileData();
+      }
       Get.to(() => const ProfilePage());
     }
   }

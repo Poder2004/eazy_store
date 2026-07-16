@@ -1,3 +1,5 @@
+import 'package:eazy_store/api/api_shop.dart';
+import 'package:eazy_store/model/response/shop_response.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +18,7 @@ class DebtPaymentController extends GetxController {
   var amountPaid = 0.0.obs;
   var remainingDebt = 0.0.obs;
   var change = 0.0.obs;
+  var shopQrCodeUrl = "".obs; // ✅ URL สำหรับรูปภาพ QR Code จริง
 
   // --- Controllers ---
   final TextEditingController amountPaidController = TextEditingController();
@@ -27,6 +30,21 @@ class DebtPaymentController extends GetxController {
   void onInit() {
     super.onInit();
     amountPaidController.addListener(calculateChange);
+    refreshShopData(); // ✅ ดึงข้อมูล QR Code ร้านค้า
+  }
+
+  Future<void> refreshShopData() async {
+    try {
+      ShopResponse? shop = await ApiShop().getCurrentShop();
+      if (shop != null && shop.imgQrcode.isNotEmpty) {
+        // ✅ แนบ timestamp เพื่อล้างแคชรูปภาพเก่า (Prevent caching)
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final url = shop.imgQrcode;
+        shopQrCodeUrl.value = url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
+      }
+    } catch (e) {
+      print("Error loading shop data in DebtPayment: $e");
+    }
   }
 
   @override

@@ -96,6 +96,17 @@ class OrderListController extends GetxController {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
+      if (shopId == 0) {
+        Get.back();
+        Get.snackbar(
+          "Error",
+          "ไม่พบข้อมูลร้านค้า กรุณาล็อกอินหรือเลือกใช้งานร้านค้าใหม่อีกครั้ง",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
       // 2. เตรียมข้อมูลส่งไป Backend
       final Map<String, dynamic> requestData = {
         "shop_id": shopId, // ส่งแค่ ID ไปตัวเดียว
@@ -110,6 +121,8 @@ class OrderListController extends GetxController {
             )
             .toList(),
       };
+
+      debugPrint("Export PDF Request Data: $requestData");
 
       // 3. ยิง API
       final bytes = await ApiOrderList.exportOrderPdf(requestData);

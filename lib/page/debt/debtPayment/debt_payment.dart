@@ -240,6 +240,7 @@ class DebtPaymentScreen extends StatelessWidget {
       if (controller.selectedMethod.value != PaymentMethod.transfer) {
         return const SizedBox.shrink();
       }
+      final qrUrl = controller.shopQrCodeUrl.value;
       return Padding(
         padding: const EdgeInsets.only(top: 15.0),
         child: Column(
@@ -255,8 +256,8 @@ class DebtPaymentScreen extends StatelessWidget {
             ),
             const SizedBox(height: 15),
             Container(
-              width: 160,
-              height: 160,
+              width: 180,
+              height: 180,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -274,8 +275,29 @@ class DebtPaymentScreen extends StatelessWidget {
                   color: _kQRCodePlaceholderColor,
                   borderRadius: BorderRadius.circular(10.0),
                 ),
-                child: const Center(
-                  child: Icon(Icons.qr_code_2, size: 80, color: Colors.black45),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10.0),
+                  child: qrUrl.isNotEmpty
+                      ? Image.network(
+                          qrUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image_rounded,
+                                size: 50,
+                                color: Colors.black38,
+                              ),
+                            );
+                          },
+                        )
+                      : const Center(
+                          child: Icon(
+                            Icons.qr_code_2,
+                            size: 80,
+                            color: Colors.black45,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -490,6 +512,9 @@ class DebtPaymentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.refreshShopData(); // ✅ ดึงรูป QR Code ใหม่ทุกครั้งที่เปิดหน้า
+    });
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(

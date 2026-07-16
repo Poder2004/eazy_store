@@ -25,6 +25,10 @@ class SalesAccountController extends GetxController {
 
   var currentIndex = 0.obs;
 
+  // 💰 ยอดหนี้รวม (ตามช่วงเวลาที่เลือก)
+  var totalDebt = 0.0.obs;
+  var totalCollectedDebt = 0.0.obs; // ยอดเก็บหนี้ได้ในช่วงเวลานั้นๆ
+
   // 📝 ข้อมูลรายละเอียด (Details)
   var isDetailLoading = false.obs;
   var transactionsList = <TransactionDetailModel>[].obs;
@@ -369,6 +373,14 @@ class SalesAccountController extends GetxController {
           );
         }
       }
+      // ดึงยอดหนี้ตามช่วงเวลาเดียวกัน
+      final advancedData = await ApiDashboad.getAdvancedReport(
+        shopId,
+        currentRange['start']!,
+        currentRange['end']!,
+      );
+      totalDebt.value = advancedData?.paymentMethods.debtAmount ?? 0.0;
+      totalCollectedDebt.value = advancedData?.debtCollection.collectedDebt ?? 0.0;
     } catch (e) {
       print(e);
     } finally {
