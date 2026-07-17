@@ -184,4 +184,39 @@ class ApiDashboad {
       return null;
     }
   }
+
+  // ✅ ฟังก์ชันดึงรายชื่อลูกหนี้แยกตามสถานะอายุหนี้ (สำหรับ popup กดดูรายละเอียด)
+  static Future<AgingReportDetail?> getAgingReportDetail(
+    int shopId,
+    String endDate,
+  ) async {
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('token');
+
+      final Uri url = Uri.parse(
+        "${AppConfig.baseUrl}/api/dashboard/aging-report-detail?shop_id=$shopId&end_date=$endDate",
+      );
+
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        return AgingReportDetail.fromJson(data['aging_report_detail'] ?? {});
+      } else {
+        if (AuthGuard.isUnauthorized(response.statusCode)) {
+          await AuthGuard.handleUnauthorized();
+        }
+        print("Aging Report Detail API Error: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Aging Report Detail API Exception: $e");
+      return null;
+    }
+  }
 }

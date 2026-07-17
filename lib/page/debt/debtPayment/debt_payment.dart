@@ -2,20 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 // --- Imports ไฟล์ของคุณ ---
-import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import '../../../model/response/debtor_response.dart';
 import 'debt_payment_controller.dart'; // ★ Import Controller เข้ามา
 
-// กำหนดสีหลัก
-const Color _kPrimaryColor = Color(0xFF6B8E23);
-const Color _kBackgroundColor = Color(
-  0xFFF4F7FA,
-); // สีพื้นหลังให้อ่อนลงดูสบายตา
-const Color _kButtonGreen = Color(0xFF10B981); // ปรับเขียวให้ดูทันสมัยขึ้น
-const Color _kButtonBlue = Color(0xFF3B82F6); // ปรับฟ้าให้ดูพรีเมียม
-const Color _kInputFillColor = Color(0xFFF8FAFC);
-const Color _kQRCodePlaceholderColor = Color(0xFFF1F5F9);
-const Color _kCardColor = Colors.white;
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+const Color _kBg = Color(0xFFF3F5F9);
+const Color _kSurface = Colors.white;
+const Color _kFill = Color(0xFFF8FAFC);
+const Color _kBorder = Color(0xFFE7EAF2);
+
+const Color _kInk = Color(0xFF14213D);
+const Color _kInk2 = Color(0xFF6B7A99);
+const Color _kInk3 = Color(0xFF9AA4BF);
+
+const Color _kGreen = Color(0xFF10B981);
+const Color _kGreenBg = Color(0xFFE7FBF4);
+const Color _kGreenBorder = Color(0xFFA7F0D6);
+
+const Color _kBlue = Color(0xFF3B82F6);
+const Color _kBlueBg = Color(0xFFEAF2FF);
+const Color _kBlueBorder = Color(0xFFBFDBFE);
+
+const Color _kRed = Color(0xFFEF4444);
+const Color _kRedBg = Color(0xFFFEECEC);
+
+const double _kR12 = 12.0;
+const double _kR16 = 16.0;
+const double _kR20 = 20.0;
 
 class DebtPaymentScreen extends StatelessWidget {
   final DebtorResponse? debtor;
@@ -28,98 +41,96 @@ class DebtPaymentScreen extends StatelessWidget {
     controller.initData(debtor);
   }
 
-  // --- Widgets UI ---
-  Widget _buildPaymentMethodButtons() {
-    return Obx(
-      () => Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () =>
-                  controller.selectedMethod.value = PaymentMethod.cash,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    controller.selectedMethod.value == PaymentMethod.cash
-                    ? _kButtonGreen.withOpacity(0.1)
-                    : _kCardColor,
-                foregroundColor:
-                    controller.selectedMethod.value == PaymentMethod.cash
-                    ? _kButtonGreen
-                    : Colors.blueGrey.shade400,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  side: BorderSide(
-                    color: controller.selectedMethod.value == PaymentMethod.cash
-                        ? _kButtonGreen
-                        : Colors.grey.shade300,
-                    width: 1.5,
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.payments_rounded, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'เงินสด',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+  // ─── การ์ดข้อมูลลูกหนี้ ─────────────────────────────────────────────────────
+  Widget _buildDebtorCard() {
+    final name = debtor?.name ?? 'ไม่ระบุชื่อ';
+    final img = debtor?.imgDebtor ?? '';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _kSurface,
+        borderRadius: BorderRadius.circular(_kR20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () =>
-                  controller.selectedMethod.value = PaymentMethod.transfer,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    controller.selectedMethod.value == PaymentMethod.transfer
-                    ? _kButtonBlue.withOpacity(0.1)
-                    : _kCardColor,
-                foregroundColor:
-                    controller.selectedMethod.value == PaymentMethod.transfer
-                    ? _kButtonBlue
-                    : Colors.blueGrey.shade400,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                  side: BorderSide(
-                    color:
-                        controller.selectedMethod.value ==
-                            PaymentMethod.transfer
-                        ? _kButtonBlue
-                        : Colors.grey.shade300,
-                    width: 1.5,
-                  ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  color: _kBlueBg,
+                  shape: BoxShape.circle,
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                clipBehavior: Clip.antiAlias,
+                child: img.isNotEmpty
+                    ? Image.network(
+                        img,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _avatarInitial(name),
+                      )
+                    : _avatarInitial(name),
               ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.qr_code_scanner_rounded, size: 20),
-                    SizedBox(width: 8),
                     Text(
-                      'เงินโอน',
-                      style: TextStyle(
+                      name,
+                      style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
+                        color: _kInk,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _kFill,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'ลูกหนี้',
+                        style: TextStyle(fontSize: 11, color: _kInk2),
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(height: 1, color: _kBorder),
+          const SizedBox(height: 14),
+          const Text(
+            'ยอดค้างชำระทั้งหมด',
+            style: TextStyle(fontSize: 13, color: _kInk2),
+          ),
+          const SizedBox(height: 4),
+          Obx(
+            () => FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '฿ ${controller.totalDebtAmount.value.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 32,
+                  color: _kRed,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -129,109 +140,309 @@ class DebtPaymentScreen extends StatelessWidget {
     );
   }
 
-  // ✨ ปรับช่องกรอกข้อมูลให้ยืดหยุ่น ปลดล็อกความสูงออก
-  Widget _buildPaymentDetailRow({
-    required String label,
-    required String value,
-    bool isInput = false,
-    bool isAction = false,
-    TextEditingController? textController,
-    bool isRemainingDebt = false,
-    bool isChange = false,
-  }) {
-    final Color valueColor = isAction
-        ? Colors.black87
-        : isRemainingDebt
-        ? Colors.red.shade600
-        : isChange
-        ? _kButtonGreen
-        : Colors.black87;
+  Widget _avatarInitial(String name) {
+    return Center(
+      child: Text(
+        name.isNotEmpty ? name.characters.first : '?',
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: _kBlue,
+        ),
+      ),
+    );
+  }
 
-    String displayValue = value;
-    if (!isInput && double.tryParse(value) != null) {
-      displayValue = double.parse(value).toStringAsFixed(2);
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+  // ─── ปุ่มเลือกวิธีชำระ ──────────────────────────────────────────────────────
+  Widget _buildPaymentMethodButtons() {
+    return Obx(
+      () => Row(
         children: [
           Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.blueGrey.shade700,
-                fontWeight: (isRemainingDebt || isChange)
-                    ? FontWeight.bold
-                    : FontWeight.w500,
+            child: _methodButton(
+              selected: controller.selectedMethod.value == PaymentMethod.cash,
+              icon: Icons.payments_rounded,
+              label: 'เงินสด',
+              accent: _kGreen,
+              accentBg: _kGreenBg,
+              accentBorder: _kGreenBorder,
+              onTap: () => controller.selectedMethod.value = PaymentMethod.cash,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _methodButton(
+              selected:
+                  controller.selectedMethod.value == PaymentMethod.transfer,
+              icon: Icons.qr_code_scanner_rounded,
+              label: 'เงินโอน',
+              accent: _kBlue,
+              accentBg: _kBlueBg,
+              accentBorder: _kBlueBorder,
+              onTap: () =>
+                  controller.selectedMethod.value = PaymentMethod.transfer,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _methodButton({
+    required bool selected,
+    required IconData icon,
+    required String label,
+    required Color accent,
+    required Color accentBg,
+    required Color accentBorder,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? accentBg : _kSurface,
+          borderRadius: BorderRadius.circular(_kR12),
+          border: Border.all(
+            color: selected ? accentBorder : _kBorder,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: selected ? accent : _kInk3),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? accent : _kInk2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              transitionBuilder: (child, anim) =>
+                  ScaleTransition(scale: anim, child: child),
+              child: selected
+                  ? Padding(
+                      key: const ValueKey('checked'),
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        size: 17,
+                        color: accent,
+                      ),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('unchecked')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── ช่องกรอกยอดที่จ่าย (hero input) ───────────────────────────────────────
+  Widget _buildAmountInput() {
+    return Obx(() {
+      final isCash = controller.selectedMethod.value == PaymentMethod.cash;
+      final accent = isCash ? _kGreen : _kBlue;
+      final accentBg = isCash ? _kGreenBg : _kBlueBg;
+      final accentBorder = isCash ? _kGreenBorder : _kBlueBorder;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ระบุยอดที่ต้องการรับชำระ',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: _kInk2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: accentBg,
+              borderRadius: BorderRadius.circular(_kR16),
+              border: Border.all(color: accentBorder, width: 1.5),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  '฿',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: accent,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: controller.amountPaidController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    textAlign: TextAlign.left,
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: _kInk,
+                    ),
+                    decoration: InputDecoration(
+                      isCollapsed: true,
+                      hintText: '0',
+                      hintStyle: const TextStyle(
+                        color: _kInk3,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  // ─── การ์ดสรุป: หนี้คงเหลือ / เงินทอน ───────────────────────────────────────
+  Widget _buildSummaryChips() {
+    return Obx(
+      () => Row(
+        children: [
+          Expanded(
+            child: _statChip(
+              icon: Icons.account_balance_wallet_rounded,
+              label: 'หนี้คงเหลือ',
+              value: controller.remainingDebt.value,
+              color: _kRed,
+              bg: _kRedBg,
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            flex: 3,
-            child: isInput
-                ? TextField(
-                    controller: textController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: valueColor,
-                    ),
-                    decoration: InputDecoration(
-                      isDense: true, // ไม่ให้ช่องกรอกสูงเกินไป
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: 12.0,
-                      ),
-                      filled: true,
-                      fillColor: isAction ? Colors.white : _kInputFillColor,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                        borderSide: const BorderSide(
-                          color: _kButtonBlue,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  )
-                : Container(
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12.0,
-                      vertical: 12.0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isAction ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10.0),
-                      border: isAction
-                          ? Border.all(color: Colors.grey.shade300)
-                          : null,
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        displayValue,
-                        style: TextStyle(
-                          fontSize: (isRemainingDebt || isChange) ? 22 : 18,
-                          fontWeight: FontWeight.bold,
-                          color: valueColor,
-                        ),
-                      ),
-                    ),
-                  ),
+            child: _statChip(
+              icon: Icons.savings_rounded,
+              label: 'เงินทอน',
+              value: controller.change.value,
+              color: _kGreen,
+              bg: _kGreenBg,
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _statChip({
+    required IconData icon,
+    required String label,
+    required double value,
+    required Color color,
+    required Color bg,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(_kR12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '฿ ${value.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── ช่องชื่อผู้รับเงิน ─────────────────────────────────────────────────────
+  Widget _buildPayerNameField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'ผู้รับเงิน',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _kInk2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller.payerNameController,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: _kInk,
+          ),
+          decoration: InputDecoration(
+            prefixIcon: const Icon(
+              Icons.person_outline_rounded,
+              size: 20,
+              color: _kInk3,
+            ),
+            filled: true,
+            fillColor: _kFill,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_kR12),
+              borderSide: BorderSide(color: _kBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_kR12),
+              borderSide: BorderSide(color: _kBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(_kR12),
+              borderSide: const BorderSide(color: _kBlue, width: 2),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -242,41 +453,50 @@ class DebtPaymentScreen extends StatelessWidget {
       }
       final qrUrl = controller.shopQrCodeUrl.value;
       return Padding(
-        padding: const EdgeInsets.only(top: 15.0),
+        padding: const EdgeInsets.only(top: 18.0),
         child: Column(
           children: [
-            const Divider(color: Color(0xFFE2E8F0), thickness: 1, height: 30),
-            const Text(
-              'คิวอาร์โค้ดชำระเงิน',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueGrey,
-              ),
+            Container(height: 1, color: _kBorder),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.qr_code_2_rounded, size: 16, color: _kBlue),
+                SizedBox(width: 6),
+                Text(
+                  'สแกนเพื่อชำระผ่าน QR',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: _kInk,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 14),
             Container(
               width: 180,
               height: 180,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16.0),
+                borderRadius: BorderRadius.circular(_kR16),
+                border: Border.all(color: _kBlueBorder),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
+                    color: _kBlue.withValues(alpha: .08),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: _kQRCodePlaceholderColor,
-                  borderRadius: BorderRadius.circular(10.0),
+                  color: _kFill,
+                  borderRadius: BorderRadius.circular(_kR12),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10.0),
+                  borderRadius: BorderRadius.circular(_kR12),
                   child: qrUrl.isNotEmpty
                       ? Image.network(
                           qrUrl,
@@ -286,7 +506,7 @@ class DebtPaymentScreen extends StatelessWidget {
                               child: Icon(
                                 Icons.broken_image_rounded,
                                 size: 50,
-                                color: Colors.black38,
+                                color: _kInk3,
                               ),
                             );
                           },
@@ -295,7 +515,7 @@ class DebtPaymentScreen extends StatelessWidget {
                           child: Icon(
                             Icons.qr_code_2,
                             size: 80,
-                            color: Colors.black45,
+                            color: _kInk3,
                           ),
                         ),
                 ),
@@ -385,50 +605,68 @@ class DebtPaymentScreen extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kButtonGreen,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    controller.validateAndSubmit(
-                      pinCode: pinController.text,
-                      onSuccess: () => _showSuccessDialog(),
-                      onPinIncorrect: () {
-                        pinController.clear();
-                        Get.snackbar(
-                          'ข้อผิดพลาด',
-                          'รหัส PIN ไม่ถูกต้อง',
-                          backgroundColor: Colors.redAccent,
-                          colorText: Colors.white,
-                        );
-                      },
-                    );
-                  },
-                  child: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'ยืนยันรหัส',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+              Obx(
+                () => SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kGreen,
+                      disabledBackgroundColor: _kGreen.withValues(alpha: .6),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    onPressed: controller.isSubmitting.value
+                        ? null
+                        : () {
+                            controller.validateAndSubmit(
+                              pinCode: pinController.text,
+                              onSuccess: () => _showSuccessDialog(),
+                              onPinIncorrect: () {
+                                pinController.clear();
+                                Get.snackbar(
+                                  'ข้อผิดพลาด',
+                                  'รหัส PIN ไม่ถูกต้อง',
+                                  backgroundColor: Colors.redAccent,
+                                  colorText: Colors.white,
+                                );
+                              },
+                            );
+                          },
+                    child: controller.isSubmitting.value
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'ยืนยันรหัส',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Get.back(),
-                child: const Text(
-                  'ยกเลิก',
-                  style: TextStyle(color: Colors.blueGrey, fontSize: 16),
+              Obx(
+                () => TextButton(
+                  onPressed: controller.isSubmitting.value
+                      ? null
+                      : () => Get.back(),
+                  child: const Text(
+                    'ยกเลิก',
+                    style: TextStyle(color: Colors.blueGrey, fontSize: 16),
+                  ),
                 ),
               ),
             ],
@@ -458,13 +696,13 @@ class DebtPaymentScreen extends StatelessWidget {
             children: <Widget>[
               Container(
                 decoration: BoxDecoration(
-                  color: _kButtonGreen.withOpacity(0.1),
+                  color: _kGreen.withValues(alpha: .1),
                   shape: BoxShape.circle,
                 ),
                 padding: const EdgeInsets.all(20.0),
                 child: const Icon(
                   Icons.check_circle_rounded,
-                  color: _kButtonGreen,
+                  color: _kGreen,
                   size: 60,
                 ),
               ),
@@ -479,7 +717,7 @@ class DebtPaymentScreen extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kButtonGreen,
+                    backgroundColor: _kGreen,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -516,7 +754,7 @@ class DebtPaymentScreen extends StatelessWidget {
       controller.refreshShopData(); // ✅ ดึงรูป QR Code ใหม่ทุกครั้งที่เปิดหน้า
     });
     return Scaffold(
-      backgroundColor: _kBackgroundColor,
+      backgroundColor: _kBg,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
@@ -527,12 +765,17 @@ class DebtPaymentScreen extends StatelessWidget {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
-            color: Colors.black87,
+            color: _kInk,
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: _kSurface,
         elevation: 0,
+        iconTheme: const IconThemeData(color: _kInk),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: _kBorder),
+        ),
       ),
       // ✨ คุมฟอนต์ทั้งหน้าจอ จำกัดไม่ให้ใหญ่เกิน 1.2 เท่า
       body: MediaQuery(
@@ -546,123 +789,33 @@ class DebtPaymentScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
                   child: Column(
                     children: [
-                      // --- การ์ดแสดงยอดค้างชำระ ---
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: _kCardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              debtor?.name ?? 'ไม่ระบุชื่อ',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.blueGrey,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'ยอดค้างชำระทั้งหมด',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Obx(
-                              () => FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  '฿ ${controller.totalDebtAmount.value.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 36,
-                                    color: Colors.red.shade600,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-
-                      // --- วิธีชำระเงิน ---
+                      _buildDebtorCard(),
+                      const SizedBox(height: 16),
                       _buildPaymentMethodButtons(),
-                      const SizedBox(height: 25),
-
-                      // --- กล่องสรุปการจ่ายเงิน ---
+                      const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: _kCardColor,
-                          borderRadius: BorderRadius.circular(16),
+                          color: _kSurface,
+                          borderRadius: BorderRadius.circular(_kR20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                              color: Colors.black.withValues(alpha: .04),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
                         child: Column(
                           children: [
-                            Obx(
-                              () => _buildPaymentDetailRow(
-                                label: 'ระบุยอดที่จ่าย',
-                                value: controller.amountPaid.value.toString(),
-                                isInput: true,
-                                textController: controller.amountPaidController,
-                              ),
-                            ),
-                            const Divider(
-                              color: Color(0xFFF1F5F9),
-                              thickness: 1.5,
-                              height: 20,
-                            ),
-                            Obx(
-                              () => _buildPaymentDetailRow(
-                                label: 'หนี้คงเหลือ',
-                                value: controller.remainingDebt.value
-                                    .toString(),
-                                isRemainingDebt:
-                                    controller.remainingDebt.value > 0,
-                              ),
-                            ),
-                            Obx(
-                              () => _buildPaymentDetailRow(
-                                label: 'เงินทอน',
-                                value: controller.change.value.toString(),
-                                isChange: true,
-                              ),
-                            ),
-                            const Divider(
-                              color: Color(0xFFF1F5F9),
-                              thickness: 1.5,
-                              height: 20,
-                            ),
-                            _buildPaymentDetailRow(
-                              label: 'ผู้รับเงิน',
-                              value: controller.payerNameController.text,
-                              isAction: true,
-                              isInput: true,
-                              textController: controller.payerNameController,
-                            ),
+                            _buildAmountInput(),
+                            const SizedBox(height: 14),
+                            _buildSummaryChips(),
+                            const SizedBox(height: 18),
+                            _buildPayerNameField(),
                             _buildQRCodeSection(),
                           ],
                         ),
@@ -673,12 +826,12 @@ class DebtPaymentScreen extends StatelessWidget {
               ),
               // --- ปุ่มยืนยันด้านล่างสุด ---
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: _kSurface,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: .05),
                       offset: const Offset(0, -4),
                       blurRadius: 10,
                     ),
@@ -702,22 +855,30 @@ class DebtPaymentScreen extends StatelessWidget {
                         _showPinInputDialog();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black87,
+                        backgroundColor: _kGreen,
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
+                          borderRadius: BorderRadius.circular(_kR12),
                         ),
-                        elevation: 2,
+                        elevation: 3,
+                        shadowColor: _kGreen.withValues(alpha: .4),
                       ),
                       child: const FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(
-                          'ยืนยันการชำระเงิน',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_circle_rounded, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'ยืนยันการชำระเงิน',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -728,10 +889,6 @@ class DebtPaymentScreen extends StatelessWidget {
           ),
         ),
       ),
-      // bottomNavigationBar: Obx(() => BottomNavBar(
-      //   currentIndex: controller.selectedIndex.value,
-      //   onTap: controller.setBottomNavIndex,
-      // )),
     );
   }
 }

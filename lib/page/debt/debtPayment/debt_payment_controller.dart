@@ -19,6 +19,7 @@ class DebtPaymentController extends GetxController {
   var remainingDebt = 0.0.obs;
   var change = 0.0.obs;
   var shopQrCodeUrl = "".obs; // ✅ URL สำหรับรูปภาพ QR Code จริง
+  var isSubmitting = false.obs; // ✅ กันกดยืนยันซ้ำ/พิมพ์ PIN ซ้อนกันจนไดอะล็อกค้าง
 
   // --- Controllers ---
   final TextEditingController amountPaidController = TextEditingController();
@@ -61,11 +62,11 @@ class DebtPaymentController extends GetxController {
     totalDebtAmount.value = (debtor?.currentDebt as num?)?.toDouble() ?? 0.0;
     
     remainingDebt.value = totalDebtAmount.value;
-    amountPaid.value = totalDebtAmount.value;
+    amountPaid.value = 0.0;
 
     // ยกเลิก listener ชั่วคราวตอนเซ็ตค่าเริ่มต้น เพื่อไม่ให้คำนวณซ้ำซ้อน
     amountPaidController.removeListener(calculateChange);
-    amountPaidController.text = totalDebtAmount.value.toStringAsFixed(0);
+    amountPaidController.text = '';
     amountPaidController.addListener(calculateChange);
   }
 
@@ -94,57 +95,66 @@ class DebtPaymentController extends GetxController {
     required VoidCallback onSuccess,
     required VoidCallback onPinIncorrect,
   }) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String savedPin = prefs.getString('pinCode') ?? '';
-    final int shopId = prefs.getInt('shopId') ?? 0;
+    // กันเรียกซ้อน — ถ้ากดยืนยัน/กด Enter ซ้ำระหว่างรออยู่แล้ว จะเปิด dialog ซ้ำ
+    // จนลำดับปิด dialog (Get.back) ไม่ตรงกับ dialog ที่ยังค้างอยู่จริง
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
 
-    if (savedPin.isEmpty) {
-      Get.snackbar('แจ้งเตือน', 'ไม่พบรหัส PIN ในระบบ กรุณา Login ใหม่',
-          backgroundColor: Colors.redAccent, colorText: Colors.white);
-      return;
-    }
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String savedPin = prefs.getString('pinCode') ?? '';
+      final int shopId = prefs.getInt('shopId') ?? 0;
 
-    if (pinCode == savedPin) {
-      // 1. แสดง Loading Dialog
-      Get.dialog(
-        const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false,
-      );
+      if (savedPin.isEmpty) {
+        Get.snackbar('แจ้งเตือน', 'ไม่พบรหัส PIN ในระบบ กรุณา Login ใหม่',
+            backgroundColor: Colors.redAccent, colorText: Colors.white);
+        return;
+      }
 
-      try {
-        final request = PayDebtRequest(
-          shopId: shopId,
-          debtorId: debtor?.debtorId ?? 0,
-          amountPaid: amountPaid.value,
-          paymentMethod: selectedMethod.value == PaymentMethod.cash ? 'จ่ายเงินสด' : 'โอนจ่าย',
-          payWith: payerNameController.text,
-          pinCode: pinCode,
+      if (pinCode == savedPin) {
+        // 1. แสดง Loading Dialog
+        Get.dialog(
+          const Center(child: CircularProgressIndicator()),
+          barrierDismissible: false,
         );
 
-        final result = await ApiPayment.payDebt(request);
+        try {
+          final request = PayDebtRequest(
+            shopId: shopId,
+            debtorId: debtor?.debtorId ?? 0,
+            amountPaid: amountPaid.value,
+            paymentMethod: selectedMethod.value == PaymentMethod.cash ? 'จ่ายเงินสด' : 'โอนจ่าย',
+            payWith: payerNameController.text,
+            pinCode: pinCode,
+          );
 
-        // ปิด Loading Dialog
-        Get.back();
+          final result = await ApiPayment.payDebt(request);
 
-        if (result != null && !result.containsKey('error')) {
-          // ✅ สำเร็จ - ปิดหน้า PIN แล้วแสดง Dialog สำเร็จ (ผ่าน Callback)
-          Get.back(); 
-          onSuccess();
-        } else {
-          // ❌ มี Error จาก Server
-          String errorMsg = result != null ? result['error'].toString() : 'เกิดข้อผิดพลาดที่ไม่รู้จัก';
-          Get.snackbar('ข้อผิดพลาด', errorMsg,
+          // ปิด Loading Dialog
+          Get.back();
+
+          if (!result.containsKey('error')) {
+            // ✅ สำเร็จ - ปิดหน้า PIN แล้วแสดง Dialog สำเร็จ (ผ่าน Callback)
+            Get.back();
+            onSuccess();
+          } else {
+            // ❌ มี Error จาก Server
+            String errorMsg = result['error'].toString();
+            Get.snackbar('ข้อผิดพลาด', errorMsg,
+                backgroundColor: Colors.redAccent, colorText: Colors.white);
+          }
+        } catch (e) {
+          Get.back(); // ปิด Loading
+          print("Error submit: $e");
+          Get.snackbar('ข้อผิดพลาด', 'เชื่อมต่อล้มเหลว: $e',
               backgroundColor: Colors.redAccent, colorText: Colors.white);
         }
-      } catch (e) {
-        Get.back(); // ปิด Loading
-        print("Error submit: $e");
-        Get.snackbar('ข้อผิดพลาด', 'เชื่อมต่อล้มเหลว: $e',
-            backgroundColor: Colors.redAccent, colorText: Colors.white);
+      } else {
+        // ❌ PIN ผิด
+        onPinIncorrect();
       }
-    } else {
-      // ❌ PIN ผิด
-      onPinIncorrect();
+    } finally {
+      isSubmitting.value = false;
     }
   }
 }

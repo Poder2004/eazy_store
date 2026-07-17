@@ -11,6 +11,8 @@ class AdvancedReportController extends GetxController {
   var selectedView = 'เดือนนี้'.obs;
   var currentDate = DateTime.now().obs;
   var reportData = Rxn<AdvancedReportResponse>();
+  var isAgingDetailLoading = false.obs;
+  var agingDetail = Rxn<AgingReportDetail>();
 
   @override
   void onInit() {
@@ -37,6 +39,24 @@ class AdvancedReportController extends GetxController {
       debugPrint('Error fetching advanced report: $e');
     } finally {
       isLoading(false);
+    }
+  }
+
+  Future<void> fetchAgingReportDetail() async {
+    isAgingDetailLoading(true);
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+      final range = _getDateRange();
+      final data = await ApiDashboad.getAgingReportDetail(
+        shopId,
+        range['end']!,
+      );
+      agingDetail.value = data;
+    } catch (e) {
+      debugPrint('Error fetching aging report detail: $e');
+    } finally {
+      isAgingDetailLoading(false);
     }
   }
 

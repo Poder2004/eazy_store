@@ -1168,6 +1168,12 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             _kGreen,
             const Color(0xFFE8FDF5),
             const Color(0xFF0F6E56),
+            onTap: () => _showAgingBucketDetail(
+              'safe',
+              'ลูกหนี้สถานะปลอดภัย',
+              _kGreen,
+              const Color(0xFFE8FDF5),
+            ),
           ),
           const SizedBox(height: 7),
           _agingRow(
@@ -1177,6 +1183,12 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             _kAmber,
             _kAmberBg,
             const Color(0xFF854F0B),
+            onTap: () => _showAgingBucketDetail(
+              'warning',
+              'ลูกหนี้สถานะทวงถาม',
+              _kAmber,
+              _kAmberBg,
+            ),
           ),
           const SizedBox(height: 7),
           _agingRow(
@@ -1186,6 +1198,23 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             const Color(0xFFFF5A6A),
             const Color(0xFFFFF0F0),
             const Color(0xFFA32D2D),
+            onTap: () => _showAgingBucketDetail(
+              'danger',
+              'ลูกหนี้สถานะอันตราย',
+              const Color(0xFFFF5A6A),
+              const Color(0xFFFFF0F0),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Row(
+            children: [
+              Icon(Icons.touch_app_rounded, size: 11, color: _kInk3),
+              SizedBox(width: 4),
+              Text(
+                'แตะแต่ละสถานะเพื่อดูรายชื่อลูกหนี้',
+                style: TextStyle(fontSize: 11, color: _kInk3),
+              ),
+            ],
           ),
         ],
       ),
@@ -1198,50 +1227,228 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
     double value,
     Color dotColor,
     Color badgeBg,
-    Color badgeFg,
+    Color badgeFg, {
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: dotColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(period, style: const TextStyle(fontSize: 13, color: _kInk2)),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: badgeBg,
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Text(
+                badge,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: badgeFg,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Flexible(
+              child: Text(
+                '฿${c.formatNumber(value)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: dotColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: _kInk4,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Bottom Sheet: รายชื่อลูกหนี้แยกตามสถานะอายุหนี้ ─────────────────────────
+  void _showAgingBucketDetail(
+    String bucket,
+    String title,
+    Color accent,
+    Color accentBg,
   ) {
-    return Row(
-      children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: dotColor,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(period, style: const TextStyle(fontSize: 13, color: _kInk2)),
-        const SizedBox(width: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-          decoration: BoxDecoration(
-            color: badgeBg,
-            borderRadius: BorderRadius.circular(5),
-          ),
-          child: Text(
-            badge,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: badgeFg,
+    c.fetchAgingReportDetail();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AgingDetailSheet(
+        title: title,
+        icon: Icons.groups_rounded,
+        accent: accent,
+        accentBg: accentBg,
+        contentBuilder: (scrollCtrl) => Obx(() {
+          if (c.isAgingDetailLoading.value) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 60),
+                child: CircularProgressIndicator(color: _kInk3, strokeWidth: 2.5),
+              ),
+            );
+          }
+          final detail = c.agingDetail.value;
+          final items = switch (bucket) {
+            'safe' => detail?.safe ?? [],
+            'warning' => detail?.warning ?? [],
+            _ => detail?.danger ?? [],
+          };
+          if (items.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 60),
+                child: Column(
+                  children: [
+                    Icon(Icons.inbox_rounded, size: 40, color: _kInk4),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'ไม่มีลูกหนี้ในสถานะนี้',
+                      style: TextStyle(fontSize: 13, color: _kInk3),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return ListView.builder(
+            controller: scrollCtrl,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+            itemCount: items.length,
+            itemBuilder: (_, i) => Padding(
+              padding: EdgeInsets.only(bottom: i < items.length - 1 ? 8 : 0),
+              child: _agingDebtorTile(items[i], accent, accentBg),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _agingDebtorTile(
+    AgingBucketDebtorItem item,
+    Color accent,
+    Color accentBg,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: accentBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: .25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: .15),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                item.name.isNotEmpty ? item.name.characters.first : '?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
+              ),
             ),
           ),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            '฿${c.formatNumber(value)}',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: dotColor,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _kInk,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    if (item.phone.isNotEmpty) ...[
+                      Icon(Icons.phone_rounded, size: 10, color: _kInk3),
+                      const SizedBox(width: 3),
+                      Text(
+                        item.phone,
+                        style: const TextStyle(fontSize: 11, color: _kInk3),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        'ค้างมา ${item.daysOverdue} วัน',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: accent,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '฿${c.formatNumber(item.amountOwed)}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: accent,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1500,6 +1707,106 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             height: 3,
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Aging Detail Sheet ───────────────────────────────────────────────────────
+class _AgingDetailSheet extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color accent;
+  final Color accentBg;
+  final Widget Function(ScrollController) contentBuilder;
+
+  const _AgingDetailSheet({
+    required this.title,
+    required this.icon,
+    required this.accent,
+    required this.accentBg,
+    required this.contentBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: MediaQuery.of(
+          context,
+        ).textScaler.clamp(maxScaleFactor: _kMaxTextScale),
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (ctx, scrollCtrl) => Container(
+          decoration: const BoxDecoration(
+            color: _kSurface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _kBorder,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: accentBg,
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: Icon(icon, color: accent, size: 19),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: _kInk,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: _kSurface2,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: _kBorder),
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: _kInk2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: _kBorder),
+              Expanded(child: contentBuilder(scrollCtrl)),
+            ],
+          ),
+        ),
       ),
     );
   }
