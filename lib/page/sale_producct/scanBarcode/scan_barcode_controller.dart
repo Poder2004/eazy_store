@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
+import 'package:eazy_store/widgets/confirm_dialog.dart';
 
 // ----------------------------------------------------------------------
 // 1. Controller: จัดการ Logic การสแกน
@@ -96,42 +97,24 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
   // - ปฏิเสธถาวร: ปุ่ม "เปิดการตั้งค่า" (ระบบไม่ยอมให้ขอซ้ำแล้ว)
   // - ปุ่ม "ยกเลิก": กลับไปหน้า Home
   void _showPermissionDialog({required bool isPermanentlyDenied}) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("ไม่ได้รับสิทธิ์กล้อง"),
-        content: Text(
-          isPermanentlyDenied
-              ? "แอปต้องใช้กล้องเพื่อสแกนบาร์โค้ด\nกรุณาไปเปิดสิทธิ์กล้องในการตั้งค่า"
-              : "แอปต้องใช้กล้องเพื่อสแกนบาร์โค้ด\nต้องการขอสิทธิ์อีกครั้งหรือไม่?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back(); // ปิด dialog
-              Get.offAll(() => const HomePage()); // กลับหน้า Home
-            },
-            child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFC0392B),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Get.back(); // ปิด dialog
-              if (isPermanentlyDenied) {
-                // กลับมาจากหน้าตั้งค่าแล้ว จะเช็คสิทธิ์ใหม่ใน didChangeAppLifecycleState
-                openAppSettings();
-              } else {
-                requestCameraPermission();
-              }
-            },
-            child: Text(isPermanentlyDenied ? "เปิดการตั้งค่า" : "ขอสิทธิ์อีกครั้ง"),
-          ),
-        ],
-      ),
+    ConfirmDialog.show(
+      title: "ไม่ได้รับสิทธิ์กล้อง",
+      message: isPermanentlyDenied
+          ? "แอปต้องใช้กล้องเพื่อสแกนบาร์โค้ด\nกรุณาไปเปิดสิทธิ์กล้องในการตั้งค่า"
+          : "แอปต้องใช้กล้องเพื่อสแกนบาร์โค้ด\nต้องการขอสิทธิ์อีกครั้งหรือไม่?",
+      icon: Icons.no_photography_rounded,
+      confirmColor: const Color(0xFFC0392B),
+      confirmLabel: isPermanentlyDenied ? "เปิดการตั้งค่า" : "ขอสิทธิ์อีกครั้ง",
       barrierDismissible: false,
+      onCancel: () => Get.offAll(() => const HomePage()), // กลับหน้า Home
+      onConfirm: () {
+        if (isPermanentlyDenied) {
+          // กลับมาจากหน้าตั้งค่าแล้ว จะเช็คสิทธิ์ใหม่ใน didChangeAppLifecycleState
+          openAppSettings();
+        } else {
+          requestCameraPermission();
+        }
+      },
     );
   }
 

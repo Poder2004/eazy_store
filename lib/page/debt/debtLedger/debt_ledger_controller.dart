@@ -32,6 +32,10 @@ class DebtLedgerController extends GetxController {
   
   Timer? _debounce;
 
+  // ป้องกัน race condition แบบเดียวกับ CheckStockController: ถ้ากดเปลี่ยนหน้า
+  // เร็วกว่าที่ request เดิมจะตอบกลับ ผลลัพธ์เก่าจะไม่ทับข้อมูลหน้าปัจจุบัน
+  int _fetchGeneration = 0;
+
   @override
   void onInit() {
     super.onInit();
@@ -54,6 +58,7 @@ class DebtLedgerController extends GetxController {
   // --- ฟังก์ชันดึงลูกหนี้ทั้งหมด ---
   Future<void> fetchAllDebtors() async {
     isLoading.value = true;
+    final int requestGeneration = ++_fetchGeneration;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       currentShopId.value = prefs.getInt('shopId') ?? 1;
@@ -63,8 +68,12 @@ class DebtLedgerController extends GetxController {
         currentShopId.value,
         page: currentPage.value,
         limit: itemsPerPage.value,
-        search: searchController.text, 
+        search: searchController.text,
       );
+
+      // มี request ใหม่กว่าเริ่มไปแล้วระหว่างรอ await ทิ้งผลลัพธ์นี้ไป
+      // ไม่ให้ทับข้อมูลของหน้าปัจจุบัน
+      if (requestGeneration != _fetchGeneration) return;
 
       if (result is DebtorPagedResponse) {
         allDebtors.assignAll(result.items);
@@ -76,7 +85,9 @@ class DebtLedgerController extends GetxController {
     } catch (e) {
       print("Error loading debtors: $e");
     } finally {
-      isLoading.value = false;
+      if (requestGeneration == _fetchGeneration) {
+        isLoading.value = false;
+      }
     }
   }
 

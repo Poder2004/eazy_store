@@ -115,6 +115,7 @@ class CheckStockScreen extends StatelessWidget {
               updateLimit: controller.updateLimit,
               changePage: controller.changePage,
               primaryColor: primaryColor,
+              isLoading: controller.isLoading,
             ),
           ],
         ),
@@ -162,26 +163,102 @@ class CheckStockScreen extends StatelessWidget {
 
   Widget _buildProductCard(ProductResponse product, Color warningColor) {
     final bool isLowStock = product.stock <= 10;
+    final Color stockColor = isLowStock
+        ? const Color(0xFFE53935)
+        : const Color(0xFF2E7D32);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            product.imgProduct,
-            width: 50,
-            height: 50,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported),
-          ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                product.imgProduct,
+                width: 50,
+                height: 50,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.image_not_supported),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          product.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isLowStock) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.warning_rounded, color: warningColor, size: 18),
+                      ],
+                    ],
+                  ),
+                  if (isLowStock) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      product.stock == 0 ? 'สินค้าหมด' : 'สินค้าใกล้หมด',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: stockColor,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  'คงเหลือ',
+                  style: TextStyle(fontSize: 11, color: Colors.black45),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '${product.stock}',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: stockColor,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      product.unit,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: stockColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
-        title: Text(
-          product.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text('คงเหลือ ${product.stock} ${product.unit}'),
-        trailing: isLowStock ? Icon(Icons.warning, color: warningColor) : null,
       ),
     );
   }

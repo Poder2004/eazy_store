@@ -30,6 +30,11 @@ class CheckStockController extends GetxController {
 
   final TextEditingController searchCtrl = TextEditingController();
 
+  // ป้องกัน race condition: ถ้าผู้ใช้กดเปลี่ยนหน้าเร็วๆ ก่อนที่ request เดิม
+  // จะตอบกลับ (เช่น backend ตื่นช้าตอน cold start บน Render) request เก่า
+  // อาจตอบกลับมาทีหลัง request ใหม่ แล้วทับข้อมูลของหน้าที่ถูกต้องทิ้งไป
+  int _fetchGeneration = 0;
+
   @override
   void onInit() {
     super.onInit();
@@ -47,6 +52,7 @@ class CheckStockController extends GetxController {
 
   Future<void> fetchStockData() async {
     isLoading.value = true;
+    final int requestGeneration = ++_fetchGeneration;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
@@ -61,6 +67,10 @@ class CheckStockController extends GetxController {
           sort: selectedSortOption.value,
         );
 
+        // มี request ใหม่กว่าเริ่มไปแล้วระหว่างที่รอ await อยู่ ทิ้งผลลัพธ์
+        // ของ request นี้เพื่อไม่ให้ทับข้อมูลของหน้าปัจจุบัน
+        if (requestGeneration != _fetchGeneration) return;
+
         if (result is ProductPagedResponse) {
           products.assignAll(result.items);
           totalPages.value = result.totalPages;
@@ -74,7 +84,9 @@ class CheckStockController extends GetxController {
     } catch (e) {
       print("Fetch Error: $e");
     } finally {
-      isLoading.value = false;
+      if (requestGeneration == _fetchGeneration) {
+        isLoading.value = false;
+      }
     }
   }
 

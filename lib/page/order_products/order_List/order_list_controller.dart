@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:eazy_store/api/api_orderlist.dart'; // Import API ที่เราสร้างไว้
 import 'package:eazy_store/page/order_products/buyProducts/buy_products_controller.dart';
+import 'package:eazy_store/widgets/confirm_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OrderItem {
@@ -189,39 +190,19 @@ class OrderListController extends GetxController {
 
   void showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {
     String originalQuantity = item.quantityController.text;
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15.0),
-        ),
-        title: const Text(
-          'ลบรายการสินค้า',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Text('คุณต้องการลบ "${item.name}" ออกหรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-              if (isFromButton ||
-                  (int.tryParse(item.quantityController.text) ?? 0) <= 0) {
-                item.quantityController.text = (originalQuantity == '0' || originalQuantity.trim().isEmpty)
-                    ? '1'
-                    : originalQuantity;
-              }
-            },
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              removeItem(item.id);
-              Get.back();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('ลบ', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    ConfirmDialog.show(
+      title: 'ลบรายการสินค้า',
+      message: 'คุณต้องการลบ "${item.name}" ออกหรือไม่?',
+      confirmLabel: 'ลบ',
+      onCancel: () {
+        if (isFromButton ||
+            (int.tryParse(item.quantityController.text) ?? 0) <= 0) {
+          item.quantityController.text = (originalQuantity == '0' || originalQuantity.trim().isEmpty)
+              ? '1'
+              : originalQuantity;
+        }
+      },
+      onConfirm: () => removeItem(item.id),
     );
   }
 }

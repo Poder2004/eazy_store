@@ -8,6 +8,9 @@ class PaginationControls extends StatefulWidget {
   final void Function(int) updateLimit;
   final void Function(int) changePage;
   final Color primaryColor;
+  // ถ้าส่งมา ปุ่มเปลี่ยนหน้าจะถูกปิดระหว่างที่ยังรอข้อมูลหน้าก่อนหน้าอยู่
+  // ป้องกันการกดรัวๆ ยิง request ซ้อนกันจนหน้าที่ได้มาไม่ตรงกับที่กด
+  final RxBool? isLoading;
 
   const PaginationControls({
     super.key,
@@ -17,6 +20,7 @@ class PaginationControls extends StatefulWidget {
     required this.updateLimit,
     required this.changePage,
     required this.primaryColor,
+    this.isLoading,
   });
 
   @override
@@ -144,8 +148,9 @@ class _PaginationControlsState extends State<PaginationControls> {
   Widget _buildPageNavigation() {
     return Obx(
       () {
-        final canPrev = widget.currentPage.value > 1;
-        final canNext = widget.currentPage.value < widget.totalPages.value;
+        final loading = widget.isLoading?.value ?? false;
+        final canPrev = widget.currentPage.value > 1 && !loading;
+        final canNext = widget.currentPage.value < widget.totalPages.value && !loading;
 
         return Row(
           mainAxisSize: MainAxisSize.min,
