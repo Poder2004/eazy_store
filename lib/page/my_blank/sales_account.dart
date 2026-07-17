@@ -294,14 +294,14 @@ class SalesAccountScreen extends StatelessWidget {
     final trendLabel = c.getTrendTextLabel();
     return Column(
       children: [
-        // ─── แถว 1: กำไรสุทธิ + ยอดขายรวม + ต้นทุนรวม (การ์ดรวม) ────────
+        // ─── แถว 1: กำไรสุทธิ + ยอดขายรวม + รับเงินจริง (การ์ดรวม) ────────
         _ProfitSalesCard(
           netProfit: c.netProfit.value,
           profitTrend: c.profitTrend.value,
           totalSales: c.totalSales.value,
           salesTrend: c.salesTrend.value,
-          totalCost: c.totalCost.value,
-          costTrend: c.costTrend.value,
+          actualPaid: c.actualPaid.value,
+          actualPaidTrend: c.actualPaidTrend.value,
           trendLabel: trendLabel,
           onTap: canDrill ? () => _showAllProductStats(context, c) : null,
           formatNumber: c.formatNumber,
@@ -1026,7 +1026,7 @@ class SalesAccountScreen extends StatelessWidget {
 class _ProfitSalesCard extends StatelessWidget {
   final double netProfit, profitTrend;
   final double totalSales, salesTrend;
-  final double totalCost, costTrend;
+  final double actualPaid, actualPaidTrend;
   final String trendLabel;
   final VoidCallback? onTap;
   final String Function(double) formatNumber;
@@ -1036,8 +1036,8 @@ class _ProfitSalesCard extends StatelessWidget {
     required this.profitTrend,
     required this.totalSales,
     required this.salesTrend,
-    required this.totalCost,
-    required this.costTrend,
+    required this.actualPaid,
+    required this.actualPaidTrend,
     required this.trendLabel,
     required this.formatNumber,
     this.onTap,
@@ -1172,7 +1172,7 @@ class _ProfitSalesCard extends StatelessWidget {
               },
             ),
             const SizedBox(height: 14),
-            // ─── ยอดขายรวม | ต้นทุนรวม ───────────────────────────
+            // ─── ยอดขายรวม | รับเงินจริง ───────────────────────────
             Row(
               children: [
                 Expanded(
@@ -1194,13 +1194,13 @@ class _ProfitSalesCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: _SalesCostCol(
-                    label: 'ต้นทุนรวม',
-                    amount: '฿${formatNumber(totalCost)}',
-                    trend: costTrend,
-                    iconBg: _kOrangeDim,
-                    iconFg: _kOrange,
-                    iconData: Icons.shopping_bag_rounded,
-                    isCost: true,
+                    label: 'รับเงินจริง',
+                    amount: '฿${formatNumber(actualPaid)}',
+                    trend: actualPaidTrend,
+                    iconBg: _kGreenDim,
+                    iconFg: _kGreen,
+                    iconData: Icons.check_circle_outline_rounded,
+                    isCost: false,
                   ),
                 ),
               ],

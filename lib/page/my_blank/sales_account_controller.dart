@@ -14,12 +14,14 @@ class SalesAccountController extends GetxController {
   // 📊 ข้อมูล
   var totalSales = 0.0.obs;
   var totalCost = 0.0.obs;
+  var actualPaid = 0.0.obs;
   var netProfit = 0.0.obs;
   var totalTransactions = 0.obs;
 
   // 📈 Trend
   var salesTrend = 0.0.obs;
   var costTrend = 0.0.obs;
+  var actualPaidTrend = 0.0.obs;
   var profitTrend = 0.0.obs;
   var transTrend = 0.0.obs;
 
@@ -355,6 +357,7 @@ class SalesAccountController extends GetxController {
       if (results[0] != null) {
         totalSales.value = results[0]!.totalRevenue;
         totalCost.value = results[0]!.cost;
+        actualPaid.value = results[0]!.actualPaid;
         netProfit.value = results[0]!.profit;
         totalTransactions.value = results[0]!.transactions;
         if (results[1] != null) {
@@ -363,6 +366,10 @@ class SalesAccountController extends GetxController {
             results[1]!.totalRevenue,
           );
           costTrend.value = _calculateTrend(results[0]!.cost, results[1]!.cost);
+          actualPaidTrend.value = _calculateTrend(
+            results[0]!.actualPaid,
+            results[1]!.actualPaid,
+          );
           profitTrend.value = _calculateTrend(
             results[0]!.profit,
             results[1]!.profit,
