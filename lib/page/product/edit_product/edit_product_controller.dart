@@ -1,4 +1,4 @@
-// ไฟล์: lib/sale_producct/edit_product_controller.dart (ปรับ path ตามจริงของคุณ)
+// ไฟล์: lib/page/product/edit_product/edit_product_controller.dart
 import 'dart:io';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_service_image.dart';
@@ -51,6 +51,14 @@ class EditProductController extends GetxController {
       stockCtrl = TextEditingController(text: originalProduct.stock.toString());
       unitCtrl = TextEditingController(text: originalProduct.unit);
 
+      // กำหนดค่าหมวดหมู่เริ่มต้นจากข้อมูลสินค้าที่มีอยู่ เพื่อป้องกันไม่ให้แสดง "ไม่ระบุ" หรือ "เลือกหมวดหมู่" ระหว่างโหลดข้อมูล
+      selectedCategory.value = originalProduct.category ?? (originalProduct.categoryId != 0 ? CategoryModel(
+        categoryId: originalProduct.categoryId,
+        shopId: originalProduct.shopId,
+        name: originalProduct.categoryName ?? "ไม่ระบุ",
+        status: true,
+      ) : null);
+
       // โหลดหมวดหมู่
       fetchCategories();
     } else {
@@ -83,17 +91,18 @@ class EditProductController extends GetxController {
       final uniqueList = list.where((cat) => seen.add(cat.categoryId)).toList();
       
       uniqueList.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
+      categories.assignAll(uniqueList);
+
       final preferredCategoryId =
           selectedCategory.value?.categoryId ?? originalProduct.categoryId;
-      categories.assignAll(uniqueList);
 
       if (preferredCategoryId != 0) {
         selectedCategory.value = categories.firstWhere(
           (cat) => cat.categoryId == preferredCategoryId,
-          orElse: () => CategoryModel(
-            categoryId: 0,
-            shopId: originalProduct.shopId,
-            name: "ไม่ระบุ",
+          orElse: () => selectedCategory.value ?? CategoryModel(
+            categoryId: preferredCategoryId,
+            shopId: shopId,
+            name: originalProduct.categoryName ?? "ไม่ระบุ",
             status: true,
           ),
         );

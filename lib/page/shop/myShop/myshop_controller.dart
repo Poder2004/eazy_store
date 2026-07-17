@@ -10,6 +10,7 @@ import '../../../model/response/shop_response.dart';
 import '../createShop/create_shop.dart';
 import '../editShop/edit_shop.dart';
 import '../../homepage/home_page.dart';
+import '../../../widgets/confirm_dialog.dart';
 
 class MyShopController extends GetxController {
   final ApiShop _apiShop = ApiShop();
@@ -53,46 +54,12 @@ class MyShopController extends GetxController {
   }
 
   Future<void> confirmAndDeleteShop(ShopResponse shop) async {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.delete_forever, color: Colors.red, size: 60),
-              const SizedBox(height: 16),
-              const Text("ยืนยันการลบ", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              Text("คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่? ข้อมูลนี้ไม่สามารถกู้คืนได้", 
-                style: const TextStyle(fontSize: 16, color: Colors.black54), textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      child: const Text("ยกเลิก"),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      onPressed: () async {
-                        Get.back(); // ปิด Dialog ยืนยัน
-                        _processDelete(shop.shopId);
-                      },
-                      child: const Text("ลบเลย", style: TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    ConfirmDialog.show(
+      title: "ยืนยันการลบ",
+      message: "คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่? ข้อมูลนี้ไม่สามารถกู้คืนได้",
+      icon: Icons.delete_forever,
+      confirmLabel: "ลบเลย",
+      onConfirm: () => _processDelete(shop.shopId),
     );
   }
   

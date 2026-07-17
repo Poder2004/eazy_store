@@ -1,6 +1,7 @@
 // ไฟล์: lib/page/product/product_detail_screen.dart
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/edit_product/edit_product_screen.dart'; // ตรวจสอบ Path ด้วยนะครับ
+import 'package:eazy_store/widgets/confirm_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'product_detail_controller.dart'; // ✅ Import Controller
@@ -261,86 +262,14 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  // 🛡️ ปรับ Popup ยืนยันการลบให้สวยขึ้น
   void _confirmDelete(ProductDetailController controller) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.warning_amber_rounded,
-                  size: 50,
-                  color: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "ยืนยันการลบ?",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "คุณต้องการลบสินค้า\n'${controller.product.value.name}'\nออกจากร้านใช่หรือไม่?",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-              const SizedBox(height: 25),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "ยกเลิก",
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () =>
-                          controller.deleteProduct(), // เรียกฟังก์ชันลบ
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        "ยืนยันลบ",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    ConfirmDialog.show(
+      title: "ยืนยันการลบ?",
+      message:
+          "คุณต้องการลบสินค้า\n'${controller.product.value.name}'\nออกจากร้านใช่หรือไม่?",
+      confirmLabel: "ยืนยันลบ",
+      closeOnConfirm: false, // deleteProduct() ปิด dialog เองแล้ว
+      onConfirm: () => controller.deleteProduct(),
     );
   }
 }

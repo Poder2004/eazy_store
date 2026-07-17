@@ -139,7 +139,7 @@ class _MoveCategoryProductsPageState extends State<MoveCategoryProductsPage> {
             disableResult['error'] ?? "ปิดใช้งานหมวดหมู่ไม่สำเร็จ",
           );
         }
-        Get.back(result: true);
+        Get.back(result: destination);
         Get.snackbar(
           "ย้ายและปิดใช้งานแล้ว",
           "ย้ายสินค้าไปที่ ${destination.name} และปิดใช้งานหมวดหมู่เดิมแล้ว",
@@ -148,7 +148,7 @@ class _MoveCategoryProductsPageState extends State<MoveCategoryProductsPage> {
           duration: const Duration(seconds: 5),
         );
       } else {
-        Get.back(result: true);
+        Get.back(result: destination);
         Get.snackbar(
           "ย้ายสินค้าสำเร็จ",
           "ย้ายสินค้า $movedCount รายการไปที่ ${destination.name} แล้ว",

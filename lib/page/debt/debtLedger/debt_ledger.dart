@@ -367,6 +367,7 @@ class DebtLedgerScreen extends StatelessWidget {
               updateLimit: controller.updateLimit,
               changePage: controller.changePage,
               primaryColor: _kPrimaryColor,
+              isLoading: controller.isLoading,
             ),
           ],
         ),

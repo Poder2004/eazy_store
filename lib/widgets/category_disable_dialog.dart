@@ -10,7 +10,8 @@ class CategoryDisableDialog {
     required CategoryModel category,
     required int productCount,
     required Future<bool> Function() onDisable,
-    required Future<void> Function() onRefreshCategories,
+    required Future<void> Function(CategoryModel? movedToCategory)
+        onRefreshCategories,
     required VoidCallback onReopenBottomSheet,
   }) async {
     if (productCount > 0) {
@@ -37,7 +38,8 @@ class CategoryDisableDialog {
     required BuildContext context,
     required CategoryModel category,
     required Future<bool> Function() onDisable,
-    required Future<void> Function() onRefreshCategories,
+    required Future<void> Function(CategoryModel? movedToCategory)
+        onRefreshCategories,
     required VoidCallback onReopenBottomSheet,
   }) async {
     await Get.dialog(
@@ -111,7 +113,8 @@ class CategoryDisableDialog {
     required CategoryModel category,
     required int productCount,
     required Future<bool> Function() onDisable,
-    required Future<void> Function() onRefreshCategories,
+    required Future<void> Function(CategoryModel? movedToCategory)
+        onRefreshCategories,
     required VoidCallback onReopenBottomSheet,
   }) async {
     await Get.dialog(
@@ -190,14 +193,14 @@ class CategoryDisableDialog {
                 child: ElevatedButton(
                   onPressed: () async {
                     Navigator.of(context, rootNavigator: true).pop();
-                    final result = await Get.to<bool>(
+                    final result = await Get.to<CategoryModel?>(
                       () => MoveCategoryProductsPage(
                         sourceCategory: category,
                         productCount: productCount,
                       ),
                     );
-                    if (result == true) {
-                      await onRefreshCategories();
+                    if (result != null) {
+                      await onRefreshCategories(result);
                       onReopenBottomSheet();
                     }
                   },
@@ -255,7 +258,8 @@ class CategoryDisableDialog {
   static Future<void> _handleDisable({
     required BuildContext context,
     required Future<bool> Function() onDisable,
-    required Future<void> Function() onRefreshCategories,
+    required Future<void> Function(CategoryModel? movedToCategory)
+        onRefreshCategories,
     required VoidCallback onReopenBottomSheet,
   }) async {
     final ok = await onDisable();
@@ -264,7 +268,7 @@ class CategoryDisableDialog {
       Navigator.of(context, rootNavigator: true).pop();
     }
     await Future.delayed(const Duration(milliseconds: 180));
-    await onRefreshCategories();
+    await onRefreshCategories(null);
     onReopenBottomSheet();
   }
 }

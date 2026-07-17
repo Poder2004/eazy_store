@@ -324,7 +324,10 @@ class EditProductScreen extends StatelessWidget {
       category: category,
       productCount: productCount,
       onDisable: () => controller.disableCategory(category),
-      onRefreshCategories: controller.fetchCategories,
+      onRefreshCategories: (CategoryModel? movedToCategory) async {
+        await controller.fetchCategories();
+        controller.selectedCategory.value = movedToCategory;
+      },
       onReopenBottomSheet: () {
         if (context.mounted) {
           _showCategoryBottomSheet(context, controller);
