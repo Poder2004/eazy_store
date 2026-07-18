@@ -1,6 +1,10 @@
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:flutter/material.dart';
 
+const Color _accentOlive = Color(0xFF6B8E23);
+const Color _accentOliveDark = Color(0xFF4E6B19);
+const Color _accentOliveSoft = Color(0xFFEAF1DC);
+
 class ProductSortOption {
   final String label;
   final String value;
@@ -8,14 +12,46 @@ class ProductSortOption {
   const ProductSortOption({required this.label, required this.value});
 }
 
-/// Shared sort options so every screen that filters products shows the
+/// A sortable field (e.g. "ชื่อสินค้า") paired with its two directions.
+/// Lets the filter sheet show one row per field instead of one row per
+/// field+direction combination, with the direction picked inline.
+class ProductSortField {
+  final String label;
+  final IconData icon;
+  final ProductSortOption asc;
+  final ProductSortOption desc;
+
+  const ProductSortField({
+    required this.label,
+    required this.icon,
+    required this.asc,
+    required this.desc,
+  });
+}
+
+/// Shared sort fields so every screen that filters products shows the
 /// same order and wording in "จัดเรียงตาม".
-const List<ProductSortOption> defaultProductSortOptions = [
-  ProductSortOption(label: 'ชื่อสินค้า (ก – ฮ)', value: 'name_asc'),
-  ProductSortOption(label: 'ชื่อสินค้า (ฮ – ก)', value: 'name_desc'),
-  ProductSortOption(label: 'สต็อกคงเหลือ (น้อย ไป มาก)', value: 'stock_asc'),
-  ProductSortOption(label: 'สต็อกคงเหลือ (มาก ไป น้อย)', value: 'stock_desc'),
+const List<ProductSortField> defaultProductSortFields = [
+  ProductSortField(
+    label: 'ชื่อสินค้า',
+    icon: Icons.sort_by_alpha_rounded,
+    asc: ProductSortOption(label: 'ก → ฮ', value: 'name_asc'),
+    desc: ProductSortOption(label: 'ฮ → ก', value: 'name_desc'),
+  ),
+  ProductSortField(
+    label: 'สต็อกคงเหลือ',
+    icon: Icons.inventory_2_rounded,
+    asc: ProductSortOption(label: 'น้อย → มาก', value: 'stock_asc'),
+    desc: ProductSortOption(label: 'มาก → น้อย', value: 'stock_desc'),
+  ),
 ];
+
+ProductSortField? _fieldOf(List<ProductSortField> fields, String value) {
+  for (final field in fields) {
+    if (field.asc.value == value || field.desc.value == value) return field;
+  }
+  return null;
+}
 
 /// Filter icon button that opens the shared category + sort bottom sheet.
 /// Used by both the check-stock screen and the buy-products screen so the
@@ -23,7 +59,7 @@ const List<ProductSortOption> defaultProductSortOptions = [
 class ProductFilterButton extends StatelessWidget {
   final List<CategoryModel> categories;
   final int selectedCategoryId;
-  final List<ProductSortOption> sortOptions;
+  final List<ProductSortField> sortFields;
   final String selectedSortValue;
   final String defaultSortValue;
   final void Function(int categoryId, String sortValue) onApply;
@@ -33,7 +69,7 @@ class ProductFilterButton extends StatelessWidget {
     super.key,
     required this.categories,
     required this.selectedCategoryId,
-    required this.sortOptions,
+    required this.sortFields,
     required this.selectedSortValue,
     required this.defaultSortValue,
     required this.onApply,
@@ -50,7 +86,7 @@ class ProductFilterButton extends StatelessWidget {
         context,
         categories: categories,
         selectedCategoryId: selectedCategoryId,
-        sortOptions: sortOptions,
+        sortFields: sortFields,
         selectedSortValue: selectedSortValue,
         onApply: onApply,
         onClear: onClear,
@@ -100,7 +136,7 @@ void _showProductFilterSheet(
   BuildContext context, {
   required List<CategoryModel> categories,
   required int selectedCategoryId,
-  required List<ProductSortOption> sortOptions,
+  required List<ProductSortField> sortFields,
   required String selectedSortValue,
   required void Function(int categoryId, String sortValue) onApply,
   required VoidCallback onClear,
@@ -114,6 +150,13 @@ void _showProductFilterSheet(
     backgroundColor: Colors.transparent,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setModalState) {
+        final activeField = _fieldOf(sortFields, tempSortValue);
+        final activeOption = activeField == null
+            ? null
+            : (activeField.asc.value == tempSortValue
+                  ? activeField.asc
+                  : activeField.desc);
+
         return ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(ctx).size.height * 0.9,
@@ -220,14 +263,47 @@ void _showProductFilterSheet(
                             color: Colors.grey,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        ...sortOptions.map(
-                          (opt) => _SortOptionTile(
-                            label: opt.label,
-                            isSelected: tempSortValue == opt.value,
-                            onTap: () => setModalState(
-                              () => tempSortValue = opt.value,
+                        const SizedBox(height: 10),
+                        if (activeField != null && activeOption != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
                             ),
+                            decoration: BoxDecoration(
+                              color: _accentOliveSoft,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.swap_vert_rounded,
+                                  size: 14,
+                                  color: _accentOliveDark,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    'เรียงตาม ${activeField.label} · ${activeOption.label}',
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: _accentOliveDark,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ...sortFields.map(
+                          (field) => _SortFieldTile(
+                            field: field,
+                            selectedValue: tempSortValue,
+                            onSelect: (value) =>
+                                setModalState(() => tempSortValue = value),
                           ),
                         ),
                       ],
@@ -333,14 +409,121 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _SortOptionTile extends StatelessWidget {
+/// One row per sortable field. Tapping the header selects the field
+/// (defaulting to ascending); the direction toggle only appears once the
+/// field is selected, so a 4-way choice fits in 2 compact rows instead of 4.
+class _SortFieldTile extends StatelessWidget {
+  final ProductSortField field;
+  final String selectedValue;
+  final ValueChanged<String> onSelect;
+
+  const _SortFieldTile({
+    required this.field,
+    required this.selectedValue,
+    required this.onSelect,
+  });
+
+  bool get _isSelected =>
+      selectedValue == field.asc.value || selectedValue == field.desc.value;
+
+  bool get _isDesc => selectedValue == field.desc.value;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _isSelected ? Colors.white : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(
+          color: _isSelected ? const Color(0xFF1A1A1A) : Colors.grey.shade200,
+          width: _isSelected ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () =>
+                onSelect(_isSelected ? selectedValue : field.asc.value),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(field.icon, size: 15, color: Colors.black87),
+                    const SizedBox(width: 8),
+                    Text(
+                      field.label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                if (!_isSelected)
+                  Text(
+                    field.asc.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topCenter,
+            child: !_isSelected
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(top: 9),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _DirButton(
+                            label: field.asc.label,
+                            isDesc: false,
+                            isActive: !_isDesc,
+                            onTap: () => onSelect(field.asc.value),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _DirButton(
+                            label: field.desc.label,
+                            isDesc: true,
+                            isActive: _isDesc,
+                            onTap: () => onSelect(field.desc.value),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DirButton extends StatelessWidget {
   final String label;
-  final bool isSelected;
+  final bool isDesc;
+  final bool isActive;
   final VoidCallback onTap;
 
-  const _SortOptionTile({
+  const _DirButton({
     required this.label,
-    required this.isSelected,
+    required this.isDesc,
+    required this.isActive,
     required this.onTap,
   });
 
@@ -350,53 +533,35 @@ class _SortOptionTile extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(12),
+          color: isActive ? _accentOliveSoft : Colors.white,
+          borderRadius: BorderRadius.circular(9),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1A1A1A) : Colors.grey.shade200,
-            width: isSelected ? 1.5 : 1,
+            color: isActive ? _accentOlive : Colors.grey.shade300,
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
+            Icon(
+              isDesc
+                  ? Icons.arrow_downward_rounded
+                  : Icons.arrow_upward_rounded,
+              size: 13,
+              color: isActive ? _accentOliveDark : Colors.black54,
             ),
-            Container(
-              width: 22,
-              height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF1A1A1A)
-                      : Colors.grey.shade400,
-                  width: 1.5,
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? _accentOliveDark : Colors.black87,
                 ),
-                color: isSelected
-                    ? const Color(0xFF1A1A1A)
-                    : Colors.transparent,
+                overflow: TextOverflow.ellipsis,
               ),
-              child: isSelected
-                  ? Center(
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
-                  : null,
             ),
           ],
         ),

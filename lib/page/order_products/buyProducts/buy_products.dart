@@ -6,7 +6,6 @@ import 'package:eazy_store/widgets/product_filter_sheet.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
 import '../buyProducts/buy_products_controller.dart';
 import '../order_List/order_list.dart';
-import 'package:eazy_store/page/menu_bar/bottom_navbar.dart'; // แก้ path ให้ตรง
 
 class BuyProductsScreen extends StatelessWidget {
   const BuyProductsScreen({super.key});
@@ -82,13 +81,6 @@ class BuyProductsScreen extends StatelessWidget {
           Obx(() => _buildConfirmButton(controller, context)),
         ],
       ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
-        onTap: (index) {
-          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
-          print("Tab tapped: $index");
-        },
-      ),
     );
   }
 
@@ -142,7 +134,7 @@ class BuyProductsScreen extends StatelessWidget {
             () => ProductFilterButton(
               categories: controller.categories,
               selectedCategoryId: controller.selectedCategoryId.value,
-              sortOptions: defaultProductSortOptions,
+              sortFields: defaultProductSortFields,
               selectedSortValue: controller.sortType.value,
               defaultSortValue: 'stock_asc',
               onApply: (categoryId, sortValue) => controller.applyFilter(
@@ -162,6 +154,14 @@ class BuyProductsScreen extends StatelessWidget {
     int index,
     BuyProductsController controller,
   ) {
+    final bool isOutOfStock = product.stock == 0;
+    final bool isLowStock = product.stock <= 10;
+    final Color stockColor = isOutOfStock
+        ? const Color(0xFFE53935)
+        : isLowStock
+        ? const Color(0xFFB8860B)
+        : Colors.black54;
+
     return GestureDetector(
       onTap: () => controller.toggleProduct(index),
       child: Container(
@@ -218,20 +218,26 @@ class BuyProductsScreen extends StatelessWidget {
                     children: [
                       Text(
                         "คงเหลือ ${product.stock} ${product.unit}",
-                        style: const TextStyle(
-                          color: Colors.black54,
+                        style: TextStyle(
+                          color: stockColor,
                           fontSize: 15,
+                          fontWeight: isLowStock
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
-                      if (product.stock == 0)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8.0),
-                          child: Icon(
-                            Icons.warning_amber_rounded,
-                            color: Colors.orange,
-                            size: 18,
-                          ),
+                      if (isLowStock) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          isOutOfStock
+                              ? Icons.remove_circle_rounded
+                              : Icons.warning_rounded,
+                          color: isOutOfStock
+                              ? stockColor
+                              : const Color(0xFFFFCC00),
+                          size: 16,
                         ),
+                      ],
                     ],
                   ),
                 ],

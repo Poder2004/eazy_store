@@ -49,9 +49,9 @@ class CheckStockScreen extends StatelessWidget {
                         () => ProductFilterButton(
                           categories: controller.categories,
                           selectedCategoryId: controller.selectedCategoryId.value,
-                          sortOptions: defaultProductSortOptions,
+                          sortFields: defaultProductSortFields,
                           selectedSortValue: controller.selectedSortOption.value,
-                          defaultSortValue: 'name_asc',
+                          defaultSortValue: 'stock_asc',
                           onApply: (categoryId, sortValue) =>
                               controller.applyFilter(
                                 categoryId: categoryId,
@@ -162,6 +162,7 @@ class CheckStockScreen extends StatelessWidget {
   }
 
   Widget _buildProductCard(ProductResponse product, Color warningColor) {
+    final bool isOutOfStock = product.stock == 0;
     final bool isLowStock = product.stock <= 10;
     final Color stockColor = isLowStock
         ? const Color(0xFFE53935)
@@ -191,32 +192,34 @@ class CheckStockScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          product.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isLowStock) ...[
-                        const SizedBox(width: 6),
-                        Icon(Icons.warning_rounded, color: warningColor, size: 18),
-                      ],
-                    ],
+                  Text(
+                    product.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (isLowStock) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      product.stock == 0 ? 'สินค้าหมด' : 'สินค้าใกล้หมด',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: stockColor,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isOutOfStock ? 'สินค้าหมด' : 'สินค้าใกล้หมด',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: stockColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          isOutOfStock
+                              ? Icons.remove_circle_rounded
+                              : Icons.warning_rounded,
+                          color: isOutOfStock ? stockColor : warningColor,
+                          size: 15,
+                        ),
+                      ],
                     ),
                   ],
                 ],

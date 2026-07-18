@@ -16,6 +16,10 @@ class OrderItem {
   final TextEditingController quantityController;
   final TextEditingController noteController;
 
+  // หน่วยนับที่แก้ไขได้เฉพาะในใบสั่งของนี้ (ไม่บันทึกกลับลงสินค้าจริง)
+  // เริ่มต้นจาก `unit` เดิม แต่ผู้ใช้พิมพ์ทับได้ เช่นเปลี่ยน "คู่" เป็น "1 โหล"
+  final TextEditingController unitController;
+
   OrderItem({
     required this.id,
     required this.name,
@@ -26,18 +30,51 @@ class OrderItem {
   }) : quantityController = TextEditingController(
          text: initialQuantity.toString(),
        ),
-       noteController = TextEditingController(text: initialNote);
+       noteController = TextEditingController(text: initialNote),
+       unitController = TextEditingController(text: unit);
 
   // สั่งปิดการทำงานของ Controller เมื่อไม่ได้ใช้
   void dispose() {
     quantityController.dispose();
     noteController.dispose();
+    unitController.dispose();
   }
 }
 
 class OrderListController extends GetxController {
   var orderItems = <OrderItem>[].obs;
-  var selectedIndex = 4.obs;
+  var searchQuery = ''.obs;
+
+  // รายการที่กำลังกางช่องหมายเหตุอยู่ (การ์ดแบบย่อ ไม่โชว์ช่องหมายเหตุ
+  // ตลอดเวลาเหมือนเดิม แต่กางเฉพาะรายการที่กดไอคอนหมายเหตุ)
+  var notesExpanded = <String>{}.obs;
+
+  // รายการที่กำลังแก้ไข "หน่วยนับ" อยู่ (กดไอคอนดินสอก่อนถึงพิมพ์ได้)
+  var unitsEditing = <String>{}.obs;
+
+  List<OrderItem> get visibleItems {
+    final query = searchQuery.value.trim().toLowerCase();
+    if (query.isEmpty) return orderItems;
+    return orderItems
+        .where((item) => item.name.toLowerCase().contains(query))
+        .toList();
+  }
+
+  void toggleNote(String id) {
+    if (notesExpanded.contains(id)) {
+      notesExpanded.remove(id);
+    } else {
+      notesExpanded.add(id);
+    }
+  }
+
+  void toggleUnitEdit(String id) {
+    if (unitsEditing.contains(id)) {
+      unitsEditing.remove(id);
+    } else {
+      unitsEditing.add(id);
+    }
+  }
 
   @override
   void onInit() {
@@ -116,7 +153,7 @@ class OrderListController extends GetxController {
               (item) => {
                 "name": item.name,
                 "quantity": int.tryParse(item.quantityController.text) ?? 0,
-                "unit": item.unit,
+                "unit": item.unitController.text,
                 "note": item.noteController.text,
               },
             )
@@ -182,10 +219,6 @@ class OrderListController extends GetxController {
     final item = orderItems.firstWhere((element) => element.id == id);
     item.dispose();
     orderItems.removeWhere((element) => element.id == id);
-  }
-
-  void onTabTapped(int index) {
-    selectedIndex.value = index;
   }
 
   void showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {

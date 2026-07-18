@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
 import 'order_list_controller.dart'; // Import controller ที่แยกออกมา
 
@@ -37,130 +36,253 @@ class OrderListScreen extends StatelessWidget {
         ),
         body: Column(
           children: [
+            _buildListHeader(controller),
             Expanded(
-              child: Obx(() => controller.orderItems.isEmpty
-                  ? const Center(child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
-                      itemCount: controller.orderItems.length,
-                      itemBuilder: (context, index) => 
-                        _buildOrderItemCard(controller.orderItems[index], controller),
-                    )),
+              child: Obx(() {
+                if (controller.orderItems.isEmpty) {
+                  return const Center(child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'));
+                }
+                final items = controller.visibleItems;
+                if (items.isEmpty) {
+                  return const Center(child: Text('ไม่พบสินค้าที่ค้นหา'));
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) =>
+                      _buildOrderItemCard(items[index], controller),
+                );
+              }),
             ),
             _buildBottomActionArea(controller),
           ],
         ),
-        bottomNavigationBar: Obx(() => BottomNavBar(
-              currentIndex: controller.selectedIndex.value,
-              onTap: controller.onTabTapped,
-            )),
       ),
     );
   }
 
-  Widget _buildOrderItemCard(OrderItem item, OrderListController controller) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15.0),
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15.0),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 5, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(item.imageUrl, width: 70, height: 70, fit: BoxFit.cover),
+  Widget _buildListHeader(OrderListController controller) {
+    return Obx(() {
+      if (controller.orderItems.isEmpty) return const SizedBox.shrink();
+      final total = controller.orderItems.length;
+      final visible = controller.visibleItems.length;
+      final hasQuery = controller.searchQuery.value.trim().isNotEmpty;
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE7EDDA),
+                borderRadius: BorderRadius.circular(20),
               ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const Text('ใส่จำนวนและหมายเหตุ:', style: TextStyle(fontSize: 14, color: Colors.black45)),
-                  ],
+              child: Text(
+                hasQuery ? '$visible จาก $total รายการ' : '$total รายการ',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF516B1A),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.grey),
-                onPressed: () => controller.showDeleteConfirmation(item),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('จำนวน:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
-                    _buildQtyField(item.quantityController, (v) {
-                      if (v.isEmpty || v == '0') controller.showDeleteConfirmation(item);
-                    }),
-                    _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        item.unit,
-                        style: const TextStyle(fontSize: 16, color: Colors.black54),
-                        overflow: TextOverflow.ellipsis,
+              child: TextField(
+                onChanged: (v) => controller.searchQuery.value = v,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'ค้นหาในรายการที่เลือกไว้...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildOrderItemCard(OrderItem item, OrderListController controller) {
+    return Obx(() {
+      final isNoteOpen = controller.notesExpanded.contains(item.id);
+      final hasNote = item.noteController.text.isNotEmpty;
+      final isUnitEditing = controller.unitsEditing.contains(item.id);
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 10.0),
+        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 9.0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 1)),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: Image.network(
+                    item.imageUrl,
+                    width: 34,
+                    height: 34,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 34,
+                      height: 34,
+                      color: Colors.grey.shade100,
+                      child: const Icon(Icons.image_not_supported, size: 16, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.name,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
+                _buildQtyField(item.quantityController, (v) {
+                  if (v.isEmpty || v == '0') controller.showDeleteConfirmation(item);
+                }),
+                _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 40,
+                  child: isUnitEditing
+                      ? TextField(
+                          controller: item.unitController,
+                          autofocus: true,
+                          maxLines: 1,
+                          style: const TextStyle(fontSize: 10.5, color: Colors.black87),
+                          onSubmitted: (_) => controller.toggleUnitEdit(item.id),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 4),
+                            border: UnderlineInputBorder(),
+                          ),
+                        )
+                      : FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            item.unitController.text,
+                            style: const TextStyle(fontSize: 10.5, color: Colors.black45),
+                            maxLines: 1,
+                          ),
+                        ),
+                ),
+                _buildIconToggle(
+                  icon: Icons.edit_outlined,
+                  active: isUnitEditing,
+                  onTap: () => controller.toggleUnitEdit(item.id),
+                ),
+                _buildIconToggle(
+                  icon: Icons.note_alt_outlined,
+                  active: isNoteOpen || hasNote,
+                  onTap: () => controller.toggleNote(item.id),
+                ),
+                _buildIconToggle(
+                  icon: Icons.close,
+                  active: false,
+                  onTap: () => controller.showDeleteConfirmation(item),
+                ),
+              ],
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: !isNoteOpen
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: TextField(
+                        controller: item.noteController,
+                        style: const TextStyle(fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'เพิ่มหมายเหตุ (ถ้ามี)',
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 15),
-          TextField(
-            controller: item.noteController,
-            decoration: InputDecoration(
-              hintText: 'เพิ่มหมายเหตุ (ถ้ามี)',
-              prefixIcon: const Icon(Icons.note_alt_outlined, size: 20),
-              filled: true,
-              fillColor: Colors.grey.shade100,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0), borderSide: BorderSide.none),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildQtyBtn(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
       child: Container(
-        width: 30, height: 30,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(color: _kPrimaryColor, borderRadius: BorderRadius.circular(8)),
-        child: Icon(icon, color: Colors.white, size: 18),
+        width: 22, height: 22,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(color: _kPrimaryColor, borderRadius: BorderRadius.circular(6)),
+        child: Icon(icon, color: Colors.white, size: 13),
       ),
     );
   }
 
   Widget _buildQtyField(TextEditingController ctrl, Function(String) onChange) {
     return SizedBox(
-      width: 50, height: 35,
+      width: 30, height: 22,
       child: TextField(
         controller: ctrl,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
         onChanged: onChange,
         decoration: InputDecoration(
           filled: true, fillColor: _kInputFillColor,
           contentPadding: EdgeInsets.zero,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          isDense: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconToggle({required IconData icon, required bool active, required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 24, height: 24,
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFFE7EDDA) : Colors.grey.shade100,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 13, color: active ? const Color(0xFF516B1A) : Colors.grey.shade500),
         ),
       ),
     );
@@ -168,15 +290,18 @@ class OrderListScreen extends StatelessWidget {
 
   Widget _buildBottomActionArea(OrderListController controller) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, -3))]),
       child: SafeArea(
-        child: Column(
+        child: Row(
           children: [
-            _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () => Get.to(() => const BuyProductsScreen())),
-            const SizedBox(height: 10),
-            _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
-            const SizedBox(height: 10),
+            Expanded(
+              child: _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () => Get.to(() => const BuyProductsScreen())),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
+            ),
           ],
         ),
       ),
@@ -185,12 +310,20 @@ class OrderListScreen extends StatelessWidget {
 
   Widget _buildBigButton(String label, IconData icon, Color color, VoidCallback onTap) {
     return SizedBox(
-      height: 55, width: double.infinity,
+      height: 55,
       child: ElevatedButton.icon(
         onPressed: onTap,
-        icon: Icon(icon, color: Colors.white),
-        label: Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-        style: ElevatedButton.styleFrom(backgroundColor: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+        icon: Icon(icon, color: Colors.white, size: 20),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       ),
     );
   }

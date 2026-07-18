@@ -16,7 +16,7 @@ class CheckStockController extends GetxController {
   var selectedIndex = 0.obs;
 
   // ค่าตรงกับที่ backend รองรับ: name_asc, name_desc, stock_asc, stock_desc
-  var selectedSortOption = "name_asc".obs;
+  var selectedSortOption = "stock_asc".obs;
 
   var categories = <CategoryModel>[].obs;
   var selectedCategoryId = 0.obs;
@@ -201,7 +201,7 @@ class CheckStockController extends GetxController {
 
   void clearFilter() {
     selectedCategoryId.value = 0;
-    selectedSortOption.value = "name_asc";
+    selectedSortOption.value = "stock_asc";
     currentPage.value = 1;
     fetchStockData();
   }
