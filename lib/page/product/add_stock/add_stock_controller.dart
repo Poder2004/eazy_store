@@ -13,6 +13,15 @@ class AddStockController extends GetxController {
   var calculatedTotal = 0.obs;
   var isSavingPrice = false.obs;
   Timer? _debounce;
+  bool _suppressSearch = false;
+
+  // รายการสินค้าที่ตรงกับคำค้นหา (เผื่อเจอมากกว่า 1 ตัว จะได้ให้ผู้ใช้เลือกเอง
+  // แทนการเดาให้ ป้องกันเพิ่มสต็อกผิดสินค้า)
+  var searchMatches = <ProductResponse>[].obs;
+  var showDropdown = false.obs;
+
+  // ส่วนแก้ไขราคา พับเก็บไว้ก่อนเพราะไม่ใช่สิ่งที่ทำทุกครั้งที่เพิ่มสต็อก
+  var isPriceEditExpanded = false.obs;
 
   // ---------------- Controllers ----------------
   final searchController = TextEditingController();
@@ -62,10 +71,14 @@ class AddStockController extends GetxController {
   }
 
   void onSearchChanged(String query) {
+    if (_suppressSearch) {
+      _suppressSearch = false;
+      return;
+    }
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      if (query.isNotEmpty) {
-        handleSearch(query);
+      if (query.trim().isNotEmpty) {
+        handleSearch(query.trim());
       } else {
         handleClear();
       }
@@ -73,8 +86,9 @@ class AddStockController extends GetxController {
   }
   // ---------------- Functions ----------------
 
-  // 🔍 ค้นหาสินค้า
-  // 🔍 ค้นหาสินค้า (เปลี่ยนมาใช้ API Search โดยตรง)
+  // 🔍 ค้นหาสินค้า (LIKE search) — ถ้าเจอมากกว่า 1 รายการ ให้โชว์ dropdown
+  // ให้ผู้ใช้เลือกเอง แทนที่จะเดาให้ (กันเพิ่มสต็อกผิดสินค้า) ยกเว้นกรณีสแกน
+  // บาร์โค้ด/รหัสสินค้าที่ตรงแบบเป๊ะๆ อยู่แล้ว ให้เลือกให้อัตโนมัติเลย
   Future<void> handleSearch([String? query]) async {
     String keyword = query ?? searchController.text.trim();
     if (keyword.isEmpty) {
@@ -87,29 +101,39 @@ class AddStockController extends GetxController {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
-      // ✅ เปลี่ยนจากดึงทั้งหมด มาเป็นการยิง Search API รายตัว
-      ProductResponse? match = await ApiProduct.searchProduct(keyword, shopId);
+      var result = await ApiProduct.getProductsByShop(
+        shopId,
+        search: keyword,
+        limit: 100,
+      );
 
-      if (match != null) {
-        foundProduct.value = match;
+      List<ProductResponse> list = [];
+      if (result is ProductPagedResponse) {
+        list = result.items;
+      } else if (result is List<ProductResponse>) {
+        list = result;
+      }
+      final activeList = list.where((p) => p.status == true).toList();
+      searchMatches.assignAll(activeList);
 
-        // อัปเดตข้อมูลลง Controller
-        nameController.text = match.name;
-        // ป้องกัน Error ถ้าค่าเป็น Null (ใช้ ?. และ ?? เหมือนเดิม)
-        costController.text = (match.costPrice ?? 0).toStringAsFixed(2);
-        salePriceController.text = (match.sellPrice ?? 0).toStringAsFixed(2);
-        currentStockController.text = (match.stock ?? 0).toString();
-        unitController.text = match.unit ?? '';
-        categoryController.text = match.category?.name ?? 'ทั่วไป';
+      final lowerKeyword = keyword.toLowerCase();
+      ProductResponse? exactMatch;
+      for (final p in activeList) {
+        if ((p.productCode?.toLowerCase() ?? '') == lowerKeyword) {
+          exactMatch = p;
+          break;
+        }
+      }
 
-        // ตั้งค่าเริ่มต้นให้ช่องแก้ไขราคา
-        editSellPriceCtrl.text = (match.sellPrice ?? 0).toStringAsFixed(2);
-        editCostPriceCtrl.text = (match.costPrice ?? 0).toStringAsFixed(2);
-
-        calculatedTotal.value = match.stock ?? 0;
-      } else {
-        // ถ้าไม่เจอสินค้า ให้ล้างค่า แต่ไม่ต้องแจ้งเตือน Snack เดี๋ยวมันเด้งรัวๆ ตอนพิมพ์
+      if (exactMatch != null) {
+        selectProduct(exactMatch);
+      } else if (activeList.isEmpty) {
         foundProduct.value = null;
+        showDropdown.value = false;
+      } else {
+        // เจอ 1 ตัวหรือหลายตัวจากชื่อ ให้ผู้ใช้กดเลือกเองจาก dropdown เสมอ
+        foundProduct.value = null;
+        showDropdown.value = true;
       }
     } catch (e) {
       print("Search Error: $e");
@@ -118,16 +142,75 @@ class AddStockController extends GetxController {
     }
   }
 
+  // ✅ เลือกสินค้าจาก dropdown (หรือจากการสแกนที่ตรงแบบเป๊ะๆ)
+  void selectProduct(ProductResponse match) {
+    foundProduct.value = match;
+    showDropdown.value = false;
+    isPriceEditExpanded.value = false;
+
+    _suppressSearch = true;
+    searchController.text = match.name;
+
+    nameController.text = match.name;
+    costController.text = (match.costPrice ?? 0).toStringAsFixed(2);
+    salePriceController.text = (match.sellPrice ?? 0).toStringAsFixed(2);
+    currentStockController.text = (match.stock ?? 0).toString();
+    unitController.text = match.unit ?? '';
+    categoryController.text = match.category?.name ?? 'ทั่วไป';
+
+    editSellPriceCtrl.text = (match.sellPrice ?? 0).toStringAsFixed(2);
+    editCostPriceCtrl.text = (match.costPrice ?? 0).toStringAsFixed(2);
+
+    addAmountController.clear();
+    calculatedTotal.value = match.stock ?? 0;
+  }
+
+  void togglePriceEdit() => isPriceEditExpanded.value = !isPriceEditExpanded.value;
+
+  // ดึงข้อมูลของสินค้าที่เลือกอยู่ตอนนี้ซ้ำ (ใช้กับ pull-to-refresh) โดยไม่ล้าง
+  // การเลือกหรือเปิด dropdown ใหม่ ถ้ายังไม่ได้เลือกสินค้าเลยก็แค่ค้นหาซ้ำตามเดิม
   Future<void> refreshCurrentProduct() async {
-    if (searchController.text.isNotEmpty) {
-      await handleSearch(searchController.text);
+    final current = foundProduct.value;
+    if (current == null) {
+      if (searchController.text.trim().isNotEmpty) {
+        await handleSearch(searchController.text.trim());
+      }
+      return;
     }
-    return Future.value();
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int shopId = prefs.getInt('shopId') ?? 0;
+
+      var result = await ApiProduct.getProductsByShop(
+        shopId,
+        search: current.name,
+        limit: 100,
+      );
+
+      List<ProductResponse> list = [];
+      if (result is ProductPagedResponse) {
+        list = result.items;
+      } else if (result is List<ProductResponse>) {
+        list = result;
+      }
+
+      final refreshed = list.firstWhere(
+        (p) => p.productId == current.productId,
+        orElse: () => current,
+      );
+      selectProduct(refreshed);
+    } catch (e) {
+      print("Refresh Error: $e");
+    }
   }
 
   // 🧹 ล้างหน้าจอ
   void handleClear() {
     foundProduct.value = null;
+    searchMatches.clear();
+    showDropdown.value = false;
+    isPriceEditExpanded.value = false;
     nameController.clear();
     costController.clear();
     salePriceController.clear();

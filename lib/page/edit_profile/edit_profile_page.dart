@@ -28,7 +28,7 @@ class EditProfilePage extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          'Edit Profile',
+          'แก้ไขข้อมูลส่วนตัว',
           style: TextStyle(
             color: textColor,
             fontWeight: FontWeight.bold,
@@ -65,7 +65,7 @@ class EditProfilePage extends StatelessWidget {
                     const SizedBox(height: 20),
                     _buildTextField(
                       controller: controller.usernameCtrl,
-                      label: "ชื่อผู้ใช้งาน (Username)",
+                      label: "ชื่อผู้ใช้งาน",
                       icon: Icons.person_outline_rounded,
                     ),
                     const SizedBox(height: 16),

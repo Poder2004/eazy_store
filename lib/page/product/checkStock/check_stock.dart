@@ -99,7 +99,7 @@ class CheckStockScreen extends StatelessWidget {
                             controller.fetchStockData();
                           }
                         },
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(13),
                         child: _buildProductCard(product, warningColor),
                       );
                     },
@@ -140,7 +140,6 @@ class CheckStockScreen extends StatelessWidget {
       ),
       child: TextField(
         controller: controller.searchCtrl,
-        onSubmitted: (val) => controller.searchProduct(val),
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
           hintText: 'ค้นหาชื่อสินค้า หรือ บาร์โค้ด...',
@@ -168,25 +167,25 @@ class CheckStockScreen extends StatelessWidget {
         ? const Color(0xFFE53935)
         : const Color(0xFF2E7D32);
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(7),
               child: Image.network(
                 product.imgProduct,
-                width: 50,
-                height: 50,
+                width: 42,
+                height: 42,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) =>
                     const Icon(Icons.image_not_supported),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -194,19 +193,19 @@ class CheckStockScreen extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (isLowStock) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           isOutOfStock ? 'สินค้าหมด' : 'สินค้าใกล้หมด',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: stockColor,
                           ),
@@ -217,7 +216,7 @@ class CheckStockScreen extends StatelessWidget {
                               ? Icons.remove_circle_rounded
                               : Icons.warning_rounded,
                           color: isOutOfStock ? stockColor : warningColor,
-                          size: 15,
+                          size: 14,
                         ),
                       ],
                     ),
@@ -225,14 +224,14 @@ class CheckStockScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 const Text(
                   'คงเหลือ',
-                  style: TextStyle(fontSize: 11, color: Colors.black45),
+                  style: TextStyle(fontSize: 10, color: Colors.black45),
                 ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -242,16 +241,16 @@ class CheckStockScreen extends StatelessWidget {
                     Text(
                       '${product.stock}',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.w800,
                         color: stockColor,
                       ),
                     ),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: 2),
                     Text(
                       product.unit,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: stockColor,
                       ),

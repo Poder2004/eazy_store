@@ -54,13 +54,16 @@ class AddStockScreen extends StatelessWidget {
                     children: [
                       _buildProductCard(controller),
                       const SizedBox(height: 20),
-                      _buildPriceEditSection(controller),
-                      const SizedBox(height: 20),
                       _buildStockInputSection(controller),
+                      const SizedBox(height: 20),
+                      _buildPriceEditSection(controller),
                       const SizedBox(height: 30),
                       _buildActionButtons(controller),
                     ],
                   );
+                } else if (controller.showDropdown.value && controller.searchMatches.isNotEmpty) {
+                  // dropdown จากช่องค้นหาด้านบนกำลังให้เลือกอยู่แล้ว ไม่ต้องซ้อนข้อความอื่น
+                  return const SizedBox.shrink();
                 } else if (controller.isSearching.value && controller.searchController.text.length > 2) {
                    // โชว์ Loading เฉพาะตอนค้นหาคำยาวๆ
                   return const Padding(
@@ -106,38 +109,102 @@ class AddStockScreen extends StatelessWidget {
   // --- Widgets ---
 
   Widget _buildSearchSection(AddStockController controller) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: TextField(
-        controller: controller.searchController,
-        decoration: InputDecoration(
-          hintText: 'ชื่อสินค้า หรือ รหัสบาร์โค้ด',
-          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.qr_code_scanner, color: _kPrimaryColor),
-            onPressed: () async {
-              var result = await Get.to(() => const ScanBarcodePage());
-              if (result != null && result is String) {
-                controller.searchController.text = result;
-                controller.handleSearch();
-              }
-            },
+          child: TextField(
+            controller: controller.searchController,
+            decoration: InputDecoration(
+              hintText: 'ชื่อสินค้า หรือ รหัสบาร์โค้ด',
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.qr_code_scanner, color: _kPrimaryColor),
+                onPressed: () async {
+                  var result = await Get.to(() => const ScanBarcodePage());
+                  if (result != null && result is String) {
+                    controller.searchController.text = result;
+                    controller.handleSearch();
+                  }
+                },
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            ),
+            onSubmitted: (_) => controller.handleSearch(),
           ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 15),
         ),
-        onSubmitted: (_) => controller.handleSearch(),
-      ),
+        Obx(() {
+          if (!controller.showDropdown.value || controller.searchMatches.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return Container(
+            margin: const EdgeInsets.only(top: 8),
+            constraints: const BoxConstraints(maxHeight: 460),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: controller.searchMatches.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final p = controller.searchMatches[index];
+                return ListTile(
+                  dense: true,
+                  onTap: () => controller.selectProduct(p),
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      p.imgProduct,
+                      width: 36,
+                      height: 36,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 36,
+                        height: 36,
+                        color: Colors.grey.shade100,
+                        child: const Icon(Icons.image_not_supported, size: 16, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    p.name,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    "รหัส: ${p.productCode ?? '-'}",
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                );
+              },
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -174,21 +241,10 @@ class AddStockScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _buildInfoItem(
-                      "หมวดหมู่",
-                      controller.categoryController.text,
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildInfoItem(
                       "ราคาขาย",
                       "฿${controller.salePriceController.text}",
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 15),
-              Row(
-                children: [
                   Expanded(
                     child: _buildInfoItem(
                       "ต้นทุน",
@@ -272,51 +328,84 @@ class AddStockScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // หัวข้อ
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _kPrimaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+          // หัวข้อ (กดเพื่อยุบ/ขยาย — ไม่บังคับให้เห็นตลอดเวลา)
+          InkWell(
+            onTap: controller.togglePriceEdit,
+            borderRadius: BorderRadius.circular(10),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _kPrimaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.price_change_outlined,
+                    color: _kPrimaryColor,
+                    size: 20,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.price_change_outlined,
-                  color: _kPrimaryColor,
-                  size: 20,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "แก้ไขราคาสินค้า",
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        "ไม่บังคับ — กดเพื่อขยาย",
+                        style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                "แก้ไขราคาสินค้า",
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                Obx(
+                  () => AnimatedRotation(
+                    turns: controller.isPriceEditExpanded.value ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade400),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFF0F0F0)),
-          const SizedBox(height: 16),
-
-          // ราคาขาย
-          _buildPriceInputRow(
-            label: "ราคาขาย",
-            unit: "บาท",
-            icon: Icons.sell_outlined,
-            controller: controller.editSellPriceCtrl,
-          ),
-          const SizedBox(height: 12),
-
-          // ราคาต้นทุน
-          _buildPriceInputRow(
-            label: "ราคาต้นทุน",
-            unit: "บาท",
-            icon: Icons.shopping_bag_outlined,
-            controller: controller.editCostPriceCtrl,
+          Obx(
+            () => AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: !controller.isPriceEditExpanded.value
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Column(
+                        children: [
+                          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                          const SizedBox(height: 16),
+                          _buildPriceInputRow(
+                            label: "ราคาขาย",
+                            unit: "บาท",
+                            icon: Icons.sell_outlined,
+                            controller: controller.editSellPriceCtrl,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPriceInputRow(
+                            label: "ราคาต้นทุน",
+                            unit: "บาท",
+                            icon: Icons.shopping_bag_outlined,
+                            controller: controller.editCostPriceCtrl,
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
           ),
         ],
       ),
@@ -372,6 +461,22 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildStepBtn(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: _kPrimaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: _kPrimaryColor, size: 22),
+      ),
+    );
+  }
+
   Widget _buildStockInputSection(AddStockController controller) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -417,26 +522,48 @@ class AddStockScreen extends StatelessWidget {
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFF0F0F0)),
           const SizedBox(height: 16),
-          TextField(
-            controller: controller.addAmountController,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: _kPrimaryColor,
-            ),
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              hintText: '0',
-              hintStyle: TextStyle(color: Colors.grey[300], fontSize: 32),
-              filled: true,
-              fillColor: const Color(0xFFF7F8FA),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+          Row(
+            children: [
+              _buildStepBtn(
+                Icons.remove,
+                () {
+                  int v = int.tryParse(controller.addAmountController.text) ?? 0;
+                  if (v > 0) controller.addAmountController.text = (v - 1).toString();
+                },
               ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 18),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: controller.addAmountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: _kPrimaryColor,
+                  ),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    hintStyle: TextStyle(color: Colors.grey[300], fontSize: 32),
+                    filled: true,
+                    fillColor: const Color(0xFFF7F8FA),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _buildStepBtn(
+                Icons.add,
+                () {
+                  int v = int.tryParse(controller.addAmountController.text) ?? 0;
+                  controller.addAmountController.text = (v + 1).toString();
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           Center(

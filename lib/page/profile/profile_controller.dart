@@ -4,6 +4,7 @@ import 'package:eazy_store/api/api_user.dart';
 import 'package:eazy_store/model/response/shop_response.dart';
 import 'package:eazy_store/page/auth/login.dart';
 import 'package:eazy_store/page/edit_profile/edit_profile_page.dart';
+import 'package:eazy_store/page/my_blank/sales_account.dart';
 import 'package:eazy_store/page/shop/editShop/edit_shop.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
 import 'package:flutter/material.dart';
@@ -152,6 +153,11 @@ class ProfileController extends GetxController {
     } catch (e) {
       print("Error reloading profile data: $e");
     }
+  }
+
+  void goToSalesReport() {
+    print("ไปยังหน้า บัญชี");
+    Get.to(() => const SalesAccountScreen());
   }
 
   void switchStore() {

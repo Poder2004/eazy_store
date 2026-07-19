@@ -32,7 +32,7 @@ class CheckPriceScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () =>
-            controller.fetchInitialData(), // เรียกโหลดข้อมูลเริ่มต้นใหม่
+            controller.refreshCurrentSearch(),
         color: primaryColor,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -82,10 +82,10 @@ class CheckPriceScreen extends StatelessWidget {
                           );
 
                           if (result == true) {
-                            controller.fetchInitialData();
+                            controller.refreshCurrentSearch();
                           }
                         },
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(13),
                         child: _buildPriceCard(product, primaryColor),
                       );
                     },
@@ -141,11 +141,11 @@ class CheckPriceScreen extends StatelessWidget {
 
   Widget _buildPriceCard(ProductResponse product, Color primaryColor) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(15),
+      margin: const EdgeInsets.only(bottom: 11),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(13),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -157,21 +157,21 @@ class CheckPriceScreen extends StatelessWidget {
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(9),
             child: Image.network(
               product.imgProduct,
-              width: 70,
-              height: 70,
+              width: 58,
+              height: 58,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
                 color: Colors.grey[200],
-                width: 70,
-                height: 70,
+                width: 58,
+                height: 58,
                 child: const Icon(Icons.image_outlined, color: Colors.grey),
               ),
             ),
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +179,7 @@ class CheckPriceScreen extends StatelessWidget {
                 Text(
                   product.name,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
@@ -189,18 +189,19 @@ class CheckPriceScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   "รหัส: ${product.productCode ?? '-'}",
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 product.sellPrice.toStringAsFixed(0),
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.w900,
                   color: primaryColor,
                 ),
@@ -208,7 +209,7 @@ class CheckPriceScreen extends StatelessWidget {
               const Text(
                 'บาท',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
                 ),

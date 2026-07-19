@@ -165,16 +165,16 @@ class BuyProductsScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () => controller.toggleProduct(index),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(13),
           border: Border.all(
             color: product.isSelected
                 ? const Color(0xFF6B8E23)
                 : Colors.transparent,
-            width: 2.5,
+            width: 2.0,
           ),
           boxShadow: [
             BoxShadow(
@@ -188,17 +188,17 @@ class BuyProductsScreen extends StatelessWidget {
           children: [
             // รูปภาพสินค้า
             ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(7),
               child: Image.network(
                 product.imgProduct,
-                width: 50,
-                height: 50,
+                width: 42,
+                height: 42,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) =>
                     const Icon(Icons.image_not_supported),
               ),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 12),
             // ข้อมูลสินค้า
             Expanded(
               child: Column(
@@ -208,26 +208,26 @@ class BuyProductsScreen extends StatelessWidget {
                     product.name,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 17,
+                      fontSize: 15,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Row(
                     children: [
                       Text(
                         "คงเหลือ ${product.stock} ${product.unit}",
                         style: TextStyle(
                           color: stockColor,
-                          fontSize: 15,
+                          fontSize: 13,
                           fontWeight: isLowStock
                               ? FontWeight.w600
                               : FontWeight.normal,
                         ),
                       ),
                       if (isLowStock) ...[
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         Icon(
                           isOutOfStock
                               ? Icons.remove_circle_rounded
@@ -235,7 +235,7 @@ class BuyProductsScreen extends StatelessWidget {
                           color: isOutOfStock
                               ? stockColor
                               : const Color(0xFFFFCC00),
-                          size: 16,
+                          size: 14,
                         ),
                       ],
                     ],
@@ -249,7 +249,7 @@ class BuyProductsScreen extends StatelessWidget {
               color: product.isSelected
                   ? const Color(0xFF6B8E23)
                   : Colors.grey.shade300,
-              size: 28,
+              size: 24,
             ),
           ],
         ),

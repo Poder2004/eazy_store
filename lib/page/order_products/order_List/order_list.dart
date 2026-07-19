@@ -160,15 +160,15 @@ class OrderListScreen extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
                 _buildQtyField(item.quantityController, (v) {
                   if (v.isEmpty || v == '0') controller.showDeleteConfirmation(item);
                 }),
                 _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 SizedBox(
-                  width: 40,
+                  width: 34,
                   child: isUnitEditing
                       ? TextField(
                           controller: item.unitController,
@@ -196,16 +196,22 @@ class OrderListScreen extends StatelessWidget {
                   icon: Icons.edit_outlined,
                   active: isUnitEditing,
                   onTap: () => controller.toggleUnitEdit(item.id),
+                  color: const Color(0xFF5390F2),
+                  bgColor: const Color(0xFFEAF1FD),
                 ),
                 _buildIconToggle(
                   icon: Icons.note_alt_outlined,
                   active: isNoteOpen || hasNote,
                   onTap: () => controller.toggleNote(item.id),
+                  color: const Color(0xFFE0932D),
+                  bgColor: const Color(0xFFFCF1E0),
                 ),
                 _buildIconToggle(
                   icon: Icons.close,
                   active: false,
                   onTap: () => controller.showDeleteConfirmation(item),
+                  color: const Color(0xFFE5484D),
+                  bgColor: const Color(0xFFFCE9E9),
                 ),
               ],
             ),
@@ -243,17 +249,17 @@ class OrderListScreen extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: Container(
-        width: 22, height: 22,
+        width: 27, height: 27,
         margin: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(color: _kPrimaryColor, borderRadius: BorderRadius.circular(6)),
-        child: Icon(icon, color: Colors.white, size: 13),
+        decoration: BoxDecoration(color: _kPrimaryColor, borderRadius: BorderRadius.circular(7)),
+        child: Icon(icon, color: Colors.white, size: 14),
       ),
     );
   }
 
   Widget _buildQtyField(TextEditingController ctrl, Function(String) onChange) {
     return SizedBox(
-      width: 30, height: 22,
+      width: 30, height: 27,
       child: TextField(
         controller: ctrl,
         keyboardType: TextInputType.number,
@@ -264,25 +270,42 @@ class OrderListScreen extends StatelessWidget {
           filled: true, fillColor: _kInputFillColor,
           contentPadding: EdgeInsets.zero,
           isDense: true,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: _kPrimaryColor, width: 1.5),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildIconToggle({required IconData icon, required bool active, required VoidCallback onTap}) {
+  Widget _buildIconToggle({
+    required IconData icon,
+    required bool active,
+    required VoidCallback onTap,
+    required Color color,
+    required Color bgColor,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(left: 3),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: 24, height: 24,
+          width: 28, height: 28,
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFE7EDDA) : Colors.grey.shade100,
+            color: active ? color.withOpacity(0.22) : bgColor,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 13, color: active ? const Color(0xFF516B1A) : Colors.grey.shade500),
+          child: Icon(icon, size: 14, color: color),
         ),
       ),
     );

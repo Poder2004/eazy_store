@@ -29,6 +29,7 @@ class CheckStockController extends GetxController {
   var totalItems = 0.obs;
 
   final TextEditingController searchCtrl = TextEditingController();
+  Timer? _debounce;
 
   // ป้องกัน race condition: ถ้าผู้ใช้กดเปลี่ยนหน้าเร็วๆ ก่อนที่ request เดิม
   // จะตอบกลับ (เช่น backend ตื่นช้าตอน cold start บน Render) request เก่า
@@ -40,10 +41,23 @@ class CheckStockController extends GetxController {
     super.onInit();
     fetchStockData();
     fetchCategories();
+
+    searchCtrl.addListener(() {
+      _onSearchChanged(searchCtrl.text);
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      currentPage.value = 1;
+      searchProduct(query);
+    });
   }
 
   @override
   void onClose() {
+    _debounce?.cancel();
     searchCtrl.dispose();
     super.onClose();
   }
@@ -98,29 +112,42 @@ class CheckStockController extends GetxController {
     }
 
     isLoading.value = true;
+    final int requestGeneration = ++_fetchGeneration;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
-      ProductResponse? result = await ApiProduct.searchProduct(query, shopId);
+      var result = await ApiProduct.getProductsByShop(
+        shopId,
+        search: query,
+        categoryId: selectedCategoryId.value != 0 ? selectedCategoryId.value : null,
+        sort: selectedSortOption.value,
+      );
 
-      if (result != null) {
-        if (result.status == true) {
-          filteredProducts.assignAll([result]);
-        } else {
-          filteredProducts.clear();
-        }
+      if (requestGeneration != _fetchGeneration) return;
+
+      if (result is ProductPagedResponse) {
+        products.assignAll(result.items);
+        totalPages.value = result.totalPages;
+        totalItems.value = result.totalItems;
+      } else if (result is List<ProductResponse>) {
+        products.assignAll(result);
         totalPages.value = 1;
-        totalItems.value = filteredProducts.length;
+        totalItems.value = result.length;
       } else {
-        filteredProducts.clear();
+        products.clear();
+        totalPages.value = 1;
         totalItems.value = 0;
       }
+
+      _applySortAndFilter();
     } catch (e) {
       print("Search Error: $e");
       filteredProducts.clear();
     } finally {
-      isLoading.value = false;
+      if (requestGeneration == _fetchGeneration) {
+        isLoading.value = false;
+      }
     }
   }
 

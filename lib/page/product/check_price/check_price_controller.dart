@@ -14,12 +14,14 @@ class PriceController extends GetxController {
   Timer? _debounce;
   final TextEditingController searchCtrl = TextEditingController();
 
+  // ขอมาทีเดียวให้ครบ (หน้านี้ไม่มี pagination) แทนที่จะให้ backend
+  // แบ่งหน้า ซึ่ง default เป็น limit=10 ถ้าไม่ส่งค่ามา
+  static const int _fetchAllLimit = 100000;
+
   @override
   void onInit() {
     super.onInit();
-    // โหลดสินค้าทั้งหมดมาโชว์ตอนแรก (หรือจะเว้นว่างไว้รอ Search ก็ได้ครับ)
-    fetchInitialData();
-
+    // ไม่โหลดสินค้าทั้งหมดตั้งแต่แรก รอให้ผู้ใช้พิมพ์ค้นหาหรือสแกนก่อนค่อยแสดงรายการ
     searchCtrl.addListener(() {
       onSearchChanged(searchCtrl.text);
     });
@@ -38,48 +40,48 @@ class PriceController extends GetxController {
       if (query.isNotEmpty) {
         handleApiSearch(query);
       } else {
-        fetchInitialData(); // ถ้าลบช่องค้นหา ให้กลับไปแสดงรายการปกติ
+        filteredProducts.clear(); // ลบช่องค้นหาแล้วให้ซ่อนรายการไว้เหมือนเดิม
       }
     });
   }
 
-  // 🚀 ฟังก์ชันดึงข้อมูลเริ่มต้น (ใช้ getProductsByShop ตามเดิมสำหรับหน้าแรก)
-  Future<void> fetchInitialData() async {
-    isLoading.value = true;
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int shopId = prefs.getInt('shopId') ?? 0;
-      
-      List<ProductResponse> list = await ApiProduct.getProductsByShop(shopId);
-      // กรองเฉพาะที่เปิดใช้งานและเรียงชื่อ
-      var activeList = list.where((p) => p.status == true).toList();
-      activeList.sort((a, b) => a.name.compareTo(b.name));
-      
-      filteredProducts.assignAll(activeList);
-    } catch (e) {
-      print("Error: $e");
-    } finally {
-      isLoading.value = false;
+  // 🔄 เรียกซ้ำตามคำค้นหาปัจจุบัน (ใช้กับ pull-to-refresh และหลังแก้ไขสินค้า)
+  Future<void> refreshCurrentSearch() async {
+    final query = searchCtrl.text.trim();
+    if (query.isNotEmpty) {
+      await handleApiSearch(query);
+    } else {
+      filteredProducts.clear();
     }
   }
 
-  // 🔍 ฟังก์ชันค้นหาผ่าน API (searchProduct)
+  // 🔍 ฟังก์ชันค้นหาผ่าน API (แบบ LIKE เพื่อให้เจอได้หลายรายการจากคำเดียว)
   Future<void> handleApiSearch(String keyword) async {
     isLoading.value = true;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
-      // ✅ เปลี่ยนมาใช้ ApiProduct.searchProduct ตามที่คุณต้องการ
-      ProductResponse? result = await ApiProduct.searchProduct(keyword, shopId);
+      var result = await ApiProduct.getProductsByShop(
+        shopId,
+        search: keyword,
+        limit: _fetchAllLimit,
+      );
 
-      if (result != null) {
-        filteredProducts.assignAll([result]); // แสดงเฉพาะตัวที่เจอ
-      } else {
-        filteredProducts.clear(); // ถ้าไม่เจอเลยให้ล้างรายการ
+      List<ProductResponse> list = [];
+      if (result is ProductPagedResponse) {
+        list = result.items;
+      } else if (result is List<ProductResponse>) {
+        list = result;
       }
+
+      var activeList = list.where((p) => p.status == true).toList();
+      activeList.sort((a, b) => a.name.compareTo(b.name));
+
+      filteredProducts.assignAll(activeList);
     } catch (e) {
       print("Search Error: $e");
+      filteredProducts.clear();
     } finally {
       isLoading.value = false;
     }
