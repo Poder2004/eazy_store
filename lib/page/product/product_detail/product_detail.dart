@@ -1,6 +1,7 @@
 // ไฟล์: lib/page/product/product_detail_screen.dart
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/edit_product/edit_product_screen.dart'; // ตรวจสอบ Path ด้วยนะครับ
+import 'package:eazy_store/utils/stock_format.dart';
 import 'package:eazy_store/widgets/confirm_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -112,6 +113,35 @@ class ProductDetailScreen extends StatelessWidget {
                       controller.product.value.unit,
                     ),
 
+                    if (controller.product.value.activeUnits.isNotEmpty) ...[
+                      const Divider(height: 30),
+                      const Text(
+                        "หน่วยขายเพิ่มเติม",
+                        style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      for (final u in controller.product.value.activeUnits)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            children: [
+                              Icon(Icons.inventory_2_outlined, color: Colors.grey[400], size: 20),
+                              const SizedBox(width: 15),
+                              Expanded(
+                                child: Text(
+                                  "${u.unitName} = ${u.conversionQty} ${controller.product.value.unit}",
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              Text(
+                                "฿${u.sellPrice.toStringAsFixed(0)}",
+                                style: const TextStyle(fontSize: 15, color: Colors.black54),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+
                     const SizedBox(height: 100), // เว้นที่ให้ปุ่มด้านล่าง
                   ],
                 ),
@@ -157,7 +187,11 @@ class ProductDetailScreen extends StatelessWidget {
           "฿${product.costPrice.toStringAsFixed(2)}",
           Colors.blueGrey,
         ),
-        _infoItem("คงเหลือ", "${product.stock} ${product.unit}", Colors.orange),
+        _infoItem(
+          "คงเหลือ",
+          formatStockBreakdown(product.stock, product.unit, product.units),
+          Colors.orange,
+        ),
       ],
     );
   }

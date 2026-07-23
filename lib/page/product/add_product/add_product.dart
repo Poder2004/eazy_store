@@ -45,6 +45,8 @@ class AddProductScreen extends StatelessWidget {
           children: [
             // 📸 ส่วนที่ 1: รูปภาพ
             _buildSectionCard(
+              title: "รูปภาพสินค้า",
+              step: 1,
               child: Center(
                 child: Column(
                   children: [
@@ -63,6 +65,7 @@ class AddProductScreen extends StatelessWidget {
             // 📝 ส่วนที่ 2: ข้อมูลพื้นฐาน
             _buildSectionCard(
               title: "ข้อมูลทั่วไป",
+              step: 2,
               child: Column(
                 children: [
                   _buildModernField(
@@ -83,6 +86,7 @@ class AddProductScreen extends StatelessWidget {
             // 💰 ส่วนที่ 3: ราคาและสต็อก
             _buildSectionCard(
               title: "ราคาและคลังสินค้า",
+              step: 3,
               child: Column(
                 children: [
                   Row(
@@ -111,21 +115,135 @@ class AddProductScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 15),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
+                        child: _buildUnitHybridField(context, controller),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
                         child: _buildModernField(
-                          label: "จำนวน",
+                          label: "จำนวนเริ่มต้น",
                           textController: controller.stockController,
                           hintText: "0",
                           isNumber: true,
                           icon: Icons.inventory_2_outlined,
                         ),
                       ),
-                      const SizedBox(width: 15),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.grey[400]),
+                      const SizedBox(width: 6),
                       Expanded(
-                        child: _buildUnitHybridField(context, controller),
+                        child: Text(
+                          "นับจำนวนเป็นหน่วยเล็กสุดเสมอ (เช่น ขวด) แม้สินค้านี้จะขายได้หลายหน่วยก็ตาม",
+                          style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+                        ),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 📦 ส่วนที่ 4: หน่วยขายเพิ่มเติม (ลัง/แพ็ค) — ไม่บังคับ พับเก็บไว้ก่อน
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: _kCardColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    onTap: controller.toggleUnitsSection,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionHeader("หน่วยขายเพิ่มเติม", 4),
+                              const SizedBox(height: 4),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 34),
+                                child: Obx(
+                                  () => Text(
+                                    controller.unitForms.isEmpty
+                                        ? "ไม่บังคับ — เช่น ขายทั้งลังและขายแยกขวด (แตะเพื่อเพิ่ม)"
+                                        : "ไม่บังคับ · เพิ่มแล้ว ${controller.unitForms.length} หน่วย",
+                                    style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Obx(
+                          () => AnimatedRotation(
+                            turns: controller.isUnitsSectionExpanded.value ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(Icons.keyboard_arrow_down, color: Colors.grey[400]),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Obx(
+                    () => AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.topCenter,
+                      child: !controller.isUnitsSectionExpanded.value
+                          ? const SizedBox(width: double.infinity)
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 16),
+                                  for (int i = 0; i < controller.unitForms.length; i++) ...[
+                                    if (i > 0) const SizedBox(height: 14),
+                                    _buildUnitFormRow(controller, i),
+                                  ],
+                                  if (controller.unitForms.isNotEmpty) const SizedBox(height: 14),
+                                  OutlinedButton.icon(
+                                    onPressed: controller.addUnitForm,
+                                    icon: const Icon(Icons.add, size: 18, color: _kPrimaryColor),
+                                    label: const Text(
+                                      "เพิ่มหน่วยขาย",
+                                      style: TextStyle(color: _kPrimaryColor),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      side: const BorderSide(color: _kPrimaryColor),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                    ),
                   ),
                 ],
               ),
@@ -152,7 +270,11 @@ class AddProductScreen extends StatelessWidget {
 
   // ==================== Widget Helpers ====================
 
-  Widget _buildSectionCard({required Widget child, String? title}) {
+  Widget _buildSectionCard({
+    required Widget child,
+    String? title,
+    int? step,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -171,19 +293,48 @@ class AddProductScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (title != null) ...[
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
+            _buildSectionHeader(title, step),
             const Divider(height: 25),
           ],
           child,
         ],
       ),
+    );
+  }
+
+  // หัวข้อ section พร้อมเลขลำดับ ให้เห็นชัดว่าฟอร์มนี้กรอกตามลำดับยังไง
+  Widget _buildSectionHeader(String title, int? step) {
+    return Row(
+      children: [
+        if (step != null) ...[
+          Container(
+            width: 24,
+            height: 24,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: _kPrimaryColor,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$step',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+        ],
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+      ],
     );
   }
 
@@ -782,12 +933,124 @@ class AddProductScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildUnitFormRow(AddProductController controller, int index) {
+    final f = controller.unitForms[index];
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _kInputFillColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: f.nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "ชื่อหน่วย เช่น ลัง",
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => controller.removeUnitForm(index),
+                icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
+                tooltip: "ลบหน่วยนี้",
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: f.conversionCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: "1 หน่วยนี้ = กี่หน่วยฐาน",
+              hintText: "เช่น 12",
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: f.barcodeCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "บาร์โค้ด (ถ้ามี)",
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: () async {
+                  var result = await Get.to(() => const ScanBarcodePage());
+                  if (result != null && result is String) {
+                    f.barcodeCtrl.text = result;
+                  }
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _kPrimaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.qr_code_scanner,
+                    color: _kPrimaryColor,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: f.sellPriceCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: "ราคาขาย",
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: f.costPriceCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: "ราคาต้นทุน",
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBarcodeField(AddProductController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "บาร์โค้ด",
+          "บาร์โค้ด (ถ้ามี)",
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,

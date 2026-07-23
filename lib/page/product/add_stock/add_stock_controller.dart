@@ -23,6 +23,11 @@ class AddStockController extends GetxController {
   // ส่วนแก้ไขราคา พับเก็บไว้ก่อนเพราะไม่ใช่สิ่งที่ทำทุกครั้งที่เพิ่มสต็อก
   var isPriceEditExpanded = false.obs;
 
+  // หน่วยที่เลือกไว้สำหรับ "เพิ่มสต็อก" ตอนนี้ — null = หน่วยฐาน (เช่น ขวด)
+  // ไม่ null = หน่วยขายเพิ่มเติม (เช่น ลัง) ค่าเริ่มต้นจะเดาเป็นหน่วยใหญ่สุดให้ เพราะ
+  // ลงของส่วนใหญ่มาเป็นลัง
+  Rx<ProductUnitResponse?> selectedRestockUnit = Rx<ProductUnitResponse?>(null);
+
   // ---------------- Controllers ----------------
   final searchController = TextEditingController();
   final nameController = TextEditingController();
@@ -49,7 +54,8 @@ class AddStockController extends GetxController {
       if (foundProduct.value != null) {
         int current = int.tryParse(currentStockController.text) ?? 0;
         int add = int.tryParse(addAmountController.text) ?? 0;
-        calculatedTotal.value = current + add;
+        int conv = selectedRestockUnit.value?.conversionQty ?? 1;
+        calculatedTotal.value = current + add * conv;
       }
     });
   }
@@ -118,15 +124,27 @@ class AddStockController extends GetxController {
 
       final lowerKeyword = keyword.toLowerCase();
       ProductResponse? exactMatch;
+      ProductUnitResponse? exactMatchUnit;
       for (final p in activeList) {
-        if ((p.productCode?.toLowerCase() ?? '') == lowerKeyword) {
+        if ((p.productCode?.toLowerCase() ?? '') == lowerKeyword ||
+            (p.barcode?.toLowerCase() ?? '') == lowerKeyword) {
           exactMatch = p;
+          break;
+        }
+        // สแกนบาร์โค้ดของหน่วยขายเพิ่มเติม (เช่น บาร์โค้ดที่แปะบนลัง)
+        final unitHit = p.activeUnits
+            .where((u) => (u.barcode?.toLowerCase() ?? '') == lowerKeyword)
+            .toList();
+        if (unitHit.isNotEmpty) {
+          exactMatch = p;
+          exactMatchUnit = unitHit.first;
           break;
         }
       }
 
       if (exactMatch != null) {
         selectProduct(exactMatch);
+        if (exactMatchUnit != null) selectRestockUnit(exactMatchUnit);
       } else if (activeList.isEmpty) {
         foundProduct.value = null;
         showDropdown.value = false;
@@ -158,11 +176,36 @@ class AddStockController extends GetxController {
     unitController.text = match.unit ?? '';
     categoryController.text = match.category?.name ?? 'ทั่วไป';
 
-    editSellPriceCtrl.text = (match.sellPrice ?? 0).toStringAsFixed(2);
-    editCostPriceCtrl.text = (match.costPrice ?? 0).toStringAsFixed(2);
+    // เดาว่าจะลงของเป็นหน่วยใหญ่สุด (เช่น ลัง) ถ้าสินค้านี้มีหน่วยขายเพิ่มเติม
+    selectedRestockUnit.value = match.largestUnit;
+    _syncPriceFieldsWithSelectedUnit();
 
     addAmountController.clear();
     calculatedTotal.value = match.stock ?? 0;
+  }
+
+  // เลือกหน่วยที่จะใช้ "เพิ่มสต็อก" ตอนนี้ (กดจาก choice chip) — null = หน่วยฐาน
+  void selectRestockUnit(ProductUnitResponse? unit) {
+    selectedRestockUnit.value = unit;
+    _syncPriceFieldsWithSelectedUnit();
+
+    final current = int.tryParse(currentStockController.text) ?? 0;
+    final add = int.tryParse(addAmountController.text) ?? 0;
+    final conv = unit?.conversionQty ?? 1;
+    calculatedTotal.value = current + add * conv;
+  }
+
+  // ให้ช่องแก้ไขราคาแสดงราคาของหน่วยที่เลือกอยู่ตอนนี้ (หน่วยฐานหรือหน่วยขายเพิ่มเติม)
+  void _syncPriceFieldsWithSelectedUnit() {
+    final unit = selectedRestockUnit.value;
+    if (unit != null) {
+      editSellPriceCtrl.text = unit.sellPrice.toStringAsFixed(2);
+      editCostPriceCtrl.text = unit.costPrice.toStringAsFixed(2);
+    } else {
+      final p = foundProduct.value;
+      editSellPriceCtrl.text = (p?.sellPrice ?? 0).toStringAsFixed(2);
+      editCostPriceCtrl.text = (p?.costPrice ?? 0).toStringAsFixed(2);
+    }
   }
 
   void togglePriceEdit() => isPriceEditExpanded.value = !isPriceEditExpanded.value;
@@ -211,6 +254,7 @@ class AddStockController extends GetxController {
     searchMatches.clear();
     showDropdown.value = false;
     isPriceEditExpanded.value = false;
+    selectedRestockUnit.value = null;
     nameController.clear();
     costController.clear();
     salePriceController.clear();
@@ -223,13 +267,14 @@ class AddStockController extends GetxController {
     calculatedTotal.value = 0;
   }
 
-  // ✅ ตรวจสอบว่าราคาถูกเปลี่ยนหรือไม่
+  // ✅ ตรวจสอบว่าราคาถูกเปลี่ยนหรือไม่ (เทียบกับราคาของหน่วยที่เลือกอยู่ตอนนี้)
   bool get _isPriceChanged {
     final newSell = double.tryParse(editSellPriceCtrl.text);
     final newCost = double.tryParse(editCostPriceCtrl.text);
-    final origSell = foundProduct.value?.sellPrice ?? 0;
-    final origCost = foundProduct.value?.costPrice ?? 0;
     if (newSell == null || newCost == null) return false;
+    final unit = selectedRestockUnit.value;
+    final origSell = unit?.sellPrice ?? foundProduct.value?.sellPrice ?? 0;
+    final origCost = unit?.costPrice ?? foundProduct.value?.costPrice ?? 0;
     return newSell != origSell || newCost != origCost;
   }
 
@@ -269,7 +314,8 @@ class AddStockController extends GetxController {
       bool priceOk = true;
       bool stockOk = true;
 
-      // --- อัปเดตราคา (ถ้ามีการเปลี่ยน) ---
+      // --- อัปเดตราคา (ถ้ามีการเปลี่ยน) — แก้ราคาของหน่วยที่เลือกอยู่ตอนนี้
+      // (หน่วยฐานผ่าน updateProduct, หน่วยขายเพิ่มเติมผ่าน updateProductUnit) ---
       if (hasPrice) {
         final newSell = double.tryParse(editSellPriceCtrl.text);
         final newCost = double.tryParse(editCostPriceCtrl.text);
@@ -284,20 +330,37 @@ class AddStockController extends GetxController {
           return;
         }
 
-        final result = await ApiProduct.updateProduct(
-          foundProduct.value!.productId!,
-          {"sell_price": newSell, "cost_price": newCost},
-        );
-
-        if (result != null) {
-          salePriceController.text = newSell.toStringAsFixed(2);
-          costController.text = newCost.toStringAsFixed(2);
+        final unit = selectedRestockUnit.value;
+        if (unit != null) {
+          final result = await ApiProduct.updateProductUnit(unit.productUnitId, {
+            "sell_price": newSell,
+            "cost_price": newCost,
+          });
+          if (result['success'] == true) {
+            final updated = result['data'] as ProductUnitResponse;
+            selectedRestockUnit.value = updated;
+            final idx = foundProduct.value!.units
+                .indexWhere((u) => u.productUnitId == updated.productUnitId);
+            if (idx != -1) foundProduct.value!.units[idx] = updated;
+          } else {
+            priceOk = false;
+          }
         } else {
-          priceOk = false;
+          final result = await ApiProduct.updateProduct(
+            foundProduct.value!.productId!,
+            {"sell_price": newSell, "cost_price": newCost},
+          );
+
+          if (result != null) {
+            salePriceController.text = newSell.toStringAsFixed(2);
+            costController.text = newCost.toStringAsFixed(2);
+          } else {
+            priceOk = false;
+          }
         }
       }
 
-      // --- เพิ่มสต็อก (ถ้ามีจำนวน) ---
+      // --- เพิ่มสต็อก (ถ้ามีจำนวน) — ถ้าเลือกหน่วยไว้ backend จะแปลงเป็นหน่วยฐานให้เอง ---
       if (hasStock) {
         final amount = int.tryParse(addAmountController.text);
         if (amount == null || amount <= 0) {
@@ -309,6 +372,7 @@ class AddStockController extends GetxController {
         stockOk = await ApiProduct.updateStock(
           foundProduct.value!.productId!,
           amount,
+          productUnitId: selectedRestockUnit.value?.productUnitId,
         );
       }
 

@@ -139,8 +139,32 @@ class CheckoutPage extends StatelessWidget {
             product.name,
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          subtitle: Text(
-            "฿${product.sellPrice.toStringAsFixed(0)} | คงเหลือ: ${product.stock}",
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "฿${product.sellPrice.toStringAsFixed(0)} | คงเหลือ: ${product.stock}",
+              ),
+              if (product.activeUnits.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: product.activeUnits.map((u) {
+                    return ActionChip(
+                      label: Text(
+                        "${u.unitName} ฿${u.sellPrice.toStringAsFixed(0)}",
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: const Color(0xFFEFF3E5),
+                      onPressed: () => controller.addUnitToCart(product, u),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
           ),
           trailing: IconButton(
             icon: const Icon(
@@ -225,10 +249,10 @@ class CheckoutPage extends StatelessWidget {
             }
             final groupedItems = <String, List<ProductItem>>{};
             for (var item in controller.cartItems) {
-              if (!groupedItems.containsKey(item.id)) {
-                groupedItems[item.id] = [];
+              if (!groupedItems.containsKey(item.lineKey)) {
+                groupedItems[item.lineKey] = [];
               }
-              groupedItems[item.id]!.add(item);
+              groupedItems[item.lineKey]!.add(item);
             }
             return ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -255,26 +279,25 @@ class CheckoutPage extends StatelessWidget {
   ) {
     double totalItemPrice = item.price * qty;
     return GestureDetector(
-      onTap: () => controller.toggleDelete(item),
+      // ปัดซ้าย = โชว์ถังขยะ, ปัดขวา = ซ่อน (แทนการแตะเปิด/ปิดแบบเดิม)
+      onHorizontalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity < -200) {
+          item.showDelete.value = true;
+        } else if (velocity > 200) {
+          item.showDelete.value = false;
+        }
+      },
       child: Container(
         color: Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 15),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              children: [
-                _squareBtn(Icons.add, () => controller.increaseItem(item)),
-                const SizedBox(height: 8),
-                _squareBtn(Icons.remove, () => controller.decreaseItem(item)),
-              ],
-            ),
-            const SizedBox(width: 15),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 5),
                   Text(
                     item.name,
                     style: const TextStyle(
@@ -285,9 +308,13 @@ class CheckoutPage extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    "$qty ${item.category == 'เครื่องดื่ม' ? 'ขวด' : 'ชิ้น'}",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  _QtyStepper(
+                    key: ValueKey(item.lineKey),
+                    quantity: qty,
+                    unitName: item.unitName,
+                    onIncrement: () => controller.increaseItem(item),
+                    onDecrement: () => controller.decreaseItem(item),
+                    onChanged: (val) => controller.setQuantity(item, val),
                   ),
                 ],
               ),
@@ -342,21 +369,6 @@ class CheckoutPage extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _squareBtn(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: const Color(0xFFEEEEEE),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Icon(icon, size: 20, color: Colors.black87),
       ),
     );
   }
@@ -485,6 +497,121 @@ class CheckoutPage extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ParkedOrdersSheet(checkoutController: controller),
+    );
+  }
+}
+
+Widget _squareBtn(IconData icon, VoidCallback onTap) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEEEEE),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(icon, size: 20, color: Colors.black87),
+    ),
+  );
+}
+
+// ----------------------------------------------------------------------
+// ช่องจำนวน — กด +/- แบบเดิม หรือพิมพ์จำนวนตรงๆ ก็ได้ (กด done/แตะที่อื่นเพื่อยืนยัน)
+// ----------------------------------------------------------------------
+class _QtyStepper extends StatefulWidget {
+  final int quantity;
+  final String unitName;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+  final ValueChanged<int> onChanged;
+
+  const _QtyStepper({
+    super.key,
+    required this.quantity,
+    required this.unitName,
+    required this.onIncrement,
+    required this.onDecrement,
+    required this.onChanged,
+  });
+
+  @override
+  State<_QtyStepper> createState() => _QtyStepperState();
+}
+
+class _QtyStepperState extends State<_QtyStepper> {
+  late final TextEditingController _ctrl;
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.quantity.toString());
+  }
+
+  @override
+  void didUpdateWidget(covariant _QtyStepper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // อัปเดตเลขในช่องเมื่อจำนวนเปลี่ยนจากที่อื่น (เช่นกดปุ่ม +/-)
+    // ยกเว้นตอนกำลังโฟกัสพิมพ์อยู่ กันค่าที่พิมพ์ค้างโดนทับ
+    if (!_focusNode.hasFocus && oldWidget.quantity != widget.quantity) {
+      _ctrl.text = widget.quantity.toString();
+    }
+  }
+
+  void _submit() {
+    final val = int.tryParse(_ctrl.text.trim());
+    if (val != null && val != widget.quantity) {
+      widget.onChanged(val);
+    } else {
+      _ctrl.text = widget.quantity.toString();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _squareBtn(Icons.remove, widget.onDecrement),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 46,
+          height: 32,
+          child: TextField(
+            controller: _ctrl,
+            focusNode: _focusNode,
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.number,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 6),
+              filled: true,
+              fillColor: const Color(0xFFF5F5F5),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onSubmitted: (_) => _submit(),
+            onTapOutside: (_) {
+              _submit();
+              _focusNode.unfocus();
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        _squareBtn(Icons.add, widget.onIncrement),
+        const SizedBox(width: 8),
+        Text(widget.unitName, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+      ],
     );
   }
 }

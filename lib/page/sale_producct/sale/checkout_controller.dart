@@ -245,6 +245,16 @@ class CheckoutController extends GetxController {
     fetchFreshProducts();
   }
 
+  // เพิ่มสินค้าเป็นหน่วยขายเพิ่มเติม (เช่น กด chip "ลัง" จากผลค้นหา)
+  void addUnitToCart(ProductResponse product, ProductUnitResponse unit) {
+    _addToCart(product, unit: unit);
+    searchController.clear();
+    isSearching.value = false;
+    searchResults.clear();
+    FocusManager.instance.primaryFocus?.unfocus();
+    fetchFreshProducts();
+  }
+
   Future<void> openInternalScanner() async {
     var result = await Get.to(() => const ScanBarcodePage(showBookButton: true));
     if (result != null && result is String) {
@@ -257,35 +267,47 @@ class CheckoutController extends GetxController {
     if (allProducts.isEmpty) {
       await _loadAllProducts();
     }
+
     var match = allProducts.firstWhereOrNull((p) => p.barcode == barcode);
     if (match != null) {
       _addToCart(match);
-    } else {
-      Get.dialog(
-        const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false,
-      );
-      try {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        int currentShopId = prefs.getInt('shopId') ?? 0;
-        ProductResponse? product = await ApiProduct.searchProduct(
-          barcode,
-          currentShopId,
-        );
-        Get.back();
-        if (product != null) {
-          _addToCart(product);
-          allProducts.add(product);
-        } else {
-          _showWarningDialog(
-            "ไม่พบสินค้า",
-            "รหัสบาร์โค้ดนี้ไม่มีในระบบของร้านค้า",
-          );
-        }
-      } catch (e) {
-        Get.back();
-        _showWarningDialog("เกิดข้อผิดพลาด", "ไม่สามารถค้นหาสินค้าได้ กรุณาลองใหม่");
+      return;
+    }
+
+    // ไม่ตรงบาร์โค้ดหลักของสินค้าใดเลย ลองเทียบกับบาร์โค้ดของหน่วยขายเพิ่มเติม
+    // (เช่น บาร์โค้ดที่แปะอยู่บนลัง) ก่อนจะยิง API ค้นหา
+    for (final p in allProducts) {
+      final unitHit = p.activeUnits.firstWhereOrNull((u) => u.barcode == barcode);
+      if (unitHit != null) {
+        _addToCart(p, unit: unitHit);
+        return;
       }
+    }
+
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int currentShopId = prefs.getInt('shopId') ?? 0;
+      ProductResponse? product = await ApiProduct.searchProduct(
+        barcode,
+        currentShopId,
+      );
+      Get.back();
+      if (product != null) {
+        _addToCart(product, unit: product.matchedUnit);
+        allProducts.add(product);
+      } else {
+        _showWarningDialog(
+          "ไม่พบสินค้า",
+          "รหัสบาร์โค้ดนี้ไม่มีในระบบของร้านค้า",
+        );
+      }
+    } catch (e) {
+      Get.back();
+      _showWarningDialog("เกิดข้อผิดพลาด", "ไม่สามารถค้นหาสินค้าได้ กรุณาลองใหม่");
     }
   }
 
@@ -309,25 +331,40 @@ class CheckoutController extends GetxController {
     return addedCount;
   }
 
-  void _addToCart(ProductResponse product) {
-    int currentQty = cartItems
-        .where((item) => item.id == product.productId.toString())
-        .length;
-    if (currentQty < product.stock) {
+  // เพิ่มสินค้าลงตะกร้า — unit เป็น null คือหน่วยฐาน (พฤติกรรมเดิม) ไม่ null คือ
+  // หน่วยขายเพิ่มเติม (เช่น ลัง) สต็อกจำกัดนับเป็นหน่วยฐานเสมอ (ดู usedBase ด้านล่าง)
+  void _addToCart(ProductResponse product, {ProductUnitResponse? unit}) {
+    final conv = unit?.conversionQty ?? 1;
+    final price = unit?.sellPrice ?? product.sellPrice;
+    final uName = unit?.unitName ?? (product.unit.isEmpty ? 'ชิ้น' : product.unit);
+
+    final pid = product.productId.toString();
+    int usedBase = cartItems
+        .where((item) => item.id == pid)
+        .fold(0, (sum, item) => sum + item.conversionQty);
+
+    if (usedBase + conv <= product.stock) {
       cartItems.add(
         ProductItem(
-          id: product.productId.toString(),
+          id: pid,
           name: product.name,
-          price: product.sellPrice,
+          price: price,
           category: product.categoryName ?? 'ทั่วไป',
           imagePath: product.imgProduct,
           maxStock: product.stock,
+          unitId: unit?.productUnitId,
+          unitName: uName,
+          conversionQty: conv,
         ),
       );
     } else {
+      final remainingBase = product.stock - usedBase;
+      final baseUnitLabel = product.unit.isEmpty ? 'ชิ้น' : product.unit;
       Get.snackbar(
         "ถึงจำนวนสูงสุดแล้ว",
-        "สินค้านี้มีในสต็อก ${product.stock} ชิ้น ไม่สามารถเพิ่มได้อีก",
+        unit != null
+            ? "สินค้านี้เหลือไม่พอสำหรับ 1 $uName (ต้องการ $conv $baseUnitLabel, เหลือ $remainingBase $baseUnitLabel)"
+            : "สินค้านี้มีในสต็อก ${product.stock} $baseUnitLabel ไม่สามารถเพิ่มได้อีก",
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         duration: const Duration(seconds: 2),
@@ -336,8 +373,10 @@ class CheckoutController extends GetxController {
   }
 
   void increaseItem(ProductItem item) {
-    int currentQty = cartItems.where((i) => i.id == item.id).length;
-    if (currentQty < item.maxStock) {
+    int usedBase = cartItems
+        .where((i) => i.id == item.id)
+        .fold(0, (sum, i) => sum + i.conversionQty);
+    if (usedBase + item.conversionQty <= item.maxStock) {
       cartItems.add(
         ProductItem(
           id: item.id,
@@ -346,6 +385,9 @@ class CheckoutController extends GetxController {
           category: item.category,
           imagePath: item.imagePath,
           maxStock: item.maxStock,
+          unitId: item.unitId,
+          unitName: item.unitName,
+          conversionQty: item.conversionQty,
         ),
       );
     } else {
@@ -360,16 +402,73 @@ class CheckoutController extends GetxController {
   }
 
   void decreaseItem(ProductItem item) {
-    int index = cartItems.indexWhere((e) => e.id == item.id);
+    int index = cartItems.indexWhere((e) => e.lineKey == item.lineKey);
     if (index != -1) cartItems.removeAt(index);
   }
 
   void removeItem(ProductItem item) =>
-      cartItems.removeWhere((e) => e.id == item.id);
+      cartItems.removeWhere((e) => e.lineKey == item.lineKey);
 
-  void toggleDelete(ProductItem item) {
-    for (var i in cartItems) i.showDelete.value = false;
-    item.showDelete.value = !item.showDelete.value;
+  // พิมพ์จำนวนตรงๆ แทนการกด +/- ทีละครั้ง — ปรับจำนวนของ "บรรทัดนี้" (lineKey เดียวกัน)
+  // ให้เท่ากับ newQty โดยยังเคารพเพดานสต็อกร่วมกับบรรทัดอื่นของสินค้าเดียวกัน (เช่น
+  // สินค้าตัวเดียวกันแต่ขายเป็นคนละหน่วยในตะกร้า)
+  void setQuantity(ProductItem item, int newQty) {
+    final key = item.lineKey;
+
+    final usedByOtherLines = cartItems
+        .where((i) => i.id == item.id && i.lineKey != key)
+        .fold<int>(0, (sum, i) => sum + i.conversionQty);
+
+    final remainingBase = item.maxStock - usedByOtherLines;
+    final maxQtyForThisLine = item.conversionQty > 0
+        ? (remainingBase / item.conversionQty).floor()
+        : 0;
+
+    final clamped = newQty.clamp(0, maxQtyForThisLine < 0 ? 0 : maxQtyForThisLine);
+
+    if (newQty > clamped) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "สินค้ามีจำกัด ใส่ได้สูงสุด $clamped ${item.unitName}",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+    }
+
+    final currentCount = cartItems.where((i) => i.lineKey == key).length;
+
+    if (clamped <= 0) {
+      cartItems.removeWhere((i) => i.lineKey == key);
+      return;
+    }
+
+    if (clamped > currentCount) {
+      final toAdd = clamped - currentCount;
+      for (int i = 0; i < toAdd; i++) {
+        cartItems.add(
+          ProductItem(
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            category: item.category,
+            imagePath: item.imagePath,
+            maxStock: item.maxStock,
+            unitId: item.unitId,
+            unitName: item.unitName,
+            conversionQty: item.conversionQty,
+          ),
+        );
+      }
+    } else if (clamped < currentCount) {
+      var toRemove = currentCount - clamped;
+      while (toRemove > 0) {
+        final idx = cartItems.indexWhere((x) => x.lineKey == key);
+        if (idx == -1) break;
+        cartItems.removeAt(idx);
+        toRemove--;
+      }
+    }
   }
 
   void clearAll() => cartItems.clear();
@@ -418,7 +517,11 @@ class CheckoutController extends GetxController {
         (p) => p.productId.toString() == pi.id,
       );
       final effectiveMaxStock = match?.stock ?? pi.maxStock;
-      final qty = pi.quantity.clamp(0, effectiveMaxStock);
+      // clamp เป็นหน่วยฐานก่อน แล้วค่อยแปลงกลับเป็นจำนวนหน่วยที่พักไว้
+      // (เผื่อสต็อกลดลงระหว่างที่พักออเดอร์ไว้ จนไม่พอสำหรับหน่วยใหญ่แล้ว)
+      final totalBaseNeeded = pi.quantity * pi.conversionQty;
+      final clampedBase = totalBaseNeeded.clamp(0, effectiveMaxStock);
+      final qty = pi.conversionQty > 0 ? clampedBase ~/ pi.conversionQty : 0;
       for (int i = 0; i < qty; i++) {
         cartItems.add(ProductItem(
           id: pi.id,
@@ -427,6 +530,9 @@ class CheckoutController extends GetxController {
           category: pi.category,
           imagePath: pi.imagePath,
           maxStock: effectiveMaxStock,
+          unitId: pi.unitId,
+          unitName: pi.unitName,
+          conversionQty: pi.conversionQty,
         ));
       }
     }
@@ -708,23 +814,28 @@ class CheckoutController extends GetxController {
 
       String userName = prefs.getString('username') ?? "พนักงานขาย";
 
-      final Map<int, SaleItemRequest> groupedItems = {};
+      // group ด้วย lineKey (ไม่ใช่แค่ product id) เพราะสินค้าเดียวกันอาจขายคนละ
+      // หน่วยพร้อมกันในบิลเดียว (เช่น 2 ขวด + 1 ลัง) ต้องแยกเป็นคนละ sale item
+      final Map<String, SaleItemRequest> groupedItems = {};
       for (var item in cartItems) {
         int productId = int.parse(item.id);
-        if (groupedItems.containsKey(productId)) {
-          var existingItem = groupedItems[productId]!;
-          groupedItems[productId] = SaleItemRequest(
+        final key = item.lineKey;
+        if (groupedItems.containsKey(key)) {
+          var existingItem = groupedItems[key]!;
+          groupedItems[key] = SaleItemRequest(
             productId: productId,
             amount: existingItem.amount + 1,
             pricePerUnit: item.price,
             totalPrice: (existingItem.amount + 1) * item.price,
+            productUnitId: item.unitId,
           );
         } else {
-          groupedItems[productId] = SaleItemRequest(
+          groupedItems[key] = SaleItemRequest(
             productId: productId,
             amount: 1,
             pricePerUnit: item.price,
             totalPrice: item.price,
+            productUnitId: item.unitId,
           );
         }
       }

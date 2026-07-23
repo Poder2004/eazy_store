@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
+import 'package:eazy_store/utils/stock_format.dart';
 
 class CheckStockScreen extends StatelessWidget {
   const CheckStockScreen({super.key});
@@ -257,6 +258,11 @@ class CheckStockScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (product.activeUnits.isNotEmpty)
+                  Text(
+                    formatStockBreakdown(product.stock, product.unit, product.units),
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                  ),
               ],
             ),
           ],

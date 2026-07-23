@@ -10,6 +10,10 @@ class ProductRequest {
   final String unit;
   final bool status;
 
+  // หน่วยขายเพิ่มเติม (ลัง/แพ็ค) ที่จะสร้างพร้อมกับสินค้านี้เลย — แต่ละรายการเป็น
+  // map ตาม ProductUnitResponse.toJson() (unit_name, conversion_qty, barcode, sell_price, cost_price)
+  final List<Map<String, dynamic>> units;
+
   ProductRequest({
     required this.shopId,
     required this.categoryId,
@@ -21,6 +25,7 @@ class ProductRequest {
     required this.stock,
     required this.unit,
     this.status = true,
+    this.units = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -35,6 +40,7 @@ class ProductRequest {
       "stock": stock,
       "unit": unit,
       "status": status,
+      "units": units,
       // หมายเหตุ: เราไม่ส่ง category object กลับไป เพราะ backend มักใช้แค่ category_id ในการ save
     };
   }

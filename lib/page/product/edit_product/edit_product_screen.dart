@@ -1,5 +1,6 @@
 // ไฟล์: lib/sale_producct/edit_product_screen.dart (ปรับ path ตามจริงของคุณ)
 import 'package:eazy_store/model/request/category_model.dart';
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/widgets/category_bottom_sheet.dart';
 import 'package:eazy_store/widgets/category_disable_dialog.dart';
@@ -269,6 +270,77 @@ class EditProductScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ),
+              ),
+              const SizedBox(height: 25),
+
+              // 📦 หน่วยขาย
+              _buildSectionTitle("หน่วยขาย"),
+              _buildCardContainer(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        Icon(Icons.straighten, color: Colors.grey.shade400),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "หน่วยฐาน",
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                controller.unitCtrl.text.isEmpty ? '-' : controller.unitCtrl.text,
+                                style: const TextStyle(fontSize: 16, color: Colors.black87),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Obx(() {
+                    if (controller.units.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          "ยังไม่มีหน่วยขายเพิ่มเติม เช่น ลัง/แพ็ค",
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: [
+                        for (int i = 0; i < controller.units.length; i++) ...[
+                          if (i > 0) const Divider(height: 1),
+                          _buildUnitTile(context, controller, controller.units[i]),
+                        ],
+                      ],
+                    );
+                  }),
+                  const Divider(height: 1),
+                  InkWell(
+                    onTap: () => _showUnitFormSheet(context, controller),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: primaryColor, size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            "เพิ่มหน่วยขาย",
+                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 50),
             ],
@@ -585,6 +657,276 @@ class EditProductScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildUnitTile(
+    BuildContext context,
+    EditProductController controller,
+    ProductUnitResponse unit,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6B8E23).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.inventory_2_outlined,
+              color: Color(0xFF6B8E23),
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${unit.unitName} = ${unit.conversionQty} ${controller.unitCtrl.text}",
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "ขาย ฿${unit.sellPrice.toStringAsFixed(0)} · ทุน ฿${unit.costPrice.toStringAsFixed(0)}"
+                  "${(unit.barcode != null && unit.barcode!.isNotEmpty) ? ' · บาร์โค้ด ${unit.barcode}' : ''}",
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _showUnitFormSheet(context, controller, existing: unit),
+            icon: Icon(Icons.edit_outlined, size: 18, color: Colors.grey.shade600),
+          ),
+          IconButton(
+            onPressed: () => _confirmDeleteUnit(controller, unit),
+            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteUnit(EditProductController controller, ProductUnitResponse unit) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text("ลบหน่วยขายนี้?"),
+        content: Text(
+          "ลบหน่วย \"${unit.unitName}\" ออกจากสินค้านี้ ถ้าเคยมีประวัติขายระบบจะซ่อนไว้แทนการลบถาวร",
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("ยกเลิก")),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              controller.deleteUnit(unit);
+            },
+            child: const Text("ลบ", style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUnitFormSheet(
+    BuildContext context,
+    EditProductController controller, {
+    ProductUnitResponse? existing,
+  }) {
+    const primaryColor = Color(0xFF6B8E23);
+    final nameCtrl = TextEditingController(text: existing?.unitName ?? '');
+    final convCtrl = TextEditingController(
+      text: existing != null ? existing.conversionQty.toString() : '',
+    );
+    final barcodeCtrl = TextEditingController(text: existing?.barcode ?? '');
+    final sellCtrl = TextEditingController(
+      text: existing != null ? existing.sellPrice.toStringAsFixed(2) : '',
+    );
+    final costCtrl = TextEditingController(
+      text: existing != null ? existing.costPrice.toStringAsFixed(2) : '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    existing == null ? "เพิ่มหน่วยขาย" : "แก้ไขหน่วยขาย",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: "ชื่อหน่วย เช่น ลัง",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: convCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "1 หน่วยนี้ = กี่หน่วยฐาน",
+                      hintText: "เช่น 12",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: barcodeCtrl,
+                          decoration: const InputDecoration(
+                            labelText: "บาร์โค้ด (ถ้ามี)",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      InkWell(
+                        onTap: () async {
+                          var result = await Get.to(() => const ScanBarcodePage());
+                          if (result != null && result is String) {
+                            barcodeCtrl.text = result;
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.qr_code_scanner, color: primaryColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: sellCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "ราคาขาย",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: costCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "ราคาต้นทุน",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        final name = nameCtrl.text.trim();
+                        final conv = int.tryParse(convCtrl.text.trim());
+                        final sell = double.tryParse(sellCtrl.text.trim());
+                        final cost = double.tryParse(costCtrl.text.trim()) ?? 0;
+                        final bc = barcodeCtrl.text.trim();
+
+                        if (name.isEmpty) {
+                          Get.snackbar("แจ้งเตือน", "กรุณากรอกชื่อหน่วย",
+                              backgroundColor: Colors.orange, colorText: Colors.white);
+                          return;
+                        }
+                        if (conv == null || conv <= 1) {
+                          Get.snackbar("แจ้งเตือน", "จำนวนแปลงต้องเป็นตัวเลขมากกว่า 1",
+                              backgroundColor: Colors.orange, colorText: Colors.white);
+                          return;
+                        }
+                        if (sell == null || sell <= 0) {
+                          Get.snackbar("แจ้งเตือน", "กรุณากรอกราคาขาย",
+                              backgroundColor: Colors.orange, colorText: Colors.white);
+                          return;
+                        }
+
+                        bool ok;
+                        if (existing == null) {
+                          ok = await controller.addUnit(
+                            unitName: name,
+                            conversionQty: conv,
+                            barcode: bc.isEmpty ? null : bc,
+                            sellPrice: sell,
+                            costPrice: cost,
+                          );
+                        } else {
+                          ok = await controller.editUnit(
+                            existing,
+                            unitName: name,
+                            conversionQty: conv,
+                            barcode: bc.isEmpty ? null : bc,
+                            sellPrice: sell,
+                            costPrice: cost,
+                          );
+                        }
+                        if (ok && ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: Text(
+                        existing == null ? "เพิ่ม" : "บันทึก",
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

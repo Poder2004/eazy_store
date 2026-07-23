@@ -1,16 +1,30 @@
 import 'package:eazy_store/page/homepage/home_controller.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
+import 'package:eazy_store/page/product/add_product/add_product_controller.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
+import 'package:eazy_store/page/product/add_stock/add_stock_controller.dart';
 import 'package:eazy_store/page/product/checkStock/check_stock.dart';
+import 'package:eazy_store/page/product/checkStock/check_stock_controller.dart';
 import 'package:eazy_store/page/product/check_price/check_price.dart';
+import 'package:eazy_store/page/product/check_price/check_price_controller.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart' show SalesAccountScreen;
+import 'package:eazy_store/page/my_blank/sales_account_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
+import 'package:eazy_store/page/order_products/buyProducts/buy_products_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
+// เปิดหน้าปลายทางแบบ "ข้อมูลสดเสมอ" — ลบ controller เก่าทิ้งก่อน (ถ้ามีค้างจากที่เคย
+// เข้าหน้านี้มาก่อน) เพื่อให้ Get.put ในหน้าปลายทางได้ instance ใหม่จริงๆ และ onInit()
+// (จุดที่ fetch ข้อมูล) ทำงานทุกครั้งที่กดเมนู ไม่ต้องดึงจอลง refresh เอง
+void _freshNav<T>(Widget Function() page) {
+  if (Get.isRegistered<T>()) Get.delete<T>();
+  Get.to(page);
+}
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -61,35 +75,45 @@ class HomePage extends StatelessWidget {
                         iconColor: iconColor,
                         title: "เพิ่มสินค้า",
                         subtitle: "สร้างรายการสินค้าใหม่สำหรับร้านนี้",
-                        onTap: () => Get.to(() => const AddProductScreen()),
+                        onTap: () => _freshNav<AddProductController>(
+                          () => const AddProductScreen(),
+                        ),
                       ),
                       _buildMenuTile(
                         icon: Icons.inventory_2_outlined,
                         iconColor: Colors.blue.shade600,
                         title: "เพิ่มสต็อกสินค้า",
                         subtitle: "เติมจำนวนสินค้าในคลัง",
-                        onTap: () => Get.to(() => const AddStockScreen()),
+                        onTap: () => _freshNav<AddStockController>(
+                          () => const AddStockScreen(),
+                        ),
                       ),
                       _buildMenuTile(
                         icon: Icons.local_offer_outlined,
                         iconColor: Colors.orange.shade600,
                         title: "เช็คราคาสินค้า",
                         subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
-                        onTap: () => Get.to(() => const CheckPriceScreen()),
+                        onTap: () => _freshNav<PriceController>(
+                          () => const CheckPriceScreen(),
+                        ),
                       ),
                       _buildMenuTile(
                         icon: Icons.fact_check_outlined,
                         iconColor: Colors.purple.shade500,
                         title: "เช็คสต็อกสินค้า",
                         subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
-                        onTap: () => Get.to(() => const CheckStockScreen()),
+                        onTap: () => _freshNav<CheckStockController>(
+                          () => const CheckStockScreen(),
+                        ),
                       ),
                       _buildMenuTile(
                         icon: Icons.receipt_long,
                         iconColor: Colors.teal.shade500,
                         title: "ทำใบสั่งสินค้า",
                         subtitle: "เลือกสินค้าและส่งออกเป็นไฟล์ PDF",
-                        onTap: () => Get.to(() => const BuyProductsScreen()),
+                        onTap: () => _freshNav<BuyProductsController>(
+                          () => const BuyProductsScreen(),
+                        ),
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -260,7 +284,9 @@ class HomePage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: GestureDetector(
-                  onTap: () => Get.to(() => const SalesAccountScreen()),
+                  onTap: () => _freshNav<SalesAccountController>(
+                    () => const SalesAccountScreen(),
+                  ),
                   child: _buildDailyReportCard(controller),
                 ),
               ),

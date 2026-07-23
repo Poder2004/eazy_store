@@ -37,6 +37,9 @@ class EditProductController extends GetxController {
   var categories = <CategoryModel>[].obs;
   var selectedCategory = Rxn<CategoryModel>();
 
+  // 📦 หน่วยขายเพิ่มเติม (ลัง/แพ็ค)
+  var units = <ProductUnitResponse>[].obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -50,6 +53,7 @@ class EditProductController extends GetxController {
       _currentCostPrice = originalProduct.costPrice;
       stockCtrl = TextEditingController(text: originalProduct.stock.toString());
       unitCtrl = TextEditingController(text: originalProduct.unit);
+      units.assignAll(originalProduct.activeUnits);
 
       // กำหนดค่าหมวดหมู่เริ่มต้นจากข้อมูลสินค้าที่มีอยู่ เพื่อป้องกันไม่ให้แสดง "ไม่ระบุ" หรือ "เลือกหมวดหมู่" ระหว่างโหลดข้อมูล
       selectedCategory.value = originalProduct.category ?? (originalProduct.categoryId != 0 ? CategoryModel(
@@ -313,6 +317,83 @@ class EditProductController extends GetxController {
     } catch (e) {
       isLoading.value = false;
       Get.snackbar("Error", "เกิดข้อผิดพลาด: $e", backgroundColor: Colors.red);
+    }
+  }
+
+  // --- หน่วยขายเพิ่มเติม (ลัง/แพ็ค) ---
+
+  Future<bool> addUnit({
+    required String unitName,
+    required int conversionQty,
+    String? barcode,
+    required double sellPrice,
+    required double costPrice,
+  }) async {
+    final result = await ApiProduct.createProductUnit(originalProduct.productId!, {
+      "unit_name": unitName,
+      "conversion_qty": conversionQty,
+      "barcode": barcode,
+      "sell_price": sellPrice,
+      "cost_price": costPrice,
+    });
+    if (result['success'] == true) {
+      units.add(result['data'] as ProductUnitResponse);
+      Get.snackbar("สำเร็จ", "เพิ่มหน่วยขาย \"$unitName\" แล้ว",
+          backgroundColor: Colors.green, colorText: Colors.white);
+      return true;
+    }
+    Get.snackbar("ผิดพลาด", result['error'] ?? "เพิ่มหน่วยขายไม่สำเร็จ",
+        backgroundColor: Colors.red, colorText: Colors.white);
+    return false;
+  }
+
+  Future<bool> editUnit(
+    ProductUnitResponse unit, {
+    required String unitName,
+    required int conversionQty,
+    String? barcode,
+    required double sellPrice,
+    required double costPrice,
+  }) async {
+    final result = await ApiProduct.updateProductUnit(unit.productUnitId, {
+      "unit_name": unitName,
+      "conversion_qty": conversionQty,
+      "barcode": barcode,
+      "sell_price": sellPrice,
+      "cost_price": costPrice,
+    });
+    if (result['success'] == true) {
+      final updated = result['data'] as ProductUnitResponse;
+      final idx = units.indexWhere((u) => u.productUnitId == unit.productUnitId);
+      if (idx != -1) units[idx] = updated;
+      Get.snackbar("สำเร็จ", "แก้ไขหน่วยขาย \"$unitName\" แล้ว",
+          backgroundColor: Colors.green, colorText: Colors.white);
+      return true;
+    }
+    Get.snackbar("ผิดพลาด", result['error'] ?? "แก้ไขหน่วยขายไม่สำเร็จ",
+        backgroundColor: Colors.red, colorText: Colors.white);
+    return false;
+  }
+
+  Future<void> deleteUnit(ProductUnitResponse unit) async {
+    final result = await ApiProduct.deleteProductUnit(unit.productUnitId);
+    if (result['success'] == true) {
+      units.removeWhere((u) => u.productUnitId == unit.productUnitId);
+      if (result['status'] == 'hidden') {
+        Get.snackbar(
+          "ซ่อนหน่วยขายแล้ว",
+          "หน่วย \"${unit.unitName}\" เคยมีประวัติขาย ระบบซ่อนไว้แทนการลบถาวร",
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      } else {
+        Get.snackbar("ลบแล้ว", "ลบหน่วยขาย \"${unit.unitName}\" ออกจากระบบสำเร็จ",
+            backgroundColor: Colors.green, colorText: Colors.white);
+      }
+    } else {
+      Get.snackbar("ผิดพลาด", result['error'] ?? "ลบหน่วยขายไม่สำเร็จ",
+          backgroundColor: Colors.red, colorText: Colors.white);
     }
   }
 

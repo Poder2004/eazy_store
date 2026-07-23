@@ -410,8 +410,13 @@ class ApiProduct {
     }
   }
 
-  // อัปเดตสต็อก (Update Stock)
-  static Future<bool> updateStock(int productId, int amountToAdd) async {
+  // อัปเดตสต็อก (Update Stock) — ถ้าระบุ productUnitId (เช่น เติมเป็น "ลัง")
+  // backend จะแปลงเป็นหน่วยฐานให้เอง (สต็อกเก็บเป็นหน่วยฐานที่เดียวเสมอ)
+  static Future<bool> updateStock(
+    int productId,
+    int amountToAdd, {
+    int? productUnitId,
+  }) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products/stock');
 
     try {
@@ -429,6 +434,7 @@ class ApiProduct {
           "product_id": productId,
           "stock":
               amountToAdd, // ส่งจำนวนที่ต้องการเพิ่มไป (Backend จะไป + เอง)
+          "product_unit_id": productUnitId,
         }),
       );
 
@@ -444,6 +450,104 @@ class ApiProduct {
     } catch (e) {
       print("Error updating stock: $e");
       return false;
+    }
+  }
+
+  // --- หน่วยขายเพิ่มเติม (ลัง/แพ็ค) ---
+
+  static Future<Map<String, dynamic>> createProductUnit(
+    int productId,
+    Map<String, dynamic> body,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId/units');
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(body),
+      );
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "data": ProductUnitResponse.fromJson(data['data']),
+        };
+      }
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {"success": false, "error": data['error'] ?? "ไม่สามารถเพิ่มหน่วยขายได้"};
+    } catch (e) {
+      return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateProductUnit(
+    int unitId,
+    Map<String, dynamic> body,
+  ) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/units/$unitId');
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(body),
+      );
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return {
+          "success": true,
+          "data": ProductUnitResponse.fromJson(data['data']),
+        };
+      }
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {"success": false, "error": data['error'] ?? "ไม่สามารถแก้ไขหน่วยขายได้"};
+    } catch (e) {
+      return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
+    }
+  }
+
+  // status = 'deleted' (ลบจริง) หรือ 'hidden' (ซ่อนเพราะเคยมีประวัติขาย)
+  static Future<Map<String, dynamic>> deleteProductUnit(int unitId) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/units/$unitId');
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.delete(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return {"success": true, "status": data['status']};
+      }
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {"success": false, "error": data['error'] ?? "ไม่สามารถลบหน่วยขายได้"};
+    } catch (e) {
+      return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
     }
   }
 

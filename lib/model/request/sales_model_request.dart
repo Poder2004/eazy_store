@@ -37,11 +37,16 @@ class SaleItemRequest {
   final double pricePerUnit;
   final double totalPrice;
 
+  // null = ขายเป็นหน่วยฐานของสินค้า (พฤติกรรมเดิม); ไม่ null = ขายเป็นหน่วยขาย
+  // เพิ่มเติม (เช่น ลัง) — backend จะเป็นคนแปลง conversion เองเสมอ
+  final int? productUnitId;
+
   SaleItemRequest({
     required this.productId,
     required this.amount,
     required this.pricePerUnit,
     required this.totalPrice,
+    this.productUnitId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -49,5 +54,6 @@ class SaleItemRequest {
     "amount": amount,
     "price_per_unit": pricePerUnit,
     "total_price": totalPrice,
+    "product_unit_id": productUnitId,
   };
 }

@@ -461,6 +461,35 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildUnitChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? _kPrimaryColor : _kPrimaryColor.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: _kPrimaryColor.withOpacity(selected ? 1 : 0.3),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : _kPrimaryColor,
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStepBtn(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
@@ -522,6 +551,31 @@ class AddStockScreen extends StatelessWidget {
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFF0F0F0)),
           const SizedBox(height: 16),
+          Obx(() {
+            final units = controller.foundProduct.value?.activeUnits ?? [];
+            if (units.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildUnitChip(
+                    label: controller.unitController.text,
+                    selected: controller.selectedRestockUnit.value == null,
+                    onTap: () => controller.selectRestockUnit(null),
+                  ),
+                  for (final u in units)
+                    _buildUnitChip(
+                      label: u.unitName,
+                      selected: controller.selectedRestockUnit.value?.productUnitId ==
+                          u.productUnitId,
+                      onTap: () => controller.selectRestockUnit(u),
+                    ),
+                ],
+              ),
+            );
+          }),
           Row(
             children: [
               _buildStepBtn(
@@ -567,23 +621,36 @@ class AddStockScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Center(
-            child: Obx(
-              () => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _kPrimaryColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  "ยอดรวมใหม่: ${controller.calculatedTotal.value} ${controller.unitController.text}",
-                  style: const TextStyle(
-                    color: _kPrimaryColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+            child: Obx(() {
+              final unit = controller.selectedRestockUnit.value;
+              final qty = int.tryParse(controller.addAmountController.text) ?? 0;
+              return Column(
+                children: [
+                  if (unit != null && qty > 0) ...[
+                    Text(
+                      "$qty ${unit.unitName} = ${qty * unit.conversionQty} ${controller.unitController.text}",
+                      style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _kPrimaryColor.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      "ยอดรวมใหม่: ${controller.calculatedTotal.value} ${controller.unitController.text}",
+                      style: const TextStyle(
+                        color: _kPrimaryColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
+                ],
+              );
+            }),
           ),
         ],
       ),

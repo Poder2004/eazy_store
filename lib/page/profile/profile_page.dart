@@ -8,11 +8,9 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ไม่ต้อง fetch ซ้ำตรงนี้ — ProfileController.onInit() ดึงข้อมูลให้แล้ว
+    // ทุกครั้งที่หน้านี้ถูกสร้างใหม่ (Get.put ด้านล่างสร้าง controller ใหม่เสมอ)
     final ProfileController controller = Get.put(ProfileController());
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.loadProfileData();
-    });
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FA),
