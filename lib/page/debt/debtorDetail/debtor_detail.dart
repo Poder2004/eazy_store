@@ -739,7 +739,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   if (!isPaid) ...[
                     const SizedBox(width: 8),
                     _buildAmountChip(
-                      label: "คงเหลือ",
+                      label: "ค้างบิลนี้",
                       amount: history.remainingAmount,
                       color: Colors.red.shade700,
                       bgColor: Colors.red.shade50,
@@ -911,7 +911,14 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
               children: [
                 Icon(icon, size: 11, color: color),
                 const SizedBox(width: 3),
-                Text(label, style: TextStyle(fontSize: 10, color: color)),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 10, color: color),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 2),

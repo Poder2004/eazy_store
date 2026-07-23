@@ -25,7 +25,7 @@ class ManualListPage extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: const Text(
-          "สมุดสินค้าไม่มีบาร์โค้ด",
+          "สมุดสินค้า",
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -35,6 +35,8 @@ class ManualListPage extends StatelessWidget {
       ),
       body: Column(
         children: [
+          _buildTabs(controller, activeBlue),
+          const SizedBox(height: 12),
           _buildSearchAndFilter(controller),
           const SizedBox(height: 10),
           Expanded(
@@ -42,25 +44,104 @@ class ManualListPage extends StatelessWidget {
               if (controller.isLoading.value) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (controller.filteredProducts.isEmpty) {
-                return const Center(child: Text("ไม่พบรายการสินค้า"));
+              final list = controller.currentFilteredList;
+              if (list.isEmpty) {
+                return Center(
+                  child: Text(
+                    controller.activeTab.value == 0
+                        ? "ไม่พบสินค้าไม่มีบาร์โค้ด"
+                        : "ไม่พบสินค้าที่มีบาร์โค้ด",
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                );
               }
 
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: controller.filteredProducts.length,
+                itemCount: list.length,
                 itemBuilder: (context, index) {
-                  return _buildProductCard(
-                    controller.filteredProducts[index],
-                    activeBlue,
-                    controller,
-                  );
+                  return _buildProductCard(list[index], activeBlue, controller);
                 },
               );
             }),
           ),
           _buildCheckoutButton(controller),
         ],
+      ),
+    );
+  }
+
+  // แท็บสลับระหว่างสินค้าไม่มีบาร์โค้ด (ดีฟอลต์) กับสินค้าที่มีบาร์โค้ด
+  // เผื่อกรณีสแกนไม่ติด จะได้มาหาจากตรงนี้แทนได้
+  Widget _buildTabs(ManualListController controller, Color activeColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Obx(
+          () => Row(
+            children: [
+              Expanded(
+                child: _buildTabButton(
+                  controller,
+                  index: 0,
+                  label: "ไม่มีบาร์โค้ด",
+                  activeColor: activeColor,
+                ),
+              ),
+              Expanded(
+                child: _buildTabButton(
+                  controller,
+                  index: 1,
+                  label: "มีบาร์โค้ด",
+                  activeColor: activeColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton(
+    ManualListController controller, {
+    required int index,
+    required String label,
+    required Color activeColor,
+  }) {
+    final selected = controller.activeTab.value == index;
+    return GestureDetector(
+      onTap: () => controller.activeTab.value = index,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: selected ? activeColor : Colors.grey[600],
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+        ),
       ),
     );
   }
@@ -73,11 +154,11 @@ class ManualListPage extends StatelessWidget {
     return GestureDetector(
       onTap: () => controller.toggleSelection(product.id),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 15),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(13),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
@@ -90,21 +171,21 @@ class ManualListPage extends StatelessWidget {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(9),
               child: Image.network(
                 product.imagePath,
-                width: 70,
-                height: 70,
+                width: 44,
+                height: 44,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey[200],
-                  width: 70,
-                  height: 70,
+                  width: 44,
+                  height: 44,
                   child: const Icon(Icons.image_outlined, color: Colors.grey),
                 ),
               ),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,27 +193,38 @@ class ManualListPage extends StatelessWidget {
                   Text(
                     product.name,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 3),
                   Text(
                     "${product.price.toStringAsFixed(0)} บาท",
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[700],
                     ),
                   ),
+                  if (product.barcode != null && product.barcode!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      "บาร์โค้ด: ${product.barcode}",
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
               ),
             ),
             Obx(() {
               final isSelected = controller.selectedIds.contains(product.id);
               return Container(
-                width: 24,
-                height: 24,
+                width: 22,
+                height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isSelected ? activeColor : Colors.transparent,
@@ -142,7 +234,7 @@ class ManualListPage extends StatelessWidget {
                   ),
                 ),
                 child: isSelected
-                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
                     : null,
               );
             }),

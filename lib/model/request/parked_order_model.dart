@@ -23,6 +23,11 @@ class ParkedItem {
   final int maxStock;
   final int quantity;
 
+  // ดูคอมเมนต์ที่ ProductItem (baskets_model.dart) — ค่าเดียวกัน แค่พักไว้ชั่วคราว
+  final int? unitId;
+  final String unitName;
+  final int conversionQty;
+
   ParkedItem({
     required this.id,
     required this.name,
@@ -31,5 +36,8 @@ class ParkedItem {
     required this.imagePath,
     required this.maxStock,
     required this.quantity,
+    this.unitId,
+    this.unitName = 'ชิ้น',
+    this.conversionQty = 1,
   });
 }

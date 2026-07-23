@@ -11,6 +11,23 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widgets/image_picker_sheet.dart';
 
+// แถวฟอร์มของหน่วยขายเพิ่มเติม 1 หน่วย (เช่น "ลัง = 12 ขวด")
+class UnitFormEntry {
+  final TextEditingController nameCtrl = TextEditingController();
+  final TextEditingController conversionCtrl = TextEditingController();
+  final TextEditingController barcodeCtrl = TextEditingController();
+  final TextEditingController sellPriceCtrl = TextEditingController();
+  final TextEditingController costPriceCtrl = TextEditingController();
+
+  void dispose() {
+    nameCtrl.dispose();
+    conversionCtrl.dispose();
+    barcodeCtrl.dispose();
+    sellPriceCtrl.dispose();
+    costPriceCtrl.dispose();
+  }
+}
+
 class AddProductController extends GetxController {
   var selectedIndex = 0.obs;
   final _picker = ImagePicker();
@@ -31,6 +48,13 @@ class AddProductController extends GetxController {
   Rx<CategoryModel?> selectedCategoryObject = Rx<CategoryModel?>(null);
   var isSaving = false.obs;
 
+  // หน่วยขายเพิ่มเติม (ลัง/แพ็ค) — ไม่บังคับมี พับเก็บไว้ก่อนเพราะสินค้าส่วนใหญ่ไม่ได้ใช้
+  var unitForms = <UnitFormEntry>[].obs;
+  var isUnitsSectionExpanded = false.obs;
+
+  void toggleUnitsSection() =>
+      isUnitsSectionExpanded.value = !isUnitsSectionExpanded.value;
+
   @override
   void onInit() {
     super.onInit();
@@ -45,7 +69,20 @@ class AddProductController extends GetxController {
     stockController.dispose();
     unitController.dispose();
     idController.dispose();
+    for (final f in unitForms) {
+      f.dispose();
+    }
     super.onClose();
+  }
+
+  void addUnitForm() {
+    unitForms.add(UnitFormEntry());
+    isUnitsSectionExpanded.value = true;
+  }
+
+  void removeUnitForm(int index) {
+    unitForms[index].dispose();
+    unitForms.removeAt(index);
   }
 
   // ---------------- Functions ----------------
@@ -105,6 +142,9 @@ class AddProductController extends GetxController {
       return;
     }
 
+    final unitsPayload = _buildUnitsPayload();
+    if (unitsPayload == null) return; // แจ้งเตือนไปแล้วใน _buildUnitsPayload
+
     isSaving.value = true;
 
     try {
@@ -137,6 +177,7 @@ class AddProductController extends GetxController {
         ),
         unit: unitController.text.trim(),
         status: true,
+        units: unitsPayload,
       );
 
       final result = await ApiProduct.createProduct(newProduct);
@@ -235,6 +276,77 @@ class AddProductController extends GetxController {
     idController.clear();
     selectedCategoryObject.value = null;
     imageFile.value = null;
+    for (final f in unitForms) {
+      f.dispose();
+    }
+    unitForms.clear();
+    isUnitsSectionExpanded.value = false;
+  }
+
+  // ตรวจสอบ + แปลงแถวฟอร์มหน่วยขายเพิ่มเติมเป็น payload สำหรับ ProductRequest
+  // คืนค่า null แปลว่าข้อมูลไม่ผ่าน (แจ้งเตือนไปแล้วในนี้)
+  List<Map<String, dynamic>>? _buildUnitsPayload() {
+    final result = <Map<String, dynamic>>[];
+    final seenNames = <String>{};
+    final seenBarcodes = <String>{};
+    final baseUnit = unitController.text.trim();
+    final baseBarcode = idController.text.trim();
+
+    for (final f in unitForms) {
+      final uName = f.nameCtrl.text.trim();
+      if (uName.isEmpty) continue; // แถวว่างข้ามไป
+
+      if (uName == baseUnit) {
+        Get.snackbar("แจ้งเตือน", "ชื่อหน่วยขาย \"$uName\" ซ้ำกับหน่วยฐานของสินค้า",
+            backgroundColor: Colors.orange, colorText: Colors.white);
+        return null;
+      }
+      if (!seenNames.add(uName)) {
+        Get.snackbar("แจ้งเตือน", "มีหน่วยขายชื่อ \"$uName\" ซ้ำกันในสินค้าเดียวกัน",
+            backgroundColor: Colors.orange, colorText: Colors.white);
+        return null;
+      }
+
+      final conv = int.tryParse(f.conversionCtrl.text.trim());
+      if (conv == null || conv <= 1) {
+        Get.snackbar("แจ้งเตือน", "หน่วย \"$uName\" ต้องระบุจำนวนแปลงเป็นตัวเลขมากกว่า 1",
+            backgroundColor: Colors.orange, colorText: Colors.white);
+        return null;
+      }
+
+      final sell = double.tryParse(f.sellPriceCtrl.text.trim());
+      if (sell == null || sell <= 0) {
+        Get.snackbar("แจ้งเตือน", "กรุณากรอกราคาขายของหน่วย \"$uName\"",
+            backgroundColor: Colors.orange, colorText: Colors.white);
+        return null;
+      }
+      final cost = double.tryParse(f.costPriceCtrl.text.trim()) ?? 0;
+
+      final barcode = f.barcodeCtrl.text.trim();
+      String? bc;
+      if (barcode.isNotEmpty) {
+        if (barcode == baseBarcode) {
+          Get.snackbar("แจ้งเตือน", "บาร์โค้ดหน่วย \"$uName\" ซ้ำกับบาร์โค้ดหลักของสินค้า",
+              backgroundColor: Colors.orange, colorText: Colors.white);
+          return null;
+        }
+        if (!seenBarcodes.add(barcode)) {
+          Get.snackbar("แจ้งเตือน", "บาร์โค้ดหน่วย \"$uName\" ซ้ำกับหน่วยอื่นในสินค้าเดียวกัน",
+              backgroundColor: Colors.orange, colorText: Colors.white);
+          return null;
+        }
+        bc = barcode;
+      }
+
+      result.add({
+        "unit_name": uName,
+        "conversion_qty": conv,
+        "barcode": bc,
+        "sell_price": sell,
+        "cost_price": cost,
+      });
+    }
+    return result;
   }
 
   Future<bool> addNewCategory(String categoryName) async {

@@ -191,6 +191,30 @@ class CheckPriceScreen extends StatelessWidget {
                   "รหัส: ${product.productCode ?? '-'}",
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
+                if (product.activeUnits.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: product.activeUnits.map((u) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          "${u.unitName} ฿${u.sellPrice.toStringAsFixed(0)}",
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: primaryColor,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
             ),
           ),

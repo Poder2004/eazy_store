@@ -283,7 +283,7 @@ class DebtSalePage extends StatelessWidget {
       child: Obx(() {
         final groupedItems = <String, List<dynamic>>{};
         for (var item in checkoutController.cartItems) {
-          groupedItems.putIfAbsent(item.id, () => []).add(item);
+          groupedItems.putIfAbsent(item.lineKey, () => []).add(item);
         }
         if (groupedItems.isEmpty) {
           return const Padding(
@@ -328,7 +328,7 @@ class DebtSalePage extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        "${items.length} ${item.category == 'เครื่องดื่ม' ? 'ขวด' : 'ชิ้น'}",
+                        "${items.length} ${item.unitName}",
                         style: TextStyle(color: Colors.grey[500], fontSize: 13),
                       ),
                     ],

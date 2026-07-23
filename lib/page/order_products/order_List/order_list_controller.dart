@@ -101,7 +101,9 @@ class OrderListController extends GetxController {
           return OrderItem(
             id: item.productId.toString(),
             name: item.name ?? 'ไม่มีชื่อสินค้า',
-            unit: item.unit ?? 'ชิ้น',
+            // สั่งของมักมาเป็นหน่วยใหญ่ (เช่น ลัง) ถ้าสินค้านี้มีหน่วยขายเพิ่มเติม
+            // ให้ใช้เป็นค่าเริ่มต้นแทนหน่วยฐาน (ผู้ใช้ยังพิมพ์ทับเองได้เหมือนเดิม)
+            unit: item.largestUnit?.unitName ?? item.unit ?? 'ชิ้น',
             imageUrl: item.imgProduct ?? '',
             initialQuantity: 1,
           );

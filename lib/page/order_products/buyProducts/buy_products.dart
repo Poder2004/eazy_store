@@ -6,6 +6,7 @@ import 'package:eazy_store/widgets/product_filter_sheet.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
 import '../buyProducts/buy_products_controller.dart';
 import '../order_List/order_list.dart';
+import 'package:eazy_store/utils/stock_format.dart';
 
 class BuyProductsScreen extends StatelessWidget {
   const BuyProductsScreen({super.key});
@@ -217,7 +218,7 @@ class BuyProductsScreen extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        "คงเหลือ ${product.stock} ${product.unit}",
+                        "คงเหลือ ${formatStockBreakdown(product.stock, product.unit, product.units)}",
                         style: TextStyle(
                           color: stockColor,
                           fontSize: 13,

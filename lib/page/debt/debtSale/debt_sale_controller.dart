@@ -301,9 +301,11 @@ class DebtSaleController extends GetxController {
           prefs.getString('username') ??
           "พนักงานขาย";
 
+      // group ด้วย lineKey (ไม่ใช่แค่ product id) เพราะสินค้าเดียวกันอาจขายคนละ
+      // หน่วยพร้อมกันในบิลเดียว (เช่น 2 ขวด + 1 ลัง)
       final groupedMap = <String, List<dynamic>>{};
       for (var item in checkoutController.cartItems) {
-        groupedMap.putIfAbsent(item.id, () => []).add(item);
+        groupedMap.putIfAbsent(item.lineKey, () => []).add(item);
       }
 
       List<SaleItemRequest> itemsRequest = groupedMap.entries.map((entry) {
@@ -313,6 +315,7 @@ class DebtSaleController extends GetxController {
           amount: entry.value.length,
           pricePerUnit: firstItem.price.toDouble(),
           totalPrice: (firstItem.price * entry.value.length).toDouble(),
+          productUnitId: firstItem.unitId,
         );
       }).toList();
 

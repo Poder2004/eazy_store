@@ -1,11 +1,11 @@
 import 'package:eazy_store/page/homepage/home_page.dart';
-import 'package:eazy_store/page/homepage/home_controller.dart'; // ✅ Import HomeController
+import 'package:eazy_store/page/homepage/home_controller.dart';
 import 'package:eazy_store/page/debt/debtLedger/debt_ledger.dart';
-import 'package:eazy_store/page/debt/debtLedger/debt_ledger_controller.dart'; // ✅ Import DebtLedgerController
+import 'package:eazy_store/page/debt/debtLedger/debt_ledger_controller.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart'; // ตรวจสอบ path นี้ให้ตรงด้วยนะครับ
 import 'package:eazy_store/page/my_blank/sales_account_controller.dart';
 import 'package:eazy_store/page/profile/profile_page.dart';
-import 'package:eazy_store/page/profile/profile_controller.dart'; // ✅ Import ProfileController
+import 'package:eazy_store/page/profile/profile_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
@@ -158,34 +158,32 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
+  // ใช้ Get.off แทน Get.to เสมอตอนสลับแท็บ — แทนที่หน้าปัจจุบันแทนการ push ซ้อนไปเรื่อยๆ
+  // (เดิม push ซ้อนไม่เคย pop ทำให้ controller หน้าเก่าค้างใน memory ตลอด session)
+  //
+  // ⚠️ Get.put() ใน build() ของแต่ละหน้า "ไม่ได้" สร้าง controller ใหม่เสมอ — ข้างใน
+  // GetX ใช้ putIfAbsent ถ้ามี controller ชนิดนี้ลงทะเบียนอยู่แล้ว (ซึ่งมักจะยังอยู่
+  // เพราะเพิ่งสลับแท็บไปมา ไม่ได้ปิดแอป) มันจะคืน instance เดิมที่ข้อมูลค้างอยู่ กลับมา
+  // โดยไม่เรียก onInit() ซ้ำ ข้อมูลเลยดูเหมือนไม่ fetch ใหม่ให้ (เช่น ขายเสร็จกลับหน้าหลัก
+  // แล้วยอดขายวันนี้ไม่อัปเดต) — ต้องลบ controller เก่าทิ้งเองก่อน ให้แน่ใจว่า Get.put ครั้ง
+  // ถัดไปที่หน้าปลายทางได้ instance ใหม่จริงๆ และ onInit() (ซึ่งไป fetch ข้อมูล) ทำงานทุกครั้ง
   void _navigateToPage(int index) {
     if (index == 0) {
-      // ✅ รีเฟรชข้อมูลหน้า Home ก่อนข้ามหน้า
-      if (Get.isRegistered<HomeController>()) {
-        Get.find<HomeController>().fetchTodaySales();
-      }
-      Get.to(() => const HomePage());
+      if (Get.isRegistered<HomeController>()) Get.delete<HomeController>();
+      Get.off(() => const HomePage());
     } else if (index == 1) {
-      // ✅ รีเซ็ตวันที่ให้กลับมาเป็น "ปัจจุบัน" ทุกครั้งที่กดเข้าหน้าบัญชี
       if (Get.isRegistered<SalesAccountController>()) {
-        final ctrl = Get.find<SalesAccountController>();
-        ctrl.selectedView.value = 'วันนี้'; // กลับมาหน้าวัน
-        ctrl.currentDate.value = DateTime.now(); // กลับมาใช้วันนี้
-        ctrl.fetchSummaryData(); // ดึงข้อมูลใหม่
+        Get.delete<SalesAccountController>();
       }
-      Get.to(() => const SalesAccountScreen());
+      Get.off(() => const SalesAccountScreen());
     } else if (index == 3) {
-      // ✅ รีเฟรชข้อมูลหน้า คนค้างชำระ (DebtLedger) ก่อนข้ามหน้า
       if (Get.isRegistered<DebtLedgerController>()) {
-        Get.find<DebtLedgerController>().initialData();
+        Get.delete<DebtLedgerController>();
       }
-      Get.to(() => DebtLedgerScreen());
+      Get.off(() => DebtLedgerScreen());
     } else if (index == 4) {
-      // ✅ รีเฟรชข้อมูลหน้า โปรไฟล์ ก่อนข้ามหน้า
-      if (Get.isRegistered<ProfileController>()) {
-        Get.find<ProfileController>().loadProfileData();
-      }
-      Get.to(() => const ProfilePage());
+      if (Get.isRegistered<ProfileController>()) Get.delete<ProfileController>();
+      Get.off(() => const ProfilePage());
     }
   }
 

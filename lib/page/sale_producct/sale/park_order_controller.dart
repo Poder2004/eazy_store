@@ -9,11 +9,14 @@ class ParkOrderController extends GetxController {
   int get count => parkedOrders.length;
 
   void parkCurrentOrder(List<ProductItem> cartItems) {
+    // group ด้วย lineKey (ไม่ใช่แค่ product id) เพื่อไม่ให้สินค้าเดียวกันแต่คนละ
+    // หน่วย (เช่น ขวด กับ ลัง) ถูกนับรวมเป็นแถวเดียวกันตอนพักออเดอร์
     final Map<String, ParkedItem> grouped = {};
     for (final item in cartItems) {
-      if (grouped.containsKey(item.id)) {
-        final existing = grouped[item.id]!;
-        grouped[item.id] = ParkedItem(
+      final key = item.lineKey;
+      if (grouped.containsKey(key)) {
+        final existing = grouped[key]!;
+        grouped[key] = ParkedItem(
           id: existing.id,
           name: existing.name,
           price: existing.price,
@@ -21,9 +24,12 @@ class ParkOrderController extends GetxController {
           imagePath: existing.imagePath,
           maxStock: existing.maxStock,
           quantity: existing.quantity + 1,
+          unitId: existing.unitId,
+          unitName: existing.unitName,
+          conversionQty: existing.conversionQty,
         );
       } else {
-        grouped[item.id] = ParkedItem(
+        grouped[key] = ParkedItem(
           id: item.id,
           name: item.name,
           price: item.price,
@@ -31,6 +37,9 @@ class ParkOrderController extends GetxController {
           imagePath: item.imagePath,
           maxStock: item.maxStock,
           quantity: 1,
+          unitId: item.unitId,
+          unitName: item.unitName,
+          conversionQty: item.conversionQty,
         );
       }
     }
