@@ -410,23 +410,22 @@ class ApiProduct {
     }
   }
 
-  // อัปเดตสต็อก (Update Stock)
+  // อัปเดตสต็อก (Update Stock) — RESTful: PATCH /products/:id/stock
   static Future<bool> updateStock(int productId, int amountToAdd) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/products/stock');
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId/stock');
 
     try {
       await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
-      final response = await http.put(
+      final response = await http.patch(
         url,
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
         },
         body: jsonEncode({
-          "product_id": productId,
           "stock":
               amountToAdd, // ส่งจำนวนที่ต้องการเพิ่มไป (Backend จะไป + เอง)
         }),
