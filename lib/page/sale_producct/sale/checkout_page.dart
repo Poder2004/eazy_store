@@ -3,6 +3,7 @@ import 'package:eazy_store/model/request/baskets_model.dart';
 import 'package:eazy_store/page/sale_producct/sale/park_order_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/parked_orders_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../menu_bar/bottom_navbar.dart';
 import 'checkout_controller.dart';
@@ -1026,7 +1027,13 @@ class _PaymentBottomSheet extends StatelessWidget {
           child: TextField(
             controller: ctrl,
             readOnly: !isEditable,
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: false,
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+            ],
             textAlign: TextAlign.right,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             decoration: InputDecoration(

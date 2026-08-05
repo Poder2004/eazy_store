@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 // --- Imports ไฟล์ของคุณ ---
@@ -292,7 +293,13 @@ class DebtPaymentScreen extends StatelessWidget {
                     controller: controller.amountPaidController,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
+                      signed: false,
                     ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}'),
+                      ),
+                    ],
                     textAlign: TextAlign.left,
                     style: const TextStyle(
                       fontSize: 30,

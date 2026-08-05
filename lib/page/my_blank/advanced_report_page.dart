@@ -195,7 +195,6 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                             height: 1.1,
                           ),
                         ),
-                        
                       ],
                     ),
                   ),
@@ -560,8 +559,10 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
         .toList();
     final maxY = displayData.isEmpty
         ? 1000.0
-        : (displayData.map((e) => e.totalSales).reduce((a, b) => a > b ? a : b)) *
-          1.45;
+        : (displayData
+                  .map((e) => e.totalSales)
+                  .reduce((a, b) => a > b ? a : b)) *
+              1.45;
 
     // Monthly: 10px/day (dense, ~310px for 31 days)
     // Yearly: 40px/point to prevent cramped labels
@@ -1132,6 +1133,28 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             ),
             title: 'รายงานอายุหนี้',
             sub: 'Aging Report',
+            trailing: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F5FA),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.bolt_rounded, size: 12, color: _kInk2),
+                  SizedBox(width: 3),
+                  Text(
+                    'ณ วันนี้',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _kInk2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
           // Stacked bar
           ClipRRect(
@@ -1206,13 +1229,17 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             ),
           ),
           const SizedBox(height: 10),
+
+          const SizedBox(height: 10),
           const Row(
             children: [
-              Icon(Icons.touch_app_rounded, size: 11, color: _kInk3),
+              Icon(Icons.info_outline_rounded, size: 11, color: _kInk3),
               SizedBox(width: 4),
-              Text(
-                'แตะแต่ละสถานะเพื่อดูรายชื่อลูกหนี้',
-                style: TextStyle(fontSize: 11, color: _kInk3),
+              Expanded(
+                child: Text(
+                  'แสดงสถานะล่าสุด ณ วันนี้เสมอ ไม่ขึ้นกับช่วงเวลาที่เลือกด้านบน',
+                  style: TextStyle(fontSize: 11, color: _kInk3),
+                ),
               ),
             ],
           ),
@@ -1278,11 +1305,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             ),
             if (onTap != null) ...[
               const SizedBox(width: 4),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: _kInk4,
-              ),
+              const Icon(Icons.chevron_right_rounded, size: 16, color: _kInk4),
             ],
           ],
         ),
@@ -1312,7 +1335,10 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             return const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 60),
-                child: CircularProgressIndicator(color: _kInk3, strokeWidth: 2.5),
+                child: CircularProgressIndicator(
+                  color: _kInk3,
+                  strokeWidth: 2.5,
+                ),
               ),
             );
           }
