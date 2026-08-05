@@ -115,12 +115,19 @@ class LoginController extends GetxController {
               Row(
                 children: [
                   Expanded(
-                    child: TextButton(
+                    child: OutlinedButton(
                       onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.grey[350]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                       child: Text(
                         "ยกเลิก",
                         style: TextStyle(
-                          color: Colors.grey[400],
+                          color: Colors.grey[800],
                           fontWeight: FontWeight.bold,
                         ),
                       ),

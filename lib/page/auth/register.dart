@@ -76,7 +76,7 @@ class SignupController extends GetxController {
       if (response.error!.contains("ถูกใช้งานแล้ว")) {
         _showError(
           "สมัครไม่สำเร็จ",
-          "อีเมลหรือข้อมูลนี้ถูกใช้งานและยืนยันตัวตนไปแล้ว กรุณาใช้ข้อมูลอื่น",
+          "อีเมลหรือเบอร์โทรนี้ถูกใช้งานไปแล้ว กรุณาใช้ข้อมูลอื่น",
         );
       } else {
         _showError("ไม่สำเร็จ", response.error ?? "เกิดข้อผิดพลาด");
@@ -86,42 +86,257 @@ class SignupController extends GetxController {
 
   // --- Helper UI Functions ---
   void _showWarning(String title, String msg) {
-    Get.snackbar(
-      title,
-      msg,
-      backgroundColor: Colors.orange,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
+    _showPopup(
+      title: title,
+      message: msg,
+      icon: Icons.error_outline_rounded,
+      color: Colors.orange,
     );
   }
 
   void _showError(String title, String msg) {
-    Get.snackbar(
-      title,
-      msg,
-      backgroundColor: Colors.redAccent,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.TOP,
+    _showPopup(
+      title: title,
+      message: msg,
+      icon: Icons.cancel_rounded,
+      color: Colors.redAccent,
     );
   }
 
   void _showSuccessPopup(String title, String msg, String email, String name) {
-    Get.defaultDialog(
-      title: title,
-      middleText: msg,
-      radius: 15,
+    const Color primaryGreen = Color(0xFF00C853);
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 30),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 42),
+              padding: const EdgeInsets.fromLTRB(24, 54, 24, 24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 30,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: primaryGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    msg,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryGreen.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: primaryGreen.withValues(alpha: 0.25),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.email_outlined,
+                          size: 16,
+                          color: primaryGreen,
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            email,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: primaryGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryGreen,
+                        foregroundColor: Colors.white,
+                        elevation: 3,
+                        shadowColor: primaryGreen.withValues(alpha: 0.4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () {
+                        Get.back(); // ปิด Dialog
+                        // ไปหน้ายืนยัน OTP พร้อมส่ง Arguments
+                        Get.to(
+                          () => const VerifyRegistrationPage(),
+                          arguments: {"email": email, "username": name},
+                        );
+                      },
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                      label: const Text(
+                        "ไปหน้ายืนยัน OTP",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 550),
+              curve: Curves.elasticOut,
+              builder: (context, value, child) {
+                return Transform.scale(scale: value, child: child);
+              },
+              child: Container(
+                width: 84,
+                height: 84,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF00E676), primaryGreen],
+                  ),
+                  border: Border.all(color: Colors.white, width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryGreen.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.mark_email_read_rounded,
+                  color: Colors.white,
+                  size: 38,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
       barrierDismissible: false,
-      textConfirm: "ไปหน้ายืนยัน OTP",
-      buttonColor: const Color(0xFF00C853),
-      confirmTextColor: Colors.white,
-      onConfirm: () {
-        Get.back(); // ปิด Dialog
-        // ไปหน้ายืนยัน OTP พร้อมส่ง Arguments
-        Get.to(
-          () => const VerifyRegistrationPage(),
-          arguments: {"email": email, "username": name},
-        );
-      },
+    );
+  }
+
+  void _showPopup({
+    required String title,
+    required String message,
+    required IconData icon,
+    required Color color,
+    String confirmText = "ตกลง",
+    bool barrierDismissible = true,
+    VoidCallback? onConfirm,
+  }) {
+    Get.dialog(
+      Dialog(
+        backgroundColor: Colors.white,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 30),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 30, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 40, color: color),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 26),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: onConfirm ?? () => Get.back(),
+                  child: Text(
+                    confirmText,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: barrierDismissible,
     );
   }
 }
@@ -420,7 +635,10 @@ class _SignupPageState extends State<SignupPage> {
                     onPointerUp: (_) => onPressEnd?.call(),
                     onPointerCancel: (_) => onPressEnd?.call(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
                       child: Icon(
                         obscureText ? Icons.visibility_off : Icons.visibility,
                         color: Colors.grey,

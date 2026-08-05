@@ -519,6 +519,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
           children: [
             header,
             Container(
+              width: double.infinity,
               height: 100,
               decoration: BoxDecoration(
                 color: _kSurface2,
