@@ -286,9 +286,38 @@ class CheckoutPage extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    "$qty ${item.category == 'เครื่องดื่ม' ? 'ขวด' : 'ชิ้น'}",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  // ✨ แตะเพื่อพิมพ์จำนวนเองได้เลย ไม่ต้องกด +/- ทีละครั้งเวลาซื้อเยอะๆ
+                  GestureDetector(
+                    onTap: () => _showEditQuantityDialog(item, qty, controller),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "$qty ${item.unit}",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.edit,
+                            size: 13,
+                            color: Colors.grey[500],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -310,8 +339,8 @@ class CheckoutPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "ต่อหน่วย ${item.price.toInt()}",
-                  style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  "ราคาต่อหน่วย ${item.price.toInt() } บาท",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -343,6 +372,157 @@ class CheckoutPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ✨ Dialog พิมพ์จำนวนสินค้าโดยตรง ใช้เวลาซื้อจำนวนมากๆ ไม่ต้องกด +/- ทีละครั้ง
+  void _showEditQuantityDialog(
+    ProductItem item,
+    int currentQty,
+    CheckoutController controller,
+  ) {
+    final qtyCtrl = TextEditingController(text: currentQty.toString());
+    final unit = item.unit;
+    String? errorText;
+
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setState) {
+          void trySubmit() {
+            final newQty = int.tryParse(qtyCtrl.text);
+            if (newQty == null) {
+              Get.back();
+              return;
+            }
+            // ✨ แจ้งเตือนทันทีถ้ากรอกเกินสต็อกที่มี แทนที่จะเงียบๆ ตัดให้เหลือแค่จำนวนสูงสุด
+            if (newQty > item.maxStock) {
+              setState(() {
+                errorText = "สต็อกมีไม่พอ เหลือเพียง ${item.maxStock} $unit";
+              });
+              return;
+            }
+            Get.back();
+            controller.setItemQuantity(item, newQty);
+          }
+
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "มีในสต็อก ${item.maxStock} $unit",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    controller: qtyCtrl,
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    onChanged: (_) {
+                      if (errorText != null) setState(() => errorText = null);
+                    },
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F5),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: errorText == null
+                            ? BorderSide.none
+                            : const BorderSide(color: Colors.red, width: 1.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: errorText == null
+                            ? BorderSide.none
+                            : const BorderSide(color: Colors.red, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onSubmitted: (_) => trySubmit(),
+                  ),
+                  if (errorText != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      errorText!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Get.back(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey[200],
+                            foregroundColor: Colors.grey[700],
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text("ยกเลิก"),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: trySubmit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00C853),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text(
+                            "ยืนยัน",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -802,7 +982,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
-                        "📱 ให้ลูกค้าสแกนจ่ายผ่านแอปธนาคาร",
+                        "ให้ลูกค้าสแกนจ่ายผ่านแอปธนาคาร",
                         style: TextStyle(color: Colors.blue),
                       ),
                     ),

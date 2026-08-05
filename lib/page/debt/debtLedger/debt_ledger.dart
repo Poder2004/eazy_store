@@ -190,113 +190,115 @@ class DebtLedgerScreen extends StatelessWidget {
 
     return Card(
       color: _kCardColor,
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-      margin: const EdgeInsets.only(bottom: 15),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0), // ปรับ Padding ให้ดูโปร่งขึ้น
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    debtor.name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    debtor.phone,
-                    style: TextStyle(fontSize: 15, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 6),
-                  // ✨ เปลี่ยนจากการใช้ Row มาใช้ Wrap เพื่อให้ข้อความไหลลงบรรทัดใหม่ได้ถ้าฟอนต์ใหญ่
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.end,
-                    children: [
-                      Text(
-                        'ค้าง ',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-                      ),
-                      Text(
-                        debtAmount.toStringAsFixed(2),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10.0),
+        onTap: () {
+          Get.to(() => DebtorDetailScreen(debtor: debtor));
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            debtor.name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      const Text(
-                        ' บาท',
-                        style: TextStyle(fontSize: 16, color: Colors.red),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  InkWell(
-                    onTap: () {
-                      Get.to(() => DebtorDetailScreen(debtor: debtor));
-                    },
-                    // ✨ ลบ Row ทิ้งไปเลย ให้เหลือแค่ Text และขีดเส้นใต้ให้รู้ว่ากดได้ (ป้องกัน Overflow)
-                    child: const Text(
-                      'รายละเอียดเพิ่มเติม',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color.fromARGB(255, 0, 119, 255),
-                        decoration: TextDecoration.underline,
-                      ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            debtor.phone,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: Colors.grey[500],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    // ✨ ใช้ Wrap เพื่อให้ข้อความไหลลงบรรทัดใหม่ได้ถ้าฟอนต์ใหญ่
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      children: [
+                        Text(
+                          'ค้าง ',
+                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        ),
+                        Text(
+                          debtAmount.toStringAsFixed(2),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                        const Text(
+                          ' บาท',
+                          style: TextStyle(fontSize: 13, color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            // ส่วนปุ่มชำระเงิน
-            Column(
-              children: [
-                SizedBox(
-                  height: 38,
-                  child: ElevatedButton(
-                    onPressed: debtAmount > 0
-                        ? () => controller.goToPaymentScreen(debtor)
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _kPayButtonColor,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade300,
-                      disabledForegroundColor: Colors.grey.shade500,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      elevation: debtAmount > 0 ? 2 : 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+              const SizedBox(width: 10),
+              // ปุ่มชำระเงิน
+              SizedBox(
+                height: 32,
+                child: ElevatedButton(
+                  onPressed: debtAmount > 0
+                      ? () => controller.goToPaymentScreen(debtor)
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kPayButtonColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    disabledForegroundColor: Colors.grey.shade500,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
-                    // ✨ ใช้ FittedBox หุ้มข้อความ เพื่อไม่ให้ปุ่มแตกเวลาฟอนต์ขยาย
-                    child: const FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'ชำระเงิน',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    elevation: debtAmount > 0 ? 1 : 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  // ✨ ใช้ FittedBox หุ้มข้อความ เพื่อไม่ให้ปุ่มแตกเวลาฟอนต์ขยาย
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'ชำระเงิน',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -348,7 +350,7 @@ class DebtLedgerScreen extends StatelessWidget {
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20.0,
-                      vertical: 8,
+                      vertical: 4,
                     ),
                     itemCount: controller.allDebtors.length,
                     itemBuilder: (context, index) {

@@ -322,6 +322,7 @@ class CheckoutController extends GetxController {
           category: product.categoryName ?? 'ทั่วไป',
           imagePath: product.imgProduct,
           maxStock: product.stock,
+          unit: product.unit.isNotEmpty ? product.unit : 'ชิ้น',
         ),
       );
     } else {
@@ -346,6 +347,7 @@ class CheckoutController extends GetxController {
           category: item.category,
           imagePath: item.imagePath,
           maxStock: item.maxStock,
+          unit: item.unit,
         ),
       );
     } else {
@@ -362,6 +364,45 @@ class CheckoutController extends GetxController {
   void decreaseItem(ProductItem item) {
     int index = cartItems.indexWhere((e) => e.id == item.id);
     if (index != -1) cartItems.removeAt(index);
+  }
+
+  // ✨ ตั้งจำนวนสินค้าโดยตรง (ใช้ตอนพิมพ์จำนวนเอง แทนการกด +/- ทีละครั้ง)
+  void setItemQuantity(ProductItem item, int newQty) {
+    final clamped = newQty.clamp(0, item.maxStock);
+    final currentQty = cartItems.where((i) => i.id == item.id).length;
+
+    if (clamped == currentQty) return;
+
+    if (clamped == 0) {
+      cartItems.removeWhere((i) => i.id == item.id);
+      return;
+    }
+
+    if (clamped > currentQty) {
+      final toAdd = clamped - currentQty;
+      cartItems.addAll(
+        List.generate(
+          toAdd,
+          (_) => ProductItem(
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            category: item.category,
+            imagePath: item.imagePath,
+            maxStock: item.maxStock,
+            unit: item.unit,
+          ),
+        ),
+      );
+    } else {
+      var toRemove = currentQty - clamped;
+      for (int i = cartItems.length - 1; i >= 0 && toRemove > 0; i--) {
+        if (cartItems[i].id == item.id) {
+          cartItems.removeAt(i);
+          toRemove--;
+        }
+      }
+    }
   }
 
   void removeItem(ProductItem item) =>
@@ -427,6 +468,7 @@ class CheckoutController extends GetxController {
           category: pi.category,
           imagePath: pi.imagePath,
           maxStock: effectiveMaxStock,
+          unit: pi.unit,
         ));
       }
     }

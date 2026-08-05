@@ -1,6 +1,7 @@
 // ไฟล์: lib/page/product/product_detail_controller.dart
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/model/response/product_response.dart';
+import 'package:eazy_store/widgets/info_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -43,17 +44,23 @@ class ProductDetailController extends GetxController {
         ); // กลับไปหน้ารายการสินค้า พร้อมส่ง true กลับไปเพื่อให้หน้าก่อนหน้ารีเฟรช
 
         // เช็คว่าเป็นการลบจริง หรือแค่ซ่อน เพื่อแสดงข้อความให้เหมาะสม
-        String msg = result['status'] == 'hidden'
-            ? "สินค้านี้เคยถูกขายแล้ว ระบบได้ทำการซ่อนสินค้าแทนการลบถาวร"
-            : "ลบสินค้าออกจากระบบเรียบร้อยแล้ว";
-
-        Get.snackbar(
-          "สำเร็จ",
-          msg,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
+        // ✨ ใช้ Dialog แทน Snackbar เพราะข้อความยาวและสำคัญ ต้องให้ผู้ใช้อ่านจบก่อนปิดเอง
+        // ✨ เปลี่ยนคำอธิบายให้เข้าใจง่ายขึ้น (คนทั่วไปที่ไม่รู้จักระบบอ่านแล้วต้องเข้าใจ)
+        if (result['status'] == 'hidden') {
+          InfoDialog.show(
+            title: "ซ่อนสินค้าเรียบร้อยแล้ว",
+            message:
+                "สินค้านี้เคยถูกขายไปแล้ว จึงไม่สามารถลบออกจากระบบได้ทั้งหมด\n"
+                "ระบบจึงซ่อนสินค้านี้ไว้แทน จะไม่แสดงในหน้าขายสินค้าอีกต่อไป",
+            icon: Icons.visibility_off_rounded,
+            iconColor: Colors.orange,
+          );
+        } else {
+          InfoDialog.show(
+            title: "ลบสินค้าสำเร็จ",
+            message: "ลบสินค้าออกจากระบบเรียบร้อยแล้ว",
+          );
+        }
       } else {
         Get.snackbar(
           "ผิดพลาด",

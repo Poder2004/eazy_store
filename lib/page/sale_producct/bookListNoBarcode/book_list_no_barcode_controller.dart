@@ -106,6 +106,9 @@ class ManualListController extends GetxController {
         category: (item['category_name'] ?? "อื่นๆ").toString().trim(),
         imagePath: item['img_product'] ?? item['image'] ?? "",
         maxStock: item['stock'] ?? 999, // ดึง stock จาก API มาใส่
+        unit: (item['unit'] ?? '').toString().trim().isNotEmpty
+            ? item['unit'].toString().trim()
+            : 'ชิ้น',
       );
     }).toList();
     allProducts.assignAll(products);

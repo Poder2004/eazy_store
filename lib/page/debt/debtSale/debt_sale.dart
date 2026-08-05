@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 // --- Imports ---
@@ -328,7 +329,7 @@ class DebtSalePage extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        "${items.length} ${item.category == 'เครื่องดื่ม' ? 'ขวด' : 'ชิ้น'}",
+                        "${items.length} ${item.unit}",
                         style: TextStyle(color: Colors.grey[500], fontSize: 13),
                       ),
                     ],
@@ -631,7 +632,12 @@ class DebtSalePage extends StatelessWidget {
       controller: ctrl,
       readOnly: readOnly,
       textAlign: TextAlign.right,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      keyboardType: isNumber
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
+      inputFormatters: isNumber
+          ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))]
+          : null,
       style: TextStyle(
         fontWeight: readOnly ? FontWeight.w500 : FontWeight.bold,
         fontSize: 16,

@@ -21,6 +21,7 @@ class ParkOrderController extends GetxController {
           imagePath: existing.imagePath,
           maxStock: existing.maxStock,
           quantity: existing.quantity + 1,
+          unit: existing.unit,
         );
       } else {
         grouped[item.id] = ParkedItem(
@@ -31,6 +32,7 @@ class ParkOrderController extends GetxController {
           imagePath: item.imagePath,
           maxStock: item.maxStock,
           quantity: 1,
+          unit: item.unit,
         );
       }
     }

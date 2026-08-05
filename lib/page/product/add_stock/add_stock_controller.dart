@@ -75,6 +75,12 @@ class AddStockController extends GetxController {
       _suppressSearch = false;
       return;
     }
+    // ✨ ถ้าเลือกสินค้าอยู่แล้วและข้อความยังตรงกับชื่อสินค้านั้น ไม่ต้องค้นหาซ้ำ
+    // (กัน TextEditingController ยิง listener ซ้ำตอน set .text ใน selectProduct
+    // จนเผลอค้นหาด้วยชื่อ ทำให้หาไม่เจอ exact match แล้วเด้งกลับไปเป็นหน้าเลือกสินค้า)
+    if (foundProduct.value != null && query == foundProduct.value!.name) {
+      return;
+    }
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (query.trim().isNotEmpty) {
@@ -144,6 +150,8 @@ class AddStockController extends GetxController {
 
   // ✅ เลือกสินค้าจาก dropdown (หรือจากการสแกนที่ตรงแบบเป๊ะๆ)
   void selectProduct(ProductResponse match) {
+    // ✨ ยกเลิก timer ค้นหาที่ค้างอยู่ กันไม่ให้ยิงค้นหาซ้ำหลังเลือกสินค้าแล้ว
+    _debounce?.cancel();
     foundProduct.value = match;
     showDropdown.value = false;
     isPriceEditExpanded.value = false;

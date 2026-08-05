@@ -93,7 +93,7 @@ class EditProfilePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // ✨ ช่องรหัสผ่าน โยน controller หลักเข้าไปเพื่อให้ปุ่มตาทำงานได้
+                 
                     _buildTextField(
                       controller: controller.passwordCtrl,
                       label: "รหัสผ่านใหม่",
@@ -211,7 +211,7 @@ class EditProfilePage extends StatelessWidget {
             ),
           )
         else
-          // ถ้าไม่ใช่รหัสผ่าน ไม่ต้องมี Obx เพื่อแก้ปัญหา GetX Error
+       
           _buildInputForm(
             controller: controller,
             icon: icon,
@@ -225,9 +225,9 @@ class EditProfilePage extends StatelessWidget {
           Text(
             helperText,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11.5,
               color: isPassword
-                  ? Colors.blueGrey.shade300
+                  ? const Color.fromARGB(255, 45, 69, 80)
                   : const Color(0xFFF59E0B),
               fontStyle: FontStyle.italic,
             ),
