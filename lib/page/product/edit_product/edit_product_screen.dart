@@ -5,6 +5,7 @@ import 'package:eazy_store/widgets/category_bottom_sheet.dart';
 import 'package:eazy_store/widgets/category_disable_dialog.dart';
 import 'package:eazy_store/widgets/inactive_categories_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'edit_product_controller.dart'; // ✅ นำเข้า Controller ที่แยกไว้
 
@@ -630,6 +631,9 @@ class EditProductScreen extends StatelessWidget {
       controller: controller,
       readOnly: readOnly,
       keyboardType: keyboardType,
+      inputFormatters: keyboardType == TextInputType.number
+          ? [FilteringTextInputFormatter.digitsOnly]
+          : null,
       validator: validator,
       style: TextStyle(
         fontWeight: isPrice ? FontWeight.bold : FontWeight.normal,

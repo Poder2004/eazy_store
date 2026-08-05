@@ -219,9 +219,28 @@ class ProductDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           // ปุ่มลบ
-          IconButton(
-            onPressed: () => _confirmDelete(controller),
-            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 30),
+          // ✨ ใส่กรอบ+พื้นหลังให้ดูเป็นปุ่มชัดเจน ไม่ใช่แค่ไอคอนลอยๆ (เข้าใจง่ายขึ้นว่ากดได้)
+          Material(
+            color: Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _confirmDelete(controller),
+              child: Container(
+                width: 54,
+                height: 54,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withOpacity(0.4)),
+                ),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 26,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 10),
 

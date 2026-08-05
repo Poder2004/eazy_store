@@ -91,34 +91,54 @@ class MyShopPage extends StatelessWidget {
                               key: ValueKey(shop.shopId),
 
                               // Action Pane ด้านขวา (ปัดซ้าย)
+                              // ✨ ลด extentRatio ลง (ค่าเริ่มต้น 0.5) ให้ปุ่มแคบลง ไม่ใหญ่เกินไป
                               endActionPane: ActionPane(
                                 motion: const ScrollMotion(),
+                                extentRatio: 0.34,
                                 children: [
                                   // ปุ่มแก้ไข
-                                  SlidableAction(
+                                  CustomSlidableAction(
                                     onPressed: (context) {
                                       controller.goToEditShop(shop);
                                     },
                                     backgroundColor: Colors.blue,
                                     foregroundColor: Colors.white,
-                                    icon: Icons.edit,
-                                    label: 'แก้ไข',
                                     borderRadius: const BorderRadius.horizontal(
                                       left: Radius.circular(15),
                                     ),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.edit, size: 18),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'แก้ไข',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   // ปุ่มลบ
-                                  SlidableAction(
+                                  CustomSlidableAction(
                                     onPressed: (context) {
                                       // เรียกใช้ฟังก์ชันที่เราเตรียมไว้ใน Controller ตัวเดียวจบ
                                       controller.confirmAndDeleteShop(shop);
                                     },
                                     backgroundColor: Colors.red,
                                     foregroundColor: Colors.white,
-                                    icon: Icons.delete,
-                                    label: 'ลบ',
                                     borderRadius: const BorderRadius.horizontal(
                                       right: Radius.circular(15),
+                                    ),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.delete, size: 18),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'ลบ',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],

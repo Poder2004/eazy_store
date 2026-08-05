@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -49,6 +50,10 @@ class DebtRegisterScreen extends StatelessWidget {
               hint: 'เบอร์โทรศัพท์',
               controller: controller.phoneController,
               keyboardType: TextInputType.phone,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(10),
+              ],
             ),
 
             const Padding(
@@ -106,7 +111,10 @@ class DebtRegisterScreen extends StatelessWidget {
               label: 'วงเงินค้างชำระ',
               hint: 'วงเงินค้างชำระ',
               controller: controller.creditLimitController,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
             ),
 
             const SizedBox(height: 40),
@@ -144,6 +152,7 @@ class DebtRegisterScreen extends StatelessWidget {
     required String hint,
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
     bool isAddress = false,
   }) {
     return Column(
@@ -172,9 +181,11 @@ class DebtRegisterScreen extends StatelessWidget {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.symmetric(horizontal: 15),
               hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey.shade400),
               border: InputBorder.none,
             ),
           ),

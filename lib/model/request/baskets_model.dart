@@ -7,6 +7,7 @@ class ProductItem {
   final String category;
   final String imagePath;
   final int maxStock;
+  final String unit;
   RxBool showDelete;
 
   ProductItem({
@@ -16,5 +17,6 @@ class ProductItem {
     required this.category,
     required this.imagePath,
     required this.maxStock,
+    required this.unit,
   }) : showDelete = false.obs;
 }

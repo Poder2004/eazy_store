@@ -22,6 +22,7 @@ class ParkedItem {
   final String imagePath;
   final int maxStock;
   final int quantity;
+  final String unit;
 
   ParkedItem({
     required this.id,
@@ -31,5 +32,6 @@ class ParkedItem {
     required this.imagePath,
     required this.maxStock,
     required this.quantity,
+    required this.unit,
   });
 }

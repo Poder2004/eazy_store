@@ -6,6 +6,7 @@ import 'package:eazy_store/widgets/category_bottom_sheet.dart';
 import 'package:eazy_store/widgets/category_disable_dialog.dart';
 import 'package:eazy_store/widgets/inactive_categories_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'add_product_controller.dart'; // ✅ นำเข้า Controller ที่แยกไว้
@@ -93,6 +94,7 @@ class AddProductScreen extends StatelessWidget {
                           textController: controller.costController,
                           hintText: "0.00",
                           isNumber: true,
+                          allowDecimal: true,
                           icon: Icons.monetization_on_outlined,
                         ),
                       ),
@@ -103,6 +105,7 @@ class AddProductScreen extends StatelessWidget {
                           textController: controller.salePriceController,
                           hintText: "0.00",
                           isNumber: true,
+                          allowDecimal: true,
                           icon: Icons.sell_outlined,
                           isHighlight: true,
                         ),
@@ -234,6 +237,7 @@ class AddProductScreen extends StatelessWidget {
     required TextEditingController textController,
     required String hintText,
     bool isNumber = false,
+    bool allowDecimal = false,
     IconData? icon,
     bool isHighlight = false,
   }) {
@@ -261,7 +265,18 @@ class AddProductScreen extends StatelessWidget {
           ),
           child: TextField(
             controller: textController,
-            keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+            keyboardType: isNumber
+                ? TextInputType.numberWithOptions(decimal: allowDecimal)
+                : TextInputType.text,
+            inputFormatters: isNumber
+                ? [
+                    FilteringTextInputFormatter.allow(
+                      allowDecimal
+                          ? RegExp(r'^\d*\.?\d{0,2}')
+                          : RegExp(r'^\d*'),
+                    ),
+                  ]
+                : null,
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
@@ -806,6 +821,9 @@ class AddProductScreen extends StatelessWidget {
                 child: TextField(
                   controller: controller.idController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   decoration: InputDecoration(
                     hintText: "พิมพ์หรือสแกน",
                     hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
