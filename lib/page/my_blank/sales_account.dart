@@ -404,7 +404,7 @@ class SalesAccountScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'บิล #${item.saleId}',
+                              'บิล',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
@@ -487,7 +487,7 @@ class SalesAccountScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DetailSheet(
-        title: 'บิล #${bill.saleId}',
+        title: 'บิล',
         icon: Icons.receipt_long_rounded,
         iconColor: _kPurple,
         contentBuilder: (scrollCtrl) => Obx(() {
