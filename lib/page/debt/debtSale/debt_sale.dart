@@ -216,7 +216,7 @@ class DebtSalePage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              debtor.name,
+                              "${debtor.name} (${debtor.phone})",
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -226,7 +226,7 @@ class DebtSalePage extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              "${debtor.phone}  •  วงเงินคงเหลือ ${controller.creditRemain.toInt()} ฿",
+                              "วงเงินคงเหลือ ${controller.creditRemain.toInt()} ฿",
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: 13,
@@ -324,27 +324,21 @@ class DebtSalePage extends StatelessWidget {
             var item = items.first;
             return Row(
               children: [
-                _buildQtyCounter(item, checkoutController),
-                const SizedBox(width: 15),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        "${items.length} ${item.unit}",
-                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                      ),
-                    ],
+                  child: Text(
+                    item.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  "${items.length} ${item.unit}",
+                  style: TextStyle(color: Colors.grey[500], fontSize: 13),
                 ),
                 const SizedBox(width: 10),
                 FittedBox(
@@ -507,7 +501,7 @@ class DebtSalePage extends StatelessWidget {
               child: _actionBtn(
                 "ล้าง",
                 Colors.grey.shade100,
-                () => controller.clearForm(checkoutController),
+                () => controller.confirmClearForm(checkoutController),
                 textColor: Colors.black87,
               ),
             ),
@@ -670,31 +664,6 @@ class DebtSalePage extends StatelessWidget {
           ),
           Expanded(flex: 3, child: inputWidget),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQtyCounter(dynamic item, CheckoutController controller) {
-    return Column(
-      children: [
-        _miniBtn(Icons.add, () => controller.increaseItem(item)),
-        const SizedBox(height: 5),
-        _miniBtn(Icons.remove, () => controller.decreaseItem(item)),
-      ],
-    );
-  }
-
-  Widget _miniBtn(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Icon(icon, size: 16, color: Colors.black87),
       ),
     );
   }

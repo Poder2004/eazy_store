@@ -85,7 +85,7 @@ class MyShopController extends GetxController {
         "ลบร้านค้าเรียบร้อยแล้ว",
         backgroundColor: Colors.green,
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
       );
     } else {
       Get.snackbar(
@@ -93,7 +93,7 @@ class MyShopController extends GetxController {
         "ไม่สามารถลบร้านค้าได้",
         backgroundColor: Colors.red,
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
       );
     }
   }

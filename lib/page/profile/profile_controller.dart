@@ -310,6 +310,7 @@ class ProfileController extends GetxController {
                   child: OutlinedButton(
                     onPressed: () => Get.back(),
                     style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: Colors.grey.shade200),
                       shape: RoundedRectangleBorder(

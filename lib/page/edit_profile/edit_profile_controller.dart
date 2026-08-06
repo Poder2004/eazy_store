@@ -211,6 +211,7 @@ class EditProfileController extends GetxController {
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),

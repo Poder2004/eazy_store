@@ -153,6 +153,7 @@ class CategoryDisableDialog {
                   onPressed: () =>
                       Navigator.of(context, rootNavigator: true).pop(),
                   style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade100,
                     foregroundColor: Colors.grey[700],
                     side: BorderSide(color: Colors.grey[300]!),
                     shape: RoundedRectangleBorder(
@@ -246,6 +247,7 @@ class CategoryDisableDialog {
     return OutlinedButton(
       onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
       style: OutlinedButton.styleFrom(
+        backgroundColor: Colors.grey.shade100,
         foregroundColor: Colors.grey[700],
         side: BorderSide(color: Colors.grey[300]!),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

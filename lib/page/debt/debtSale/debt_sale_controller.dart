@@ -12,6 +12,7 @@ import '../../sale_producct/sale/checkout_controller.dart';
 import '../../homepage/home_page.dart';
 import '../debtRegister/debt_register.dart';
 import 'debtor_book_sheet.dart';
+import '../../../widgets/confirm_dialog.dart';
 
 class DebtSaleController extends GetxController {
   final debtorNameController = TextEditingController();
@@ -245,7 +246,7 @@ class DebtSaleController extends GetxController {
         "เลือก ${result.name} เป็นผู้ค้างชำระเรียบร้อยแล้ว",
         backgroundColor: Colors.green,
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
       );
     }
   }
@@ -403,6 +404,7 @@ class DebtSaleController extends GetxController {
                       child: OutlinedButton(
                         onPressed: () => Get.back(),
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade100,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: BorderSide(color: Colors.grey.shade300),
                           shape: RoundedRectangleBorder(
@@ -542,7 +544,7 @@ class DebtSaleController extends GetxController {
           "บันทึกการค้างชำระเรียบร้อยแล้ว",
           backgroundColor: Colors.green,
           colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
+          snackPosition: SnackPosition.TOP,
         );
         checkoutController.clearAll();
         Get.offAll(() => const HomePage());
@@ -636,5 +638,15 @@ class DebtSaleController extends GetxController {
     debtRemarkController.clear();
     selectedDebtorRx.value = null;
     checkoutController.clearAll();
+  }
+
+  void confirmClearForm(CheckoutController checkoutController) {
+    ConfirmDialog.show(
+      title: "ล้างรายการ",
+      message: "ต้องการล้างข้อมูลที่กรอกในหน้านี้ทั้งหมด (ลูกหนี้ที่เลือกและรายการสินค้า) ใช่หรือไม่?",
+      icon: Icons.delete_sweep_rounded,
+      confirmLabel: "ล้าง",
+      onConfirm: () => clearForm(checkoutController),
+    );
   }
 }

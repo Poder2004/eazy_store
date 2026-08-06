@@ -672,6 +672,7 @@ class CheckoutController extends GetxController {
                       child: OutlinedButton(
                         onPressed: () => Get.back(),
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade100,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           side: BorderSide(color: Colors.grey.shade300),
                           shape: RoundedRectangleBorder(

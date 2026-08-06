@@ -410,6 +410,7 @@ class EditProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(
@@ -536,6 +537,7 @@ class EditProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(
