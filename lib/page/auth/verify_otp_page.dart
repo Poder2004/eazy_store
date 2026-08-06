@@ -201,7 +201,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
             ),
             const SizedBox(height: 30),
             const Text(
-              "OTP Verification",
+              "ยืนยันรหัส OTP",
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -263,7 +263,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                        "Verify",
+                        "ยืนยันรหัส",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,

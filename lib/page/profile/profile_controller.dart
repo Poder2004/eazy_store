@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 class ProfileController extends GetxController {
   // ---------------- State Variables ----------------
@@ -202,7 +203,7 @@ class ProfileController extends GetxController {
       if (Get.isDialogOpen == true) Get.back();
       Get.snackbar(
         "ข้อผิดพลาด",
-        "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e",
+        kNetworkErrorMessage,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -233,7 +234,7 @@ class ProfileController extends GetxController {
     try {
       final uri = Uri.parse('$_webBaseUrl$path');
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw Exception('Could not launch URL');
+        throw Exception('ไม่สามารถเปิดลิงก์ได้');
       }
     } catch (e) {
       Get.snackbar(

@@ -137,7 +137,7 @@ class OrderListController extends GetxController {
       if (shopId == 0) {
         Get.back();
         Get.snackbar(
-          "Error",
+          "เกิดข้อผิดพลาด",
           "ไม่พบข้อมูลร้านค้า กรุณาล็อกอินหรือเลือกใช้งานร้านค้าใหม่อีกครั้ง",
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -178,7 +178,12 @@ class OrderListController extends GetxController {
 
         // ตรวจสอบขนาดไฟล์ ถ้าขนาดไฟล์ < 100 bytes แสดงว่าข้อมูลที่ส่งมาผิดปกติ
         if (await file.length() < 100) {
-          Get.snackbar("Error", "ไฟล์ PDF ไม่สมบูรณ์");
+          Get.snackbar(
+            "เกิดข้อผิดพลาด",
+            "ไฟล์ PDF ไม่สมบูรณ์ กรุณาลองใหม่อีกครั้ง",
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
           return;
         }
 
@@ -186,7 +191,7 @@ class OrderListController extends GetxController {
         await OpenFile.open(filePath);
       } else {
         Get.snackbar(
-          "Error",
+          "เกิดข้อผิดพลาด",
           "เซิร์ฟเวอร์ขัดข้อง ไม่สามารถสร้าง PDF ได้",
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -196,8 +201,8 @@ class OrderListController extends GetxController {
       Get.back();
       debugPrint("Export PDF Error: $e");
       Get.snackbar(
-        "Error",
-        "เกิดข้อผิดพลาด: $e",
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาลองใหม่อีกครั้ง",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

@@ -13,6 +13,7 @@ import '../../../model/response/shop_response.dart';
 import '../../../api/api_shop.dart';
 import '../set_shop_pin_page.dart';
 import '../../../api/api_service_image.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 class CreateShopController extends GetxController {
   // --- Input Controllers ---
@@ -47,7 +48,7 @@ class CreateShopController extends GetxController {
       print(
         "Error picking image: $e",
       ); // ปริ้นออกมาดูใน Console ว่า Error จริงๆ คืออะไร
-      Get.snackbar("เกิดข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้: $e");
+      Get.snackbar("เกิดข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
     }
   }
 
@@ -439,7 +440,7 @@ class CreateShopController extends GetxController {
       Get.back();
       isLoading.value = false;
       print("Error submit: $e");
-      Get.snackbar("เกิดข้อผิดพลาด", "$e");
+      Get.snackbar("เกิดข้อผิดพลาด", friendlyError(e, fallback: "ไม่สามารถบันทึกข้อมูลร้านค้าได้ กรุณาลองใหม่อีกครั้ง"));
     }
   }
 

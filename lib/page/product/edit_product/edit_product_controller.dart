@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widgets/image_picker_sheet.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 class EditProductController extends GetxController {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -135,8 +136,46 @@ class EditProductController extends GetxController {
     }
   }
 
+  /// เช็คว่าบาร์โค้ดนี้ถูกใช้กับสินค้าตัวอื่นในร้านแล้วหรือยัง
+  /// คืนค่าชื่อสินค้าที่ใช้บาร์โค้ดนี้อยู่ (null = ใช้ได้)
+  Future<String?> findBarcodeOwner(String barcode) async {
+    final String code = barcode.trim();
+    if (code.isEmpty) return null;
+
+    // ไม่เปลี่ยนจากของเดิม ไม่ต้องเช็ค
+    if (code == (originalProduct.barcode ?? "").trim()) return null;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? originalProduct.shopId;
+
+      final found = await ApiProduct.searchProduct(code, shopId);
+      if (found == null) return null;
+      if (found.productId == originalProduct.productId) return null;
+
+      return found.name;
+    } catch (e) {
+      debugPrint("เช็คบาร์โค้ดซ้ำไม่สำเร็จ: $e");
+      return null; // เช็คไม่ได้ ปล่อยให้เซิร์ฟเวอร์ตัดสินตอนบันทึก
+    }
+  }
+
+  /// เรียกหลังสแกน/กรอกบาร์โค้ดเสร็จ เพื่อเตือนทันทีถ้าซ้ำ
+  Future<void> onBarcodeChanged(String barcode) async {
+    final owner = await findBarcodeOwner(barcode);
+    if (owner == null) return;
+
+    Get.snackbar(
+      "บาร์โค้ดซ้ำ",
+      "บาร์โค้ดนี้ถูกใช้กับสินค้า \"$owner\" ในร้านนี้แล้ว",
+      backgroundColor: Colors.orange,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 4),
+    );
+  }
+
   // แสดง Dialog ยืนยันก่อนบันทึก
-  void confirmSave(BuildContext context) {
+  Future<void> confirmSave(BuildContext context) async {
     if (!formKey.currentState!.validate()) return;
     if (selectedCategory.value == null) {
       Get.snackbar(
@@ -146,6 +185,25 @@ class EditProductController extends GetxController {
         colorText: Colors.white,
       );
       return;
+    }
+
+    // เช็คบาร์โค้ดซ้ำก่อน จะได้ไม่ต้องกดยืนยันแล้วค่อยเด้ง error
+    final String barcode = barcodeCtrl.text.trim();
+    if (barcode.isNotEmpty) {
+      isLoading.value = true;
+      final owner = await findBarcodeOwner(barcode);
+      isLoading.value = false;
+
+      if (owner != null) {
+        Get.snackbar(
+          "บาร์โค้ดซ้ำ",
+          "บาร์โค้ดนี้ถูกใช้กับสินค้า \"$owner\" ในร้านนี้แล้ว กรุณาใช้บาร์โค้ดอื่น",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+        return;
+      }
     }
 
     Get.dialog(
@@ -287,15 +345,15 @@ class EditProductController extends GetxController {
         updateData["img_product"] = newImageUrl;
       }
 
-      ProductResponse? updatedProduct = await ApiProduct.updateProduct(
+      final result = await ApiProduct.updateProduct(
         originalProduct.productId!,
         updateData,
       );
 
       isLoading.value = false;
 
-      if (updatedProduct != null) {
-        Get.back(result: updatedProduct);
+      if (result['success'] == true) {
+        Get.back(result: result['data'] as ProductResponse);
         Get.snackbar(
           "สำเร็จ",
           "แก้ไขข้อมูลเรียบร้อย",
@@ -303,16 +361,23 @@ class EditProductController extends GetxController {
           colorText: Colors.white,
         );
       } else {
+        // ข้อความจากเซิร์ฟเวอร์ เช่น บาร์โค้ดซ้ำกับสินค้าอื่นในร้าน
         Get.snackbar(
-          "ผิดพลาด",
-          "บันทึกข้อมูลไม่สำเร็จ",
+          "บันทึกไม่สำเร็จ",
+          result['message'] ?? "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
           backgroundColor: Colors.red,
           colorText: Colors.white,
+          duration: const Duration(seconds: 4),
         );
       }
     } catch (e) {
       isLoading.value = false;
-      Get.snackbar("Error", "เกิดข้อผิดพลาด: $e", backgroundColor: Colors.red);
+      Get.snackbar(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลสินค้าได้ กรุณาลองใหม่อีกครั้ง",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -349,7 +414,7 @@ class EditProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "เพิ่มหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "เพิ่มหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -398,7 +463,7 @@ class EditProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "แก้ไขหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "แก้ไขหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -450,7 +515,7 @@ class EditProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "ปิดใช้งานหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "ปิดใช้งานหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

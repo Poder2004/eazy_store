@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 const Color _kPrimaryColor = Color(0xFF6B8E23);
 
@@ -101,7 +102,7 @@ class _InactiveCategoriesContentState extends State<_InactiveCategoriesContent> 
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "$e",
+        friendlyError(e, fallback: "กู้คืนหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

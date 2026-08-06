@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -447,7 +448,9 @@ class ApiProduct {
   }
 
   // ✅ ใช้ฟังก์ชันนี้แทน (ส่ง JSON Update ปกติ)
-  static Future<ProductResponse?> updateProduct(
+  /// คืนค่า {success, message, data} เพื่อให้หน้าจอเอาข้อความจากเซิร์ฟเวอร์ไปแสดงได้
+  /// (เช่น "บาร์โค้ดนี้ถูกใช้กับสินค้าอื่นในร้านนี้แล้ว")
+  static Future<Map<String, dynamic>> updateProduct(
     int productId,
     Map<String, dynamic> updateData,
   ) async {
@@ -467,19 +470,31 @@ class ApiProduct {
         body: jsonEncode(updateData), // ส่งข้อมูลรวมถึง URL รูปภาพไปในนี้
       );
 
+      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        return ProductResponse.fromJson(jsonResponse['data']);
-      } else {
-        if (AuthGuard.isUnauthorized(response.statusCode)) {
-          await AuthGuard.handleUnauthorized();
-        }
-        print("Update failed: ${response.body}");
-        return null;
+        return {
+          "success": true,
+          "message": jsonResponse['message'] ?? "แก้ไขข้อมูลเรียบร้อย",
+          "data": ProductResponse.fromJson(jsonResponse['data']),
+        };
       }
+
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {
+        "success": false,
+        "message":
+            jsonResponse['error'] ?? "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      };
     } catch (e) {
-      print("Error updating product: $e");
-      return null;
+      debugPrint("แก้ไขสินค้าไม่สำเร็จ: $e");
+      return {
+        "success": false,
+        "message":
+            "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      };
     }
   }
 
@@ -517,10 +532,10 @@ class ApiProduct {
         if (AuthGuard.isUnauthorized(response.statusCode)) {
           await AuthGuard.handleUnauthorized();
         }
-        throw Exception("Failed to load products: ${response.statusCode}");
+        throw Exception("ไม่สามารถดึงข้อมูลสินค้าได้ กรุณาลองใหม่อีกครั้ง");
       }
     } catch (e) {
-      throw Exception("Error connecting to API: $e");
+      throw Exception("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
     }
   }
 

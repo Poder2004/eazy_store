@@ -4,6 +4,7 @@ import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/widgets/info_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 class ProductDetailController extends GetxController {
   late Rx<ProductResponse> product;
@@ -19,7 +20,7 @@ class ProductDetailController extends GetxController {
       // กรณีไม่มีข้อมูลส่งมา ให้เด้งกลับเพื่อป้องกัน Error
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.back();
-        Get.snackbar("Error", "ไม่พบข้อมูลสินค้า");
+        Get.snackbar("เกิดข้อผิดพลาด", "ไม่พบข้อมูลสินค้า");
       });
     }
   }
@@ -73,7 +74,7 @@ class ProductDetailController extends GetxController {
       Get.back(); // ปิดวงกลมโหลด
       Get.snackbar(
         "ผิดพลาด",
-        "เกิดข้อผิดพลาด: $e",
+        friendlyError(e),
         backgroundColor: Colors.red,
       );
     }
