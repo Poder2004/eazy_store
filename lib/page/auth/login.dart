@@ -4,6 +4,7 @@ import 'package:eazy_store/page/auth/register.dart';
 import 'package:eazy_store/page/auth/verify_register.dart';
 import 'package:eazy_store/model/request/login_request.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
+import 'package:eazy_store/utils/device_id.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,9 +24,13 @@ class LoginController extends GetxController {
 
     isLoading.value = true;
 
+    final deviceId = await DeviceIdHelper.getDeviceId();
+    final deviceName = await DeviceIdHelper.getDeviceName();
     LoginRequest request = LoginRequest(
       username: emailController.text.trim(),
       password: passwordController.text,
+      deviceId: deviceId,
+      deviceName: deviceName,
     );
 
     var res = await ApiAuth.login(request);

@@ -2,11 +2,11 @@ import 'package:eazy_store/api/api_dashboad.dart';
 import 'package:eazy_store/api/api_shop.dart';
 import 'package:eazy_store/api/api_user.dart';
 import 'package:eazy_store/model/response/shop_response.dart';
-import 'package:eazy_store/page/auth/login.dart';
 import 'package:eazy_store/page/edit_profile/edit_profile_page.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart';
 import 'package:eazy_store/page/shop/editShop/edit_shop.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -328,10 +328,8 @@ class ProfileController extends GetxController {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      SharedPreferences prefs =
-                          await SharedPreferences.getInstance();
-                      await prefs.clear();
-                      Get.offAll(() => const LoginPage());
+                      Get.back(); // ปิด bottom sheet ก่อนเรียก logout
+                      await AuthGuard.logout();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE11D48),

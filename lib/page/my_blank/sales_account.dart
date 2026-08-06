@@ -1407,7 +1407,7 @@ class _DebtCompactCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      '฿${_fmt(amount)}',
+                      '฿${c.formatNumber(amount)}',
                       style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
@@ -1445,12 +1445,6 @@ class _DebtCompactCard extends StatelessWidget {
       );
     });
   }
-
-  String _fmt(double v) => v >= 1000000
-      ? '${(v / 1000000).toStringAsFixed(1)}M'
-      : v >= 1000
-      ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K'
-      : v.toStringAsFixed(v == v.truncate() ? 0 : 2);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1537,7 +1531,7 @@ class _CollectedDebtCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      '฿${_fmt(amount)}',
+                      '฿${c.formatNumber(amount)}',
                       style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
@@ -1575,12 +1569,6 @@ class _CollectedDebtCard extends StatelessWidget {
       );
     });
   }
-
-  String _fmt(double v) => v >= 1000000
-      ? '${(v / 1000000).toStringAsFixed(1)}M'
-      : v >= 1000
-      ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K'
-      : v.toStringAsFixed(v == v.truncate() ? 0 : 2);
 }
 
 // ─── Metric Column (used in product stats sheet) ──────────────────────────────
