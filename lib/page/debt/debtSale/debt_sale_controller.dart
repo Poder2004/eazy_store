@@ -10,21 +10,28 @@ import '../../../model/request/sales_model_request.dart';
 import '../../../model/response/debtor_response.dart';
 import '../../sale_producct/sale/checkout_controller.dart';
 import '../../homepage/home_page.dart';
+import '../debtRegister/debt_register.dart';
+import 'debtor_book_sheet.dart';
 
 class DebtSaleController extends GetxController {
   final debtorNameController = TextEditingController();
   final debtorPhoneController = TextEditingController();
   final payAmountController = TextEditingController();
   final debtRemarkController = TextEditingController();
-  final searchController = TextEditingController();
 
-  DebtorResponse? selectedDebtor;
+  // ลูกหนี้ที่เลือกอยู่ (เป็น Rx เพื่อให้การ์ดเลือกลูกหนี้อัปเดตอัตโนมัติ)
+  final selectedDebtorRx = Rxn<DebtorResponse>();
+  DebtorResponse? get selectedDebtor => selectedDebtorRx.value;
 
+  // --- สมุดลูกหนี้ (รายชื่อลูกหนี้ทั้งหมด เรียงตามตัวอักษร + ช่องค้นหาเดียวในระบบ) ---
+  final bookSearchController = TextEditingController();
+  var allDebtors = <DebtorResponse>[].obs;
+  var bookResults = <DebtorResponse>[].obs;
+  var isLoadingBook = false.obs;
+  var isSearchingBook = false.obs;
+  var bookKeyword = "".obs;
+  var bookError = "".obs;
   Timer? debounce;
-  var isSearching = false.obs;
-  var searchResults = <DebtorResponse>[].obs;
-  var showResults = false.obs;
-  var isSearchEmpty = true.obs;
 
   var payAmount = 0.0.obs;
 
@@ -43,48 +50,204 @@ class DebtSaleController extends GetxController {
     debtorPhoneController.dispose();
     payAmountController.dispose();
     debtRemarkController.dispose();
-    searchController.dispose();
+    bookSearchController.dispose();
     super.onClose();
   }
 
-  void onSearchChanged(String keyword) {
-    isSearchEmpty.value = keyword.isEmpty;
-    if (keyword.isEmpty) {
-      searchResults.clear();
-      showResults.value = false;
-      return;
-    }
+  // ================= ยอดเงิน =================
 
-    if (debounce?.isActive ?? false) debounce!.cancel();
-    debounce = Timer(const Duration(milliseconds: 300), () async {
-      isSearching.value = true;
-      try {
-        final results = await ApiDebtor.searchDebtor(keyword);
-        searchResults.assignAll(results);
-        showResults.value = results.isNotEmpty;
-      } catch (e) {
-        debugPrint("Error searching: $e");
-        searchResults.clear();
-      } finally {
-        isSearching.value = false;
+  /// ยอดที่ลูกค้าต้องเซ็นค้างจริง (ไม่ติดลบ จ่ายเกินถือว่าค้าง 0)
+  double remainingDebt(double totalPrice) {
+    final double debt = totalPrice - payAmount.value;
+    return debt > 0 ? debt : 0.0;
+  }
+
+  /// เงินทอน (มีเมื่อจ่ายเกินยอดสินค้า)
+  double changeAmount(double totalPrice) {
+    final double change = payAmount.value - totalPrice;
+    return change > 0 ? change : 0.0;
+  }
+
+  /// วงเงินที่ลูกหนี้คนนี้ยังค้างได้อีก
+  double get creditRemain {
+    final debtor = selectedDebtor;
+    if (debtor == null) return 0.0;
+    final double remain = debtor.creditLimit - debtor.currentDebt;
+    return remain > 0 ? remain : 0.0;
+  }
+
+  /// รายการนี้ไม่มียอดค้าง (จ่ายครบ/เกิน) = ต้องบันทึกเป็นการขายเงินสดแทน
+  bool isCashCase(double totalPrice) =>
+      payAmount.value > 0 && remainingDebt(totalPrice) <= 0;
+
+  /// กลับไปหน้าคิดเงิน แล้วเปิดหน้าจ่ายเงินสดให้ต่อเลย พร้อมเติมยอดเงินที่รับมา
+  void switchToCashCheckout(CheckoutController checkoutController) {
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    final double received = payAmount.value;
+
+    // เคลียร์ข้อมูลฝั่งค้างชำระ ไม่ให้ค้างไว้สับสน (ตะกร้าสินค้ายังอยู่ครบ)
+    payAmountController.clear();
+    debtRemarkController.clear();
+
+    Get.back(); // กลับหน้าคิดเงิน
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = Get.context;
+      final open = checkoutController.openCashPaymentSheet;
+      if (ctx == null || open == null) return;
+
+      open(ctx); // เปิดแผ่นจ่ายเงินสด
+      // ใส่ยอดเงินที่ลูกค้ายื่นมาให้เลย ระบบจะคำนวณเงินทอนให้เอง
+      if (received > 0) {
+        checkoutController.receivedAmountController.text = received
+            .toInt()
+            .toString();
       }
     });
   }
 
   void selectDebtor(DebtorResponse debtor) {
-    selectedDebtor = debtor;
+    selectedDebtorRx.value = debtor;
     debtorNameController.text = debtor.name;
     debtorPhoneController.text = debtor.phone;
-    showResults.value = false;
     FocusManager.instance.primaryFocus?.unfocus();
   }
 
-  void clearSearch() {
-    searchController.clear();
-    isSearchEmpty.value = true;
-    searchResults.clear();
-    showResults.value = false;
+  // ================= สมุดลูกหนี้ =================
+
+  /// เปิดสมุดลูกหนี้ (Popup รายชื่อลูกหนี้ทั้งหมด เรียงตามตัวอักษร)
+  void openDebtorBook() {
     FocusManager.instance.primaryFocus?.unfocus();
+    bookSearchController.clear();
+    DebtorBookSheet.show(this);
+    loadAllDebtors();
+  }
+
+  /// โหลดรายชื่อลูกหนี้ทั้งหมดของร้าน แล้วเรียงตามตัวอักษร
+  Future<void> loadAllDebtors({bool forceRefresh = false}) async {
+    if (allDebtors.isNotEmpty && !forceRefresh) {
+      filterBook(bookSearchController.text);
+      return;
+    }
+
+    isLoadingBook.value = true;
+    bookError.value = "";
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final int shopId = prefs.getInt('shopId') ?? 0;
+
+      if (shopId == 0) {
+        bookError.value = "ไม่พบข้อมูลร้านค้า กรุณาเข้าสู่ระบบใหม่อีกครั้ง";
+        return;
+      }
+
+      // ดึงมาทีเดียวทั้งหมด (limit สูง) เพื่อให้เลือกจากสมุดได้ครบ
+      final result = await ApiDebtor.getDebtorsByShop(
+        shopId,
+        page: 1,
+        limit: 1000,
+      );
+
+      List<DebtorResponse> list = [];
+      if (result is DebtorPagedResponse) {
+        list = List<DebtorResponse>.from(result.items);
+      } else if (result is List<DebtorResponse>) {
+        list = List<DebtorResponse>.from(result);
+      } else {
+        bookError.value = "ไม่สามารถโหลดรายชื่อลูกหนี้ได้ กรุณาลองใหม่อีกครั้ง";
+        return;
+      }
+
+      list.sort(
+        (a, b) => a.name.trim().toLowerCase().compareTo(
+          b.name.trim().toLowerCase(),
+        ),
+      );
+      allDebtors.assignAll(list);
+      filterBook(bookSearchController.text);
+    } catch (e) {
+      debugPrint("โหลดสมุดลูกหนี้ไม่สำเร็จ: $e");
+      bookError.value = "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+    } finally {
+      isLoadingBook.value = false;
+    }
+  }
+
+  /// ค้นหาภายในสมุดลูกหนี้ (ค้นจากชื่อหรือเบอร์โทร)
+  /// ถ้าในเครื่องไม่เจอ จะยิงค้นหาที่เซิร์ฟเวอร์ให้อีกชั้น (เผื่อร้านมีลูกหนี้เยอะเกินที่โหลดมา)
+  void filterBook(String keyword) {
+    final String key = keyword.trim().toLowerCase();
+    bookKeyword.value = keyword;
+    debounce?.cancel();
+
+    if (key.isEmpty) {
+      bookResults.assignAll(allDebtors);
+      isSearchingBook.value = false;
+      return;
+    }
+
+    bookResults.assignAll(
+      allDebtors.where(
+        (d) =>
+            d.name.toLowerCase().contains(key) ||
+            d.phone.replaceAll('-', '').contains(key),
+      ),
+    );
+
+    if (bookResults.isNotEmpty || key.length < 2) return;
+
+    // ไม่เจอในเครื่อง ค่อยถามเซิร์ฟเวอร์
+    debounce = Timer(const Duration(milliseconds: 400), () async {
+      isSearchingBook.value = true;
+      try {
+        final results = await ApiDebtor.searchDebtor(keyword.trim());
+        // กันกรณีผู้ใช้พิมพ์ต่อจนคำค้นเปลี่ยนไปแล้ว
+        if (bookSearchController.text.trim().toLowerCase() != key) return;
+        bookResults.assignAll(results);
+      } catch (e) {
+        debugPrint("ค้นหาลูกหนี้จากเซิร์ฟเวอร์ไม่สำเร็จ: $e");
+      } finally {
+        isSearchingBook.value = false;
+      }
+    });
+  }
+
+  /// จัดกลุ่มรายชื่อตามตัวอักษรตัวแรก สำหรับแสดงหัวข้อในสมุด
+  Map<String, List<DebtorResponse>> groupedBookResults() {
+    final Map<String, List<DebtorResponse>> grouped = {};
+    for (final debtor in bookResults) {
+      final String name = debtor.name.trim();
+      final String letter = name.isEmpty ? "#" : name[0].toUpperCase();
+      grouped.putIfAbsent(letter, () => []).add(debtor);
+    }
+    return grouped;
+  }
+
+  /// เลือกลูกหนี้จากสมุด แล้วปิด Popup
+  void selectDebtorFromBook(DebtorResponse debtor) {
+    Get.back(); // ปิดสมุดลูกหนี้
+    selectDebtor(debtor);
+  }
+
+  /// เปิดหน้าสมัครบัญชีลูกหนี้ ถ้าสมัครสำเร็จจะเลือกลูกหนี้คนนั้นให้อัตโนมัติ
+  Future<void> goToRegisterDebtor() async {
+    final result = await Get.to(() => DebtRegisterScreen());
+
+    if (result is DebtorResponse) {
+      // มีลูกหนี้ใหม่ ต้องโหลดสมุดใหม่รอบหน้า
+      allDebtors.clear();
+      // เลือกลูกหนี้คนที่เพิ่งสมัครทันที
+      selectDebtor(result);
+
+      Get.snackbar(
+        "เลือกลูกหนี้แล้ว",
+        "เลือก ${result.name} เป็นผู้ค้างชำระเรียบร้อยแล้ว",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   // ✨ Popup ยืนยันที่แก้ไขใหม่ โชว์ปุ่มครบ ไม่ต้องเลื่อนหา
@@ -101,7 +264,32 @@ class DebtSaleController extends GetxController {
       return;
     }
 
-    int debt = (checkoutController.totalPrice - payAmount.value).toInt();
+    final double total = checkoutController.totalPrice.toDouble();
+    final double debtValue = remainingDebt(total);
+    final double change = changeAmount(total);
+
+    // จ่ายครบแล้ว ไม่มียอดค้าง = ไม่ใช่การขายแบบค้างชำระ ให้ไปใช้หน้าขายเงินสดแทน
+    if (debtValue <= 0) {
+      showErrorDialog(
+        change > 0
+            ? "ลูกค้าจ่ายเกินยอดสินค้า (เงินทอน ${change.toInt()} บาท)\n"
+                  "รายการนี้ไม่มียอดค้างชำระ กรุณาบันทึกเป็นการขายเงินสดแทน"
+            : "ลูกค้าจ่ายครบตามยอดสินค้าแล้ว ไม่มียอดค้างชำระ\n"
+                  "กรุณาบันทึกเป็นการขายเงินสดแทน",
+      );
+      return;
+    }
+
+    // เช็ควงเงินคงเหลือของลูกหนี้ก่อน (เซิร์ฟเวอร์เช็คซ้ำอีกชั้น)
+    if (debtValue > creditRemain) {
+      showErrorDialog(
+        "ยอดที่เซ็นค้าง ${debtValue.toInt()} บาท เกินวงเงินที่ลูกหนี้ค้างได้\n"
+        "วงเงินคงเหลือของ ${selectedDebtor!.name} คือ ${creditRemain.toInt()} บาท",
+      );
+      return;
+    }
+
+    int debt = debtValue.toInt();
 
     Get.dialog(
       MediaQuery(
@@ -166,9 +354,16 @@ class DebtSaleController extends GetxController {
                     children: [
                       _rowPopupInfo("ลูกหนี้:", selectedDebtor?.name ?? ""),
                       const SizedBox(height: 10),
+                      _rowPopupInfo("ยอดสินค้า:", "${total.toInt()} ฿"),
+                      const SizedBox(height: 10),
                       _rowPopupInfo(
                         "จ่ายล่วงหน้า:",
                         "${payAmount.value.toInt()} ฿",
+                      ),
+                      const SizedBox(height: 10),
+                      _rowPopupInfo(
+                        "วงเงินคงเหลือหลังเซ็น:",
+                        "${(creditRemain - debtValue).toInt()} ฿",
                       ),
                       const Divider(height: 24, thickness: 1),
                       Row(
@@ -316,11 +511,17 @@ class DebtSaleController extends GetxController {
         );
       }).toList();
 
+      // จ่ายเกินยอดสินค้าไม่ได้ ไม่งั้นเซิร์ฟเวอร์จะเอาส่วนเกินไปหักหนี้ก้อนเก่า
+      final double total = checkoutController.totalPrice.toDouble();
+      final double effectivePay = payAmount.value > total
+          ? total
+          : payAmount.value;
+
       final saleRequest = SaleRequest(
         shopId: currentShopId,
         debtorId: selectedDebtor!.debtorId,
-        netPrice: checkoutController.totalPrice.toDouble(),
-        pay: payAmount.value,
+        netPrice: total,
+        pay: effectivePay,
         paymentMethod: "ค้างชำระ",
         note: debtRemarkController.text,
         createdBuy: userName,
@@ -351,7 +552,8 @@ class DebtSaleController extends GetxController {
       }
     } catch (e) {
       Get.back();
-      showErrorDialog("เกิดข้อผิดพลาด: $e");
+      debugPrint("บันทึกค้างชำระไม่สำเร็จ: $e");
+      showErrorDialog("ไม่สามารถบันทึกรายการได้ กรุณาลองใหม่อีกครั้ง");
     }
   }
 
@@ -432,7 +634,7 @@ class DebtSaleController extends GetxController {
     debtorPhoneController.clear();
     payAmountController.clear();
     debtRemarkController.clear();
-    selectedDebtor = null;
+    selectedDebtorRx.value = null;
     checkoutController.clearAll();
   }
 }

@@ -46,7 +46,10 @@ class ApiDebtor {
         };
       }
     } catch (e) {
-      return {"success": false, "message": "เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว: $e"};
+      return {
+        "success": false,
+        "message": "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      };
     }
   }
 
@@ -212,7 +215,10 @@ class ApiDebtor {
         };
       }
     } catch (e) {
-      return {"success": false, "message": "เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว: $e"};
+      return {
+        "success": false,
+        "message": "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      };
     }
   }
 }

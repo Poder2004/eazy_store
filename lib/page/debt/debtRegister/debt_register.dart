@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 
 // --- Import Controller ที่เราเพิ่งสร้าง ---
 import 'debt_register_controller.dart';
@@ -244,14 +242,14 @@ class DebtRegisterScreen extends StatelessWidget {
                 width: 2,
               ),
               borderRadius: BorderRadius.circular(15.0),
-              image: controller.imageFile.value != null
+              image: controller.imageBytes.value != null
                   ? DecorationImage(
-                      image: FileImage(controller.imageFile.value!),
+                      image: MemoryImage(controller.imageBytes.value!),
                       fit: BoxFit.cover,
                     )
                   : null,
             ),
-            child: controller.imageFile.value == null
+            child: controller.imageBytes.value == null
                 ? const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

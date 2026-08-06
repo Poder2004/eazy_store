@@ -428,7 +428,7 @@ class ProfilePage extends StatelessWidget {
         Text(
           title.toUpperCase(),
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w800,
             color: Colors.blueGrey.shade400,
             letterSpacing: 0.8,

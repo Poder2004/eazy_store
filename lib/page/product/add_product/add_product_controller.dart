@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widgets/image_picker_sheet.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 class AddProductController extends GetxController {
   var selectedIndex = 0.obs;
@@ -149,7 +150,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "เกิดข้อผิดพลาด: $e",
+        friendlyError(e, fallback: "ไม่สามารถบันทึกสินค้าได้ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );
@@ -270,7 +271,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "เพิ่มหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "เพิ่มหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -319,7 +320,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "แก้ไขหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "แก้ไขหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -371,7 +372,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "ปิดใช้งานหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "ปิดใช้งานหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

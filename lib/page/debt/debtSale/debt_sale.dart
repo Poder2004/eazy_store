@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 
 // --- Imports ---
 import '../../sale_producct/sale/checkout_controller.dart';
-import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
 import 'debt_sale_controller.dart';
 
 class DebtSalePage extends StatelessWidget {
@@ -14,7 +13,6 @@ class DebtSalePage extends StatelessWidget {
   final CheckoutController checkoutController = Get.find<CheckoutController>();
 
   final Color _bgColor = const Color(0xFFF4F7FA);
-  final Color _cardColor = Colors.white;
   final Color _primaryColor = const Color(0xFF2563EB); // ฟ้าพรีเมียม
   final Color _successColor = const Color(0xFF10B981); // เขียว
 
@@ -58,53 +56,53 @@ class DebtSalePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- 1. ส่วนค้นหาลูกหนี้ ---
-                    const Text(
-                      "ข้อมูลลูกหนี้",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueGrey,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildSearchBar(),
-                    const SizedBox(height: 10),
-
-                    // ✨ เพิ่มปุ่ม "สร้างลูกหนี้ใหม่" ไว้ใต้ช่องค้นหา จัดวางแบบพรีเมียม
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: () => Get.to(() => DebtRegisterScreen()),
-                        icon: const Icon(
-                          Icons.person_add_alt_1_rounded,
-                          size: 18,
-                        ),
-                        label: const Text(
-                          "สร้างลูกหนี้ใหม่",
+                    // --- 1. หัวข้อ + ปุ่มสร้างลูกหนี้ใหม่ (ย้ายขึ้นมาไว้ด้านบน) ---
+                    Row(
+                      children: [
+                        const Text(
+                          "ข้อมูลลูกหนี้",
                           style: TextStyle(
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            color: Colors.blueGrey,
                           ),
                         ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: _primaryColor,
-                          backgroundColor: _primaryColor.withOpacity(
-                            0.08,
-                          ), // สีพื้นหลังจางๆ ดูสบายตา
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: controller.goToRegisterDebtor,
+                          icon: const Icon(
+                            Icons.person_add_alt_1_rounded,
+                            size: 18,
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          label: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              "สร้างลูกหนี้ใหม่",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
-                          elevation: 0,
+                          style: TextButton.styleFrom(
+                            foregroundColor: _primaryColor,
+                            backgroundColor: _primaryColor.withOpacity(0.08),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
                         ),
-                      ),
+                      ],
                     ),
+                    const SizedBox(height: 10),
 
-                    _buildSearchResults(),
+                    // --- 2. การ์ดเลือกลูกหนี้ (แตะเพื่อเปิดสมุด ค้นหาในสมุดที่เดียว) ---
+                    _buildDebtorPicker(),
                     const SizedBox(height: 20),
 
                     // --- 2. ส่วนตะกร้าสินค้า ---
@@ -143,128 +141,141 @@ class DebtSalePage extends StatelessWidget {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller.searchController,
-        onChanged: controller.onSearchChanged,
-        style: const TextStyle(fontSize: 16),
-        decoration: InputDecoration(
-          hintText: 'กรอกชื่อหรือเบอร์ลูกหนี้เพื่อค้นหา...',
-          hintStyle: TextStyle(color: Colors.grey.shade400),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 14.0,
-            horizontal: 16.0,
-          ),
-          prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-          suffixIcon: Obx(() {
-            if (controller.isSearching.value) {
-              return const Padding(
-                padding: EdgeInsets.all(14.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              );
-            } else if (!controller.isSearchEmpty.value) {
-              return IconButton(
-                icon: const Icon(Icons.cancel_rounded, color: Colors.grey),
-                onPressed: controller.clearSearch,
-              );
-            }
-            return const SizedBox.shrink();
-          }),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          isDense: true,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchResults() {
+  /// การ์ดเลือกลูกหนี้ — แตะเพื่อเปิด "สมุดลูกหนี้" (ค้นหาอยู่ในสมุดที่เดียว ไม่ซ้ำซ้อน)
+  Widget _buildDebtorPicker() {
     return Obx(() {
-      if (controller.showResults.value) {
-        return Container(
-          margin: const EdgeInsets.only(top: 8),
-          constraints: const BoxConstraints(maxHeight: 250),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+      final debtor = controller.selectedDebtorRx.value;
+      final bool hasDebtor = debtor != null;
+
+      return Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        elevation: 0,
+        child: InkWell(
+          onTap: controller.openDebtorBook,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: hasDebtor ? _primaryColor : Colors.grey.shade300,
+                width: hasDebtor ? 1.5 : 1,
               ),
-            ],
-          ),
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: controller.searchResults.length,
-            separatorBuilder: (ctx, i) =>
-                Divider(height: 1, color: Colors.grey.shade100),
-            itemBuilder: (ctx, i) {
-              final item = controller.searchResults[i];
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                leading: CircleAvatar(
-                  backgroundColor: _primaryColor.withOpacity(0.1),
-                  backgroundImage:
-                      (item.imgDebtor != null && item.imgDebtor!.isNotEmpty)
-                      ? NetworkImage(item.imgDebtor!)
-                      : null,
-                  child: (item.imgDebtor == null || item.imgDebtor!.isEmpty)
-                      ? Text(
-                          item.name.isNotEmpty
-                              ? item.name[0].toUpperCase()
-                              : "?",
-                          style: TextStyle(
-                            color: _primaryColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // รูป/ไอคอน
+                hasDebtor
+                    ? CircleAvatar(
+                        radius: 22,
+                        backgroundColor: _primaryColor.withOpacity(0.1),
+                        backgroundImage: debtor.imgDebtor.isNotEmpty
+                            ? NetworkImage(debtor.imgDebtor)
+                            : null,
+                        child: debtor.imgDebtor.isEmpty
+                            ? Text(
+                                debtor.name.isNotEmpty
+                                    ? debtor.name[0].toUpperCase()
+                                    : "?",
+                                style: TextStyle(
+                                  color: _primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            : null,
+                      )
+                    : Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: _primaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Icon(
+                          Icons.menu_book_rounded,
+                          color: _primaryColor,
+                          size: 22,
+                        ),
+                      ),
+                const SizedBox(width: 12),
+
+                // ข้อความ
+                Expanded(
+                  child: hasDebtor
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              debtor.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "${debtor.phone}  •  วงเงินคงเหลือ ${controller.creditRemain.toInt()} ฿",
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         )
-                      : null,
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "เลือกลูกหนี้",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "แตะเพื่อเปิดสมุดลูกหนี้ / ค้นหาชื่อหรือเบอร์",
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                 ),
-                title: Text(
-                  item.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+
+                // ปุ่มท้ายการ์ด
+                Text(
+                  hasDebtor ? "เปลี่ยน" : "เลือก",
+                  style: TextStyle(
+                    color: _primaryColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
-                subtitle: Text(
-                  item.phone,
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-                trailing: const Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.grey,
-                ),
-                onTap: () => controller.selectDebtor(item),
-              );
-            },
+                Icon(Icons.chevron_right_rounded, color: _primaryColor),
+              ],
+            ),
           ),
-        );
-      }
-      // ลบปุ่ม Fallback เก่าที่ซ้อนทับออกไปแล้ว
-      return const SizedBox.shrink();
+        ),
+      );
     });
   }
 
@@ -401,14 +412,63 @@ class DebtSalePage extends StatelessWidget {
           ),
 
           Obx(() {
-            int debt =
-                (checkoutController.totalPrice - controller.payAmount.value)
-                    .toInt();
-            return _rowInfo(
-              "ยอดที่เซ็นค้าง",
-              "$debt บาท",
-              isRed: true,
-              valueSize: 18,
+            final double total = checkoutController.totalPrice.toDouble();
+            final double debt = controller.remainingDebt(total);
+            final double change = controller.changeAmount(total);
+
+            return Column(
+              children: [
+                // ยอดค้างไม่ติดลบ จ่ายเกินถือว่าค้าง 0
+                _rowInfo(
+                  "ยอดที่เซ็นค้าง",
+                  "${debt.toInt()} บาท",
+                  isRed: debt > 0,
+                  valueSize: 18,
+                ),
+
+                // จ่ายเกิน แสดงเงินทอนให้ร้านทอนถูก
+                if (change > 0)
+                  _rowInfo(
+                    "เงินทอน",
+                    "${change.toInt()} บาท",
+                    isBold: true,
+                    valueSize: 18,
+                  ),
+
+                // จ่ายครบแล้ว = ไม่ใช่รายการค้างชำระ เตือนให้ไปใช้ขายเงินสด
+                if (debt <= 0 && controller.payAmount.value > 0)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color: Colors.orange.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            change > 0
+                                ? "ลูกค้าจ่ายเกินยอดสินค้า ไม่มียอดค้างชำระ\nกดปุ่ม \"ไปคิดเงินสด\" ด้านล่างเพื่อปิดการขายและทอนเงิน"
+                                : "ลูกค้าจ่ายครบแล้ว ไม่มียอดค้างชำระ\nกดปุ่ม \"ไปคิดเงินสด\" ด้านล่างเพื่อปิดการขาย",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             );
           }),
 
@@ -454,12 +514,29 @@ class DebtSalePage extends StatelessWidget {
             const SizedBox(width: 15),
             Expanded(
               flex: 2,
-              child: _actionBtn(
-                "ยืนยันการค้างชำระ",
-                _successColor,
-                () => controller.confirmSubmit(checkoutController),
-                textColor: Colors.white,
-              ),
+              child: Obx(() {
+                // จ่ายครบแล้ว = ไม่ใช่รายการค้างชำระ เปลี่ยนปุ่มเป็นไปคิดเงินสดแทน
+                final bool cashCase = controller.isCashCase(
+                  checkoutController.totalPrice.toDouble(),
+                );
+
+                if (cashCase) {
+                  return _actionBtn(
+                    "ไปคิดเงินสด",
+                    _primaryColor,
+                    () => controller.switchToCashCheckout(checkoutController),
+                    textColor: Colors.white,
+                    icon: Icons.point_of_sale_rounded,
+                  );
+                }
+
+                return _actionBtn(
+                  "ยืนยันการค้างชำระ",
+                  _successColor,
+                  () => controller.confirmSubmit(checkoutController),
+                  textColor: Colors.white,
+                );
+              }),
             ),
           ],
         ),
@@ -679,6 +756,7 @@ class DebtSalePage extends StatelessWidget {
     Color bgColor,
     VoidCallback onTap, {
     required Color textColor,
+    IconData? icon,
   }) {
     return ElevatedButton(
       onPressed: onTap,
@@ -693,9 +771,18 @@ class DebtSalePage extends StatelessWidget {
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 20, color: textColor),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ),
     );

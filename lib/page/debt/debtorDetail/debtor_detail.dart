@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../model/response/debtor_response.dart';
@@ -150,7 +150,9 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
       text: _controller.currentDebtor.creditLimit.toStringAsFixed(0),
     );
 
-    File? selectedImage;
+    // ใช้ XFile + bytes แทน File เพื่อให้รองรับทั้งเว็บและมือถือ
+    XFile? selectedImage;
+    Uint8List? selectedImageBytes;
     final picker = ImagePicker();
 
     showModalBottomSheet(
@@ -206,7 +208,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                       onTap: () async {
                         final pickedFile = await picker.pickImage(source: ImageSource.gallery);
                         if (pickedFile != null) {
-                          setStateSheet(() => selectedImage = File(pickedFile.path));
+                          final bytes = await pickedFile.readAsBytes();
+                          setStateSheet(() {
+                            selectedImage = pickedFile;
+                            selectedImageBytes = bytes;
+                          });
                         }
                       },
                       child: Stack(
@@ -214,8 +220,8 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           CircleAvatar(
                             radius: 45,
                             backgroundColor: Colors.blue.shade50,
-                            backgroundImage: selectedImage != null
-                                ? FileImage(selectedImage!) as ImageProvider
+                            backgroundImage: selectedImageBytes != null
+                                ? MemoryImage(selectedImageBytes!) as ImageProvider
                                 : (_controller.currentDebtor.imgDebtor != null &&
                                       _controller.currentDebtor.imgDebtor!.trim().isNotEmpty)
                                 ? NetworkImage(_controller.currentDebtor.imgDebtor!)
@@ -271,12 +277,25 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           onPressed: isLoading
                               ? null
                               : () async {
-                                  setStateSheet(() => isLoading = true);
-                                  final bool success = await _controller.updateDebtorData(
+                                  // ตรวจสอบข้อมูลให้ครบถ้วนก่อนบันทึก
+                                  final String? errorMessage = _validateDebtorForm(
                                     name: nameController.text,
                                     phone: phoneController.text,
                                     address: addressController.text,
-                                    creditLimit: double.tryParse(creditController.text) ?? 0,
+                                    creditLimit: creditController.text,
+                                  );
+                                  if (errorMessage != null) {
+                                    _showTopNotification(errorMessage, isError: true);
+                                    return;
+                                  }
+
+                                  setStateSheet(() => isLoading = true);
+                                  final bool success = await _controller.updateDebtorData(
+                                    name: nameController.text.trim(),
+                                    phone: phoneController.text.trim(),
+                                    address: addressController.text.trim(),
+                                    creditLimit:
+                                        double.tryParse(creditController.text.trim()) ?? 0,
                                     imageFile: selectedImage,
                                   );
                                   if (sheetContext.mounted) {
@@ -285,7 +304,10 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                                   if (success) {
                                     _showTopNotification("บันทึกข้อมูลสำเร็จ");
                                   } else {
-                                    _showTopNotification("เกิดข้อผิดพลาดในการบันทึก", isError: true);
+                                    _showTopNotification(
+                                      "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+                                      isError: true,
+                                    );
                                   }
                                 },
                           child: isLoading
@@ -309,6 +331,30 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
         },
       ),
     );
+  }
+
+  /// ตรวจสอบความครบถ้วนของข้อมูลลูกหนี้ คืนค่าข้อความแจ้งเตือนภาษาไทย (null = ผ่าน)
+  String? _validateDebtorForm({
+    required String name,
+    required String phone,
+    required String address,
+    required String creditLimit,
+  }) {
+    if (name.trim().isEmpty) return "กรุณากรอกชื่อ-นามสกุลลูกหนี้";
+    if (phone.trim().isEmpty) return "กรุณากรอกเบอร์โทรศัพท์";
+    if (!RegExp(r'^0[0-9]{9}$').hasMatch(phone.trim())) {
+      return "เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0";
+    }
+    if (address.trim().isEmpty) return "กรุณากรอกที่อยู่";
+    if (creditLimit.trim().isEmpty) return "กรุณากรอกวงเงินเครดิต";
+
+    final credit = double.tryParse(creditLimit.trim());
+    if (credit == null) return "กรุณากรอกวงเงินเครดิตเป็นตัวเลข";
+    if (credit <= 0) return "วงเงินเครดิตต้องมากกว่า 0 บาท";
+    if (credit < _controller.currentDebtor.currentDebt) {
+      return "วงเงินเครดิตต้องไม่น้อยกว่ายอดหนี้คงค้างปัจจุบัน";
+    }
+    return null;
   }
 
   Widget _buildFormField(

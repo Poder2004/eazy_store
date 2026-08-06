@@ -43,7 +43,7 @@ class ApiAuth {
       } else {
         // กรณีอื่นๆ เช่น 500 (Server Error)
         return LoginResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error:
               responseData['error'] ??
               "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุจากเซิร์ฟเวอร์",
@@ -52,8 +52,8 @@ class ApiAuth {
     } catch (e) {
       // กรณีเชื่อมต่อไม่ได้ (เน็ตหลุด, Server ปิด)
       return LoginResponse(
-        message: "Error",
-        error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: $e",
+        message: "ผิดพลาด",
+        error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
@@ -80,14 +80,14 @@ class ApiAuth {
         return RegisterResponse.fromJson(responseData);
       } else {
         return RegisterResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
         );
       }
     } catch (e) {
       return RegisterResponse(
-        message: "Error",
-        error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: $e",
+        message: "ผิดพลาด",
+        error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
@@ -109,12 +109,12 @@ class ApiAuth {
         return ResetResponse.fromJson(responseData);
       } else {
         return ResetResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "ไม่สามารถส่งคำขอได้",
         );
       }
     } catch (e) {
-      return ResetResponse(message: "Error", error: "การเชื่อมต่อขัดข้อง: $e");
+      return ResetResponse(message: "ผิดพลาด", error: "การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
     }
   }
 
@@ -134,14 +134,14 @@ class ApiAuth {
         return VerifyOtpResponse.fromJson(responseData);
       } else {
         return VerifyOtpResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "รหัส OTP ไม่ถูกต้อง",
         );
       }
     } catch (e) {
       return VerifyOtpResponse(
-        message: "Error",
-        error: "การเชื่อมต่อขัดข้อง: $e",
+        message: "ผิดพลาด",
+        error: "การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
@@ -164,14 +164,14 @@ class ApiAuth {
         return UpdatePasswordResponse.fromJson(responseData);
       } else {
         return UpdatePasswordResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "ไม่สามารถเปลี่ยนรหัสผ่านได้",
         );
       }
     } catch (e) {
       return UpdatePasswordResponse(
-        message: "Error",
-        error: "การเชื่อมต่อขัดข้อง: $e",
+        message: "ผิดพลาด",
+        error: "การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
@@ -192,7 +192,7 @@ class ApiAuth {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
       return RegisterResponse.fromJson(responseData);
     } catch (e) {
-      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ: $e");
+      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
     }
   }
 
@@ -209,7 +209,7 @@ class ApiAuth {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
       return RegisterResponse.fromJson(responseData);
     } catch (e) {
-      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ: $e");
+      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
     }
   }
 }

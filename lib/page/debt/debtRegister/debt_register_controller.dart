@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../api/api_debtor.dart';
 import '../../../api/api_service_image.dart';
 import '../../../model/request/debtor_request.dart';
+import '../../../model/response/debtor_response.dart';
 import '../../../widgets/image_picker_sheet.dart';
 
 class DebtRegisterController extends GetxController {
@@ -19,7 +20,9 @@ class DebtRegisterController extends GetxController {
   final creditLimitController = TextEditingController();
 
   // --- State Variables (ใช้ .obs เพื่อให้ UI อัปเดตอัตโนมัติ) ---
-  var imageFile = Rx<File?>(null);
+  // ใช้ XFile + bytes แทน File เพื่อให้ใช้งานได้ทั้งบนเว็บและมือถือ
+  var imageFile = Rx<XFile?>(null);
+  var imageBytes = Rx<Uint8List?>(null);
   final ImagePicker picker = ImagePicker();
 
   var selectedProvince = Rx<String?>(null);
@@ -116,27 +119,116 @@ class DebtRegisterController extends GetxController {
       );
 
       if (pickedFile != null) {
-        imageFile.value = File(pickedFile.path);
+        // อ่านเป็น bytes เพื่อให้แสดงตัวอย่างรูปและอัปโหลดได้ทั้งบนเว็บและมือถือ
+        imageBytes.value = await pickedFile.readAsBytes();
+        imageFile.value = pickedFile;
       }
     } catch (e) {
-      debugPrint("Error picking image: $e");
+      debugPrint("เลือกรูปภาพไม่สำเร็จ: $e");
+      Get.snackbar(
+        "เลือกรูปภาพไม่สำเร็จ",
+        "ไม่สามารถเปิดรูปภาพที่เลือกได้ กรุณาลองใหม่อีกครั้ง",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
+  }
+
+  // แจ้งเตือนแบบข้อมูลไม่ครบถ้วน (สีส้ม)
+  void _showWarning(String title, String message) {
+    Get.snackbar(
+      title,
+      message,
+      backgroundColor: Colors.orange,
+      colorText: Colors.white,
+    );
+  }
+
+  // แจ้งเตือนข้อผิดพลาด (สีแดง)
+  void _showError(String message, {String title = "เกิดข้อผิดพลาด"}) {
+    Get.snackbar(
+      title,
+      message,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
+  }
+
+  /// 📌 ตรวจสอบว่ากรอกข้อมูลครบถ้วนหรือยัง (ชื่อ / เบอร์โทร / ที่อยู่ / วงเงิน / รูปภาพ)
+  /// คืนค่า true เมื่อข้อมูลครบและถูกต้อง
+  bool validateForm() {
+    // 1) รูปภาพลูกหนี้
+    if (imageFile.value == null || imageBytes.value == null) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเพิ่มรูปภาพลูกหนี้");
+      return false;
+    }
+
+    // 2) ชื่อคนค้างชำระ
+    final name = nameController.text.trim();
+    if (name.isEmpty) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกชื่อคนค้างชำระ");
+      return false;
+    }
+    if (name.length < 2) {
+      _showWarning("ชื่อไม่ถูกต้อง", "ชื่อคนค้างชำระต้องมีอย่างน้อย 2 ตัวอักษร");
+      return false;
+    }
+
+    // 3) เบอร์โทรศัพท์
+    final phone = phoneController.text.trim();
+    if (phone.isEmpty) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกเบอร์โทรศัพท์");
+      return false;
+    }
+    if (phone.length != 10 || !RegExp(r'^[0-9]{10}$').hasMatch(phone)) {
+      _showWarning("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์โทรเป็นตัวเลข 10 หลัก");
+      return false;
+    }
+    if (!phone.startsWith('0')) {
+      _showWarning("เบอร์โทรไม่ถูกต้อง", "เบอร์โทรศัพท์ต้องขึ้นต้นด้วยเลข 0");
+      return false;
+    }
+
+    // 4) ที่อยู่ (จังหวัด / อำเภอ / ตำบล / รายละเอียด)
+    if (selectedProvince.value == null) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกจังหวัด");
+      return false;
+    }
+    if (selectedDistrict.value == null) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกอำเภอ/เขต");
+      return false;
+    }
+    if (selectedSubdistrict.value == null) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกตำบล/แขวง");
+      return false;
+    }
+    if (addressDetailController.text.trim().isEmpty) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกบ้านเลขที่/ซอย/ถนน");
+      return false;
+    }
+
+    // 5) วงเงินค้างชำระ
+    final creditText = creditLimitController.text.trim();
+    if (creditText.isEmpty) {
+      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกวงเงินค้างชำระ");
+      return false;
+    }
+    final credit = double.tryParse(creditText);
+    if (credit == null) {
+      _showWarning("วงเงินไม่ถูกต้อง", "กรุณากรอกวงเงินค้างชำระเป็นตัวเลข");
+      return false;
+    }
+    if (credit <= 0) {
+      _showWarning("วงเงินไม่ถูกต้อง", "วงเงินค้างชำระต้องมากกว่า 0 บาท");
+      return false;
+    }
+
+    return true;
   }
 
   // 📌 4. Logic การส่งข้อมูลไป API
   Future<void> submitDebtorData() async {
-    if (nameController.text.isEmpty || phoneController.text.isEmpty) {
-      Get.snackbar("แจ้งเตือน", "กรุณากรอกชื่อและเบอร์โทรศัพท์",
-          backgroundColor: Colors.orange, colorText: Colors.white);
-      return;
-    }
-
-    final phone = phoneController.text.trim();
-    if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
-      Get.snackbar("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์โทรเป็นตัวเลข 10 หลัก",
-          backgroundColor: Colors.orange, colorText: Colors.white);
-      return;
-    }
+    if (!validateForm()) return;
 
     // แสดง Loading
     Get.dialog(
@@ -150,39 +242,37 @@ class DebtRegisterController extends GetxController {
 
       if (shopId == 0) {
         Get.back(); // ปิด Loading
-        Get.snackbar("ผิดพลาด", "ไม่พบข้อมูลร้านค้า กรุณาล็อกอินใหม่",
-            backgroundColor: Colors.red, colorText: Colors.white);
+        _showError("ไม่พบข้อมูลร้านค้า กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
         return;
       }
 
-      String imageUrl = "";
+      // อัปโหลดรูปภาพ (ผ่านการตรวจสอบจาก validateForm มาแล้วว่ามีรูปแน่นอน)
+      final uploadService = ImageUploadService();
+      final String? uploadedUrl = await uploadService.uploadBytes(
+        imageBytes.value!,
+        fileName: imageFile.value!.name,
+      );
 
-      if (imageFile.value != null) {
-        final uploadService = ImageUploadService();
-        String? uploadedUrl = await uploadService.uploadImage(imageFile.value!);
-
-        if (uploadedUrl != null) {
-          imageUrl = uploadedUrl;
-        } else {
-          Get.back(); // ปิด loading
-          Get.snackbar("ผิดพลาด", "ไม่สามารถอัปโหลดรูปภาพได้ กรุณาลองใหม่",
-              backgroundColor: Colors.red, colorText: Colors.white);
-          return;
-        }
+      if (uploadedUrl == null) {
+        Get.back(); // ปิด loading
+        _showError(
+          "อัปโหลดรูปภาพไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
+        );
+        return;
       }
 
-      String fullAddress = "${addressDetailController.text} "
-          "ต.${selectedSubdistrict.value ?? '-'} "
-          "อ.${selectedDistrict.value ?? '-'} "
-          "จ.${selectedProvince.value ?? '-'}";
+      String fullAddress = "${addressDetailController.text.trim()} "
+          "ต.${selectedSubdistrict.value} "
+          "อ.${selectedDistrict.value} "
+          "จ.${selectedProvince.value}";
 
       DebtorRequest newDebtor = DebtorRequest(
         shopId: shopId,
-        name: nameController.text,
-        phone: phoneController.text,
+        name: nameController.text.trim(),
+        phone: phoneController.text.trim(),
         address: fullAddress,
-        imgDebtor: imageUrl,
-        creditLimit: double.tryParse(creditLimitController.text) ?? 0.0,
+        imgDebtor: uploadedUrl,
+        creditLimit: double.tryParse(creditLimitController.text.trim()) ?? 0.0,
         currentDebt: 0.0,
       );
 
@@ -190,21 +280,35 @@ class DebtRegisterController extends GetxController {
 
       Get.back(); // ปิด Loading
 
-      if (result['success']) {
-        Get.snackbar("สำเร็จ", result['message'],
-            backgroundColor: Colors.green, colorText: Colors.white);
+      if (result['success'] == true) {
+        // ข้อมูลลูกหนี้ที่เพิ่งสร้าง (มี debtor_id จากเซิร์ฟเวอร์แล้ว)
+        final DebtorResponse? createdDebtor = result['data'] is DebtorResponse
+            ? result['data'] as DebtorResponse
+            : null;
 
-        Future.delayed(const Duration(seconds: 1), () {
-          Get.back(); // ปิดหน้าจอเมื่อสำเร็จ
-        });
+        // ปิด Snackbar ที่ค้างอยู่ก่อน ไม่งั้น Get.back() จะไปปิด Snackbar แทนการปิดหน้าจอ
+        // (สาเหตุที่เดิมกดเพิ่มลูกหนี้แล้วหน้าไม่เด้งกลับ)
+        Get.closeAllSnackbars();
+
+        // ส่งข้อมูลลูกหนี้กลับไปให้หน้าที่เรียกใช้ (เช่น หน้าบันทึกค้างชำระ) เลือกอัตโนมัติ
+        Get.back(result: createdDebtor);
+
+        Get.snackbar(
+          "สำเร็จ",
+          result['message'] ?? "บันทึกข้อมูลลูกหนี้เรียบร้อยแล้ว",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
       } else {
-        Get.snackbar("ผิดพลาด", result['message'],
-            backgroundColor: Colors.red, colorText: Colors.white);
+        _showError(
+          result['message'] ?? "ไม่สามารถบันทึกข้อมูลลูกหนี้ได้ กรุณาลองใหม่",
+          title: "บันทึกไม่สำเร็จ",
+        );
       }
     } catch (e) {
       Get.back(); // ปิด Loading
-      Get.snackbar("Error", "เกิดข้อผิดพลาด: $e",
-          backgroundColor: Colors.red, colorText: Colors.white);
+      debugPrint("เพิ่มลูกหนี้ไม่สำเร็จ: $e");
+      _showError("ไม่สามารถบันทึกข้อมูลลูกหนี้ได้ กรุณาลองใหม่อีกครั้ง");
     }
   }
 }

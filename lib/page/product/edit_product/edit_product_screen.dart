@@ -211,6 +211,8 @@ class EditProductScreen extends StatelessWidget {
                           controller: controller.barcodeCtrl,
                           icon: Icons.qr_code_scanner,
                           keyboardType: TextInputType.number,
+                          // พิมพ์เองเสร็จแล้วเช็คซ้ำให้ทันที
+                          onEditingDone: controller.onBarcodeChanged,
                         ),
                       ),
                       Padding(
@@ -222,6 +224,8 @@ class EditProductScreen extends StatelessWidget {
                             );
                             if (result != null && result is String) {
                               controller.barcodeCtrl.text = result;
+                              // เตือนทันทีถ้าบาร์โค้ดนี้มีสินค้าตัวอื่นใช้อยู่
+                              controller.onBarcodeChanged(result);
                             }
                           },
                           borderRadius: BorderRadius.circular(10),
@@ -626,11 +630,17 @@ class EditProductScreen extends StatelessWidget {
     Widget? suffix,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    void Function(String)? onEditingDone,
   }) {
     return TextFormField(
       controller: controller,
       readOnly: readOnly,
       keyboardType: keyboardType,
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        if (onEditingDone != null) onEditingDone(controller.text);
+      },
+      onFieldSubmitted: onEditingDone,
       inputFormatters: keyboardType == TextInputType.number
           ? [FilteringTextInputFormatter.digitsOnly]
           : null,

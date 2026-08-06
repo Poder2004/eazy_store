@@ -297,7 +297,7 @@ class AddStockController extends GetxController {
           {"sell_price": newSell, "cost_price": newCost},
         );
 
-        if (result != null) {
+        if (result['success'] == true) {
           salePriceController.text = newSell.toStringAsFixed(2);
           costController.text = newCost.toStringAsFixed(2);
         } else {
@@ -347,7 +347,12 @@ class AddStockController extends GetxController {
         );
       }
     } catch (e) {
-      Get.snackbar("Error", "เกิดข้อผิดพลาด: $e", backgroundColor: Colors.red);
+      Get.snackbar(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
       isSavingPrice.value = false;
     }

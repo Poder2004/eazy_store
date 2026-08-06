@@ -179,7 +179,10 @@ class EditShopController extends GetxController {
       }
     } catch (e) {
       print("Error SaveShop: $e");
-      _showWarningDialog("Error", "เกิดข้อผิดพลาด: $e");
+      _showWarningDialog(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลร้านค้าได้ กรุณาลองใหม่อีกครั้ง",
+      );
     } finally {
       isLoading.value = false;
     }

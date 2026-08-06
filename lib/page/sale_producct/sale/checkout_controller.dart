@@ -3,6 +3,7 @@ import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_shop.dart';
 import 'package:eazy_store/api/api_sale.dart';
 import 'package:eazy_store/model/request/baskets_model.dart';
+import 'package:eazy_store/model/response/debtor_response.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/sales_model_request.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
@@ -28,6 +29,9 @@ class CheckoutController extends GetxController {
   var isProcessingPayment = false.obs;
   var paymentMethod = "จ่ายเงินสด".obs;
   final receivedAmountController = TextEditingController();
+
+  /// หน้า CheckoutPage เป็นคนกำหนดให้ ใช้เปิดแผ่นจ่ายเงินสดจากหน้าอื่น
+  void Function(BuildContext context)? openCashPaymentSheet;
   final noteController = TextEditingController();
   var changeAmount = 0.0.obs;
   var shopQrCodeUrl = "".obs;
@@ -805,7 +809,11 @@ class CheckoutController extends GetxController {
     }
   }
 
-  void registerNewDebtor() => Get.to(() => DebtRegisterScreen());
+  /// เปิดหน้าสมัครบัญชีลูกหนี้ และคืนข้อมูลลูกหนี้ที่เพิ่งสมัคร (null = ยกเลิก/ไม่สำเร็จ)
+  Future<DebtorResponse?> registerNewDebtor() async {
+    final result = await Get.to(() => DebtRegisterScreen());
+    return result is DebtorResponse ? result : null;
+  }
 
   @override
   void onClose() {
