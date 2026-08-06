@@ -79,6 +79,16 @@ class BuyProductsController extends GetxController {
   Future<void> fetchProducts() async {
     try {
       isLoading(true);
+
+      // ✅ จำ id สินค้าที่เลือกไว้ก่อนโหลดใหม่ เพราะเปลี่ยนตัวกรอง/ค้นหา
+      // จะเรียก fetchProducts() ใหม่ทุกครั้ง แทนที่ allProducts ด้วย object
+      // ใหม่ทั้งหมดจาก API (isSelected เริ่มเป็น false เสมอ) ถ้าไม่จำไว้
+      // การเลือกที่ทำค้างไว้ข้ามหน้าจะหายไปเงียบๆ
+      final selectedIds = allProducts
+          .where((p) => p.isSelected)
+          .map((p) => p.productId)
+          .toSet();
+
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
@@ -91,13 +101,25 @@ class BuyProductsController extends GetxController {
         limit: _fetchAllLimit,
       );
 
+      List<ProductResponse> fetched;
       if (response is ProductPagedResponse) {
-        allProducts.assignAll(response.items);
+        fetched = response.items;
       } else if (response is List<ProductResponse>) {
-        allProducts.assignAll(response);
+        fetched = response;
       } else {
-        allProducts.clear();
+        fetched = [];
       }
+
+      // คืนสถานะ "เลือกไว้" ให้สินค้าตัวเดิม แม้จะเป็น object คนละตัวจาก API รอบนี้
+      if (selectedIds.isNotEmpty) {
+        for (final p in fetched) {
+          if (selectedIds.contains(p.productId)) {
+            p.isSelected = true;
+          }
+        }
+      }
+
+      allProducts.assignAll(fetched);
 
       totalPages.value = allProducts.isEmpty
           ? 1

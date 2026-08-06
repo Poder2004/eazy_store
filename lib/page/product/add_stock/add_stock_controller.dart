@@ -300,6 +300,10 @@ class AddStockController extends GetxController {
         if (result['success'] == true) {
           salePriceController.text = newSell.toStringAsFixed(2);
           costController.text = newCost.toStringAsFixed(2);
+          // การ์ดราคาอ่านค่าจาก TextEditingController ตรงๆ ภายใต้ Obx ที่ผูกกับ
+          // foundProduct เท่านั้น การแก้ .text เฉยๆ ไม่ทำให้ Obx รีบิลด์
+          // ต้องสั่ง refresh() เพื่อบังคับให้จอแสดงราคาใหม่ทันที
+          foundProduct.refresh();
         } else {
           priceOk = false;
         }
@@ -355,40 +359,6 @@ class AddStockController extends GetxController {
       );
     } finally {
       isSavingPrice.value = false;
-    }
-  }
-
-  // 💾 เก็บไว้ใช้ใน Dialog ยืนยัน
-  Future<void> executeSave(int amount) async {
-    Get.dialog(
-      const Center(child: CircularProgressIndicator()),
-      barrierDismissible: false,
-    );
-
-    bool success = await ApiProduct.updateStock(
-      foundProduct.value!.productId!,
-      amount,
-    );
-
-    Get.back(); // Hide Loading
-
-    if (success) {
-      Get.snackbar(
-        "สำเร็จ",
-        "เพิ่มสต็อกเรียบร้อยแล้ว",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-      handleClear();
-
-      searchController.clear();
-    } else {
-      Get.snackbar(
-        "ผิดพลาด",
-        "บันทึกไม่สำเร็จ กรุณาลองใหม่",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
     }
   }
 }

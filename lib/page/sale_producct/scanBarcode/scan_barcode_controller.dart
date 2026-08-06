@@ -187,9 +187,21 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void goToListPage() {
+  void goToListPage() async {
+    // ✅ เช็ค ณ จุดนี้ (ก่อนหน้านี้เอง) ว่าหน้าที่พาเรามาสแกนคือ CheckoutPage ไหม
+    // เพราะพอ push ManualListPage ไปแล้ว Get.previousRoute จะกลายเป็นหน้าสแกนนี้เอง
+    // เช็คทีหลังจาก ManualListPage จะไม่มีทางรู้ว่าก่อนหน้าสแกนคือ CheckoutPage หรือเปล่า
+    final bool cameFromCheckout = Get.previousRoute.contains('CheckoutPage');
+
     // ✅ หยุดกล้องก่อนไปหน้าอื่น
     cameraController.stop();
-    Get.to(() => const ManualListPage());
+    await Get.to(
+      () => const ManualListPage(),
+      arguments: {'cameFromCheckout': cameFromCheckout},
+    );
+    // ✅ กลับมาจากหน้ารายการแล้ว เปิดกล้องต่อถ้ายังมีสิทธิ์อยู่ กันจอสแกนค้าง/ดำ
+    if (hasPermission.value) {
+      cameraController.start();
+    }
   }
 }

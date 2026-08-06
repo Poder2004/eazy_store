@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
 import 'order_list_controller.dart'; // Import controller ที่แยกออกมา
@@ -162,9 +163,10 @@ class OrderListScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 3),
                 _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
-                _buildQtyField(item.quantityController, (v) {
-                  if (v.isEmpty || v == '0') controller.showDeleteConfirmation(item);
-                }),
+                _buildQtyField(
+                  item.quantityController,
+                  (v) => controller.onQuantityTyped(item, v),
+                ),
                 _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
                 const SizedBox(width: 3),
                 SizedBox(
@@ -263,6 +265,8 @@ class OrderListScreen extends StatelessWidget {
       child: TextField(
         controller: ctrl,
         keyboardType: TextInputType.number,
+        // กันพิมพ์เลขติดลบ/ตัวอักษรเข้าไปในช่องจำนวน (ทำให้จำนวนสั่งของเพี้ยนตอน export PDF)
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
         onChanged: onChange,

@@ -73,12 +73,22 @@ class AddProductController extends GetxController {
   }
 
   Future<void> pickImage(ImageSource source) async {
-    final pickedFile = await _picker.pickImage(
-      source: source,
-      imageQuality: 80,
-    );
-    if (pickedFile != null) {
-      imageFile.value = File(pickedFile.path);
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
+        imageFile.value = File(pickedFile.path);
+      }
+    } catch (e) {
+      print("Error picking image: $e");
+      Get.snackbar(
+        "ผิดพลาด",
+        "ไม่สามารถเลือกรูปภาพได้ กรุณาลองใหม่อีกครั้ง",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -100,6 +110,16 @@ class AddProductController extends GetxController {
       Get.snackbar(
         "แจ้งเตือน",
         "กรุณากรอกข้อมูลให้ครบถ้วน",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+    if ((double.tryParse(costController.text) ?? 0) <= 0 ||
+        (double.tryParse(salePriceController.text) ?? 0) <= 0) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "กรุณากรอกราคาทุนและราคาขายให้มากกว่า 0",
         backgroundColor: Colors.orange,
         colorText: Colors.white,
       );

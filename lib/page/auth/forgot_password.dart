@@ -83,10 +83,20 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       );
       return;
     }
+    if (!GetUtils.isEmail(_emailController.text.trim())) {
+      _showPopup(
+        title: "แจ้งเตือน",
+        message: "รูปแบบอีเมลไม่ถูกต้อง",
+        icon: Icons.info_outline,
+        color: Colors.orange,
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     final request = ResetRequest(email: _emailController.text.trim());
     final response = await ApiAuth.requestResetOTP(request);
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     // 2. กรณีส่งสำเร็จ

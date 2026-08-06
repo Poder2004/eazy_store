@@ -25,6 +25,10 @@ class EditProductController extends GetxController {
   double _currentSellPrice = 0.0;
   double _currentCostPrice = 0.0;
 
+  // แคชผลเช็คบาร์โค้ดซ้ำล่าสุด กันยิงเช็ค/เตือนซ้ำถ้าค่ายังไม่เปลี่ยน
+  String? _lastCheckedBarcode;
+  String? _lastCheckedOwner;
+
   // ---------------- Data Variables ----------------
   late ProductResponse originalProduct;
   var isLoading = false.obs;
@@ -63,9 +67,27 @@ class EditProductController extends GetxController {
       // โหลดหมวดหมู่
       fetchCategories();
     } else {
-      // ถ้าไม่มีข้อมูลส่งมา ให้เด้งกลับทันที
+      // ถ้าไม่มีข้อมูลส่งมา ตั้งค่าว่างที่ปลอดภัยไว้ก่อน กัน build() รอบแรก
+      // (ที่ทำงานก่อน addPostFrameCallback) อ่านค่า late field ที่ยังไม่ได้ assign แล้วแอป crash
+      originalProduct = ProductResponse(
+        shopId: 0,
+        categoryId: 0,
+        name: '',
+        imgProduct: '',
+        sellPrice: 0,
+        costPrice: 0,
+        stock: 0,
+        unit: '',
+      );
+      nameCtrl = TextEditingController();
+      barcodeCtrl = TextEditingController();
+      stockCtrl = TextEditingController(text: '0');
+      unitCtrl = TextEditingController();
+
+      // แล้วค่อยเด้งกลับทันที
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.back();
+        Get.snackbar("เกิดข้อผิดพลาด", "ไม่พบข้อมูลสินค้า");
       });
     }
   }
@@ -163,8 +185,11 @@ class EditProductController extends GetxController {
   /// เรียกหลังสแกน/กรอกบาร์โค้ดเสร็จ เพื่อเตือนทันทีถ้าซ้ำ
   Future<void> onBarcodeChanged(String barcode) async {
     final owner = await findBarcodeOwner(barcode);
+    _lastCheckedBarcode = barcode.trim();
+    _lastCheckedOwner = owner;
     if (owner == null) return;
 
+    Get.closeAllSnackbars();
     Get.snackbar(
       "บาร์โค้ดซ้ำ",
       "บาร์โค้ดนี้ถูกใช้กับสินค้า \"$owner\" ในร้านนี้แล้ว",
@@ -188,13 +213,22 @@ class EditProductController extends GetxController {
     }
 
     // เช็คบาร์โค้ดซ้ำก่อน จะได้ไม่ต้องกดยืนยันแล้วค่อยเด้ง error
+    // ถ้าบาร์โค้ดไม่เปลี่ยนจากตอนเช็คสด (onBarcodeChanged) ก็ใช้ผลเดิม ไม่ต้องยิง API/เตือนซ้ำ
     final String barcode = barcodeCtrl.text.trim();
     if (barcode.isNotEmpty) {
-      isLoading.value = true;
-      final owner = await findBarcodeOwner(barcode);
-      isLoading.value = false;
+      String? owner;
+      if (barcode == _lastCheckedBarcode) {
+        owner = _lastCheckedOwner;
+      } else {
+        isLoading.value = true;
+        owner = await findBarcodeOwner(barcode);
+        isLoading.value = false;
+        _lastCheckedBarcode = barcode;
+        _lastCheckedOwner = owner;
+      }
 
       if (owner != null) {
+        Get.closeAllSnackbars();
         Get.snackbar(
           "บาร์โค้ดซ้ำ",
           "บาร์โค้ดนี้ถูกใช้กับสินค้า \"$owner\" ในร้านนี้แล้ว กรุณาใช้บาร์โค้ดอื่น",

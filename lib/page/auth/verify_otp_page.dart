@@ -64,6 +64,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   void _handleResendOTP() async {
     setState(() => _isLoading = true);
     final response = await ApiAuth.requestResetOTP(ResetRequest(email: _email));
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (response.error == null) {
@@ -92,6 +93,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     final response = await ApiAuth.verifyOTP(
       VerifyOtpRequest(email: _email, otpCode: otp),
     );
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (response.error == null) {

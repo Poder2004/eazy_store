@@ -36,6 +36,9 @@ class DebtSaleController extends GetxController {
 
   var payAmount = 0.0.obs;
 
+  // กันกดยืนยันซ้ำจนบันทึกรายการค้างชำระซ้ำสองครั้ง
+  var isSubmitting = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -252,7 +255,7 @@ class DebtSaleController extends GetxController {
   }
 
   // ✨ Popup ยืนยันที่แก้ไขใหม่ โชว์ปุ่มครบ ไม่ต้องเลื่อนหา
-  void confirmSubmit(CheckoutController checkoutController) {
+  void confirmSubmit(CheckoutController checkoutController) async {
     // 1. สั่งปิดคีย์บอร์ดก่อนเสมอ เพื่อไม่ให้จอโดนดันจน Popup เล็กลง
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -279,6 +282,21 @@ class DebtSaleController extends GetxController {
                   "กรุณาบันทึกเป็นการขายเงินสดแทน",
       );
       return;
+    }
+
+    // ✅ ขอข้อมูลลูกหนี้ล่าสุดจากเซิร์ฟเวอร์ก่อนเช็ควงเงิน กันตัวเลขที่แคชเชียร์
+    // เห็นไม่ทันข้อมูลจริง ถ้ามีการบันทึกหนี้จากเครื่อง/เซสชันอื่นพร้อมกัน
+    // (เช็คไม่ได้ก็ไม่เป็นไร ปล่อยให้ใช้ข้อมูล cache เดิม เซิร์ฟเวอร์เช็คซ้ำอีกชั้นตอนบันทึกอยู่แล้ว)
+    try {
+      final fresh = await ApiDebtor.searchDebtor(selectedDebtor!.phone);
+      final match = fresh.firstWhereOrNull(
+        (d) => d.debtorId == selectedDebtor!.debtorId,
+      );
+      if (match != null) {
+        selectedDebtorRx.value = match;
+      }
+    } catch (e) {
+      debugPrint("รีเฟรชข้อมูลลูกหนี้ไม่สำเร็จ: $e");
     }
 
     // เช็ควงเงินคงเหลือของลูกหนี้ก่อน (เซิร์ฟเวอร์เช็คซ้ำอีกชั้น)
@@ -484,6 +502,8 @@ class DebtSaleController extends GetxController {
   }
 
   Future<void> submitDebt(CheckoutController checkoutController) async {
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
@@ -556,6 +576,8 @@ class DebtSaleController extends GetxController {
       Get.back();
       debugPrint("บันทึกค้างชำระไม่สำเร็จ: $e");
       showErrorDialog("ไม่สามารถบันทึกรายการได้ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      isSubmitting.value = false;
     }
   }
 

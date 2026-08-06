@@ -20,6 +20,11 @@ class OrderItem {
   // เริ่มต้นจาก `unit` เดิม แต่ผู้ใช้พิมพ์ทับได้ เช่นเปลี่ยน "คู่" เป็น "1 โหล"
   final TextEditingController unitController;
 
+  // จำนวนล่าสุดที่ยังถูกต้อง (>0) ไว้ใช้คืนค่าตอนกดยกเลิกลบ เพราะพอผู้ใช้พิมพ์
+  // เลขในช่องจนกลายเป็น "0" ไปแล้ว ตัว TextField เองจะอัปเดต .text ไปก่อน
+  // ที่ onChanged จะทำงาน ทำให้อ่าน .text ตอนนั้นไม่ได้ค่าเดิมที่แท้จริงอีกต่อไป
+  String lastValidQuantity;
+
   OrderItem({
     required this.id,
     required this.name,
@@ -31,7 +36,8 @@ class OrderItem {
          text: initialQuantity.toString(),
        ),
        noteController = TextEditingController(text: initialNote),
-       unitController = TextEditingController(text: unit);
+       unitController = TextEditingController(text: unit),
+       lastValidQuantity = initialQuantity.toString();
 
   // สั่งปิดการทำงานของ Controller เมื่อไม่ได้ใช้
   void dispose() {
@@ -361,6 +367,16 @@ class OrderListController extends GetxController {
       showDeleteConfirmation(item, isFromButton: true);
     } else {
       item.quantityController.text = newQuantity.toString();
+      item.lastValidQuantity = newQuantity.toString();
+    }
+  }
+
+  // เรียกจากช่องกรอกจำนวนตอนพิมพ์เอง (ต่างจาก updateQuantity ที่มาจากปุ่ม +/-)
+  void onQuantityTyped(OrderItem item, String value) {
+    if (value.isEmpty || value == '0') {
+      showDeleteConfirmation(item);
+    } else if ((int.tryParse(value) ?? 0) > 0) {
+      item.lastValidQuantity = value;
     }
   }
 
@@ -372,7 +388,6 @@ class OrderListController extends GetxController {
   }
 
   void showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {
-    String originalQuantity = item.quantityController.text;
     ConfirmDialog.show(
       title: 'ลบรายการสินค้า',
       message: 'คุณต้องการลบ "${item.name}" ออกหรือไม่?',
@@ -380,9 +395,9 @@ class OrderListController extends GetxController {
       onCancel: () {
         if (isFromButton ||
             (int.tryParse(item.quantityController.text) ?? 0) <= 0) {
-          item.quantityController.text = (originalQuantity == '0' || originalQuantity.trim().isEmpty)
-              ? '1'
-              : originalQuantity;
+          // ใช้ lastValidQuantity แทนการอ่าน .text ตอนนี้ตรงๆ เพราะถ้ามาจาก
+          // การพิมพ์ในช่อง .text จะถูกอัปเดตเป็นค่าใหม่ (เช่น "0") ไปแล้วก่อนหน้านี้
+          item.quantityController.text = item.lastValidQuantity;
         }
       },
       onConfirm: () => removeItem(item.id),

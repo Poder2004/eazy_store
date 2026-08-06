@@ -226,19 +226,25 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                         ),
                       ),
                       onPressed: () {
-                        if (newEmailController.text.trim().isNotEmpty) {
-                          setState(
-                            () => email = newEmailController.text.trim(),
-                          );
-                          Get.back();
-                          // ✨ ไม่สั่ง _startTimer ตรงนี้แล้ว ผู้ใช้ต้องกด "ส่งรหัสอีกครั้ง" เอง
+                        final newEmail = newEmailController.text.trim();
+                        if (!GetUtils.isEmail(newEmail)) {
                           Get.snackbar(
-                            "อัปเดตแล้ว",
-                            "เปลี่ยนอีเมลเป็น $email เรียบร้อย\nกรุณากด 'ส่งรหัสอีกครั้ง'",
+                            "รูปแบบอีเมลไม่ถูกต้อง",
+                            "กรุณากรอกอีเมลให้ถูกต้อง",
                             backgroundColor: Colors.white,
                             colorText: Colors.black87,
                           );
+                          return;
                         }
+                        setState(() => email = newEmail);
+                        Get.back();
+                        // ✨ ไม่สั่ง _startTimer ตรงนี้แล้ว ผู้ใช้ต้องกด "ส่งรหัสอีกครั้ง" เอง
+                        Get.snackbar(
+                          "อัปเดตแล้ว",
+                          "เปลี่ยนอีเมลเป็น $email เรียบร้อย\nกรุณากด 'ส่งรหัสอีกครั้ง'",
+                          backgroundColor: Colors.white,
+                          colorText: Colors.black87,
+                        );
                       },
                       child: const Text(
                         "บันทึก",
@@ -252,7 +258,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() => newEmailController.dispose());
   }
 
   @override

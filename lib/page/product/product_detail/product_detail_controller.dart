@@ -17,6 +17,19 @@ class ProductDetailController extends GetxController {
     if (Get.arguments != null && Get.arguments is ProductResponse) {
       product = (Get.arguments as ProductResponse).obs;
     } else {
+      // ตั้งค่าว่างที่ปลอดภัยไว้ก่อน กัน build() รอบแรก (ที่ทำงานก่อน addPostFrameCallback)
+      // อ่านค่า late field ที่ยังไม่ได้ assign แล้วแอป crash ระหว่างรอเด้งกลับ
+      product = ProductResponse(
+        shopId: 0,
+        categoryId: 0,
+        name: '',
+        imgProduct: '',
+        sellPrice: 0,
+        costPrice: 0,
+        stock: 0,
+        unit: '',
+      ).obs;
+
       // กรณีไม่มีข้อมูลส่งมา ให้เด้งกลับเพื่อป้องกัน Error
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.back();

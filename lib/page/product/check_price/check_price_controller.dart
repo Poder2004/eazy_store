@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,7 +77,9 @@ class PriceController extends GetxController {
       }
 
       var activeList = list.where((p) => p.status == true).toList();
-      activeList.sort((a, b) => a.name.compareTo(b.name));
+      activeList.sort(
+        (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
+      );
 
       filteredProducts.assignAll(activeList);
     } catch (e) {

@@ -116,6 +116,16 @@ class EditShopController extends GetxController {
       return;
     }
 
+    // 3. เช็ค PIN ต้องเป็นตัวเลข 6 หลักเท่านั้น (กันบันทึก PIN สั้น/ผิดรูปแบบ)
+    final pin = pinCodeController.text.trim();
+    if (pin.length != 6 || !RegExp(r'^[0-9]{6}$').hasMatch(pin)) {
+      _showWarningDialog(
+        "รหัส PIN ไม่ถูกต้อง",
+        "กรุณากรอกรหัส PIN เป็นตัวเลขให้ครบ 6 หลัก",
+      );
+      return;
+    }
+
     isLoading.value = true;
     try {
       String imageUrl = shop.imgShop;

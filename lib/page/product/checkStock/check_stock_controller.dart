@@ -76,7 +76,9 @@ class CheckStockController extends GetxController {
           shopId,
           page: currentPage.value,
           limit: itemsPerPage.value,
-          search: "",
+          // ใช้คำค้นหาปัจจุบันแทนที่จะ hardcode ว่าง กันคำค้นหาหายไปเงียบๆ
+          // เวลาเปลี่ยนหน้า/ตัวกรอง/เรียงลำดับระหว่างที่ยังมีคำค้นหาอยู่
+          search: searchCtrl.text.trim(),
           categoryId: selectedCategoryId.value != 0 ? selectedCategoryId.value : null,
           sort: selectedSortOption.value,
         );

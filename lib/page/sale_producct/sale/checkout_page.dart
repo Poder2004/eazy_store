@@ -146,6 +146,8 @@ class CheckoutPage extends StatelessWidget {
           title: Text(
             product.name,
             style: const TextStyle(fontWeight: FontWeight.bold),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
             "฿${product.sellPrice.toStringAsFixed(0)} | คงเหลือ: ${product.stock}",
@@ -578,7 +580,7 @@ class CheckoutPage extends StatelessWidget {
                 ),
                 Obx(
                   () => Text(
-                    "${controller.totalPrice.toInt()} บาท",
+                    "${controller.totalPriceRounded} บาท",
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -819,7 +821,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                   () => FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      "${controller.totalPrice.toInt()} บาท",
+                      "${controller.totalPriceRounded} บาท",
                       style: const TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -930,7 +932,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                               () => FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  "${controller.changeAmount.value.toInt()} ฿",
+                                  "${controller.changeAmount.value.round()} ฿",
                                   style: TextStyle(
                                     fontSize: 26,
                                     fontWeight: FontWeight.bold,

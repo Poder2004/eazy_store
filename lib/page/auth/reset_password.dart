@@ -50,6 +50,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       );
       return;
     }
+    if (_passController.text.length < 6) {
+      _showPopup(
+        title: "เตือน",
+        message: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+        icon: Icons.warning_amber,
+        color: Colors.orange,
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     final request = UpdatePasswordRequest(
@@ -58,6 +67,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       newPassword: _passController.text,
     );
     final response = await ApiAuth.updatePassword(request);
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (response.error == null) {

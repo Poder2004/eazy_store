@@ -159,12 +159,15 @@ class BottomNavBar extends StatelessWidget {
   }
 
   void _navigateToPage(int index) {
+    // ✅ ใช้ Get.off() แทน Get.to() เพื่อ "แทนที่" หน้าปัจจุบันแทนการ push ซ้อนไปเรื่อยๆ
+    // (เดิมสลับแท็บไปมาหลายรอบจะ push หน้าใหม่ทับไปเรื่อยๆ กด back ต้องกดหลายที
+    // และ controller ของแท็บเดิมค้างอยู่ในหน่วยความจำสะสมโดยไม่ถูกลบ)
     if (index == 0) {
       // ✅ รีเฟรชข้อมูลหน้า Home ก่อนข้ามหน้า
       if (Get.isRegistered<HomeController>()) {
         Get.find<HomeController>().fetchTodaySales();
       }
-      Get.to(() => const HomePage());
+      Get.off(() => const HomePage());
     } else if (index == 1) {
       // ✅ รีเซ็ตวันที่ให้กลับมาเป็น "ปัจจุบัน" ทุกครั้งที่กดเข้าหน้าบัญชี
       if (Get.isRegistered<SalesAccountController>()) {
@@ -173,19 +176,19 @@ class BottomNavBar extends StatelessWidget {
         ctrl.currentDate.value = DateTime.now(); // กลับมาใช้วันนี้
         ctrl.fetchSummaryData(); // ดึงข้อมูลใหม่
       }
-      Get.to(() => const SalesAccountScreen());
+      Get.off(() => const SalesAccountScreen());
     } else if (index == 3) {
       // ✅ รีเฟรชข้อมูลหน้า คนค้างชำระ (DebtLedger) ก่อนข้ามหน้า
       if (Get.isRegistered<DebtLedgerController>()) {
         Get.find<DebtLedgerController>().initialData();
       }
-      Get.to(() => DebtLedgerScreen());
+      Get.off(() => DebtLedgerScreen());
     } else if (index == 4) {
       // ✅ รีเฟรชข้อมูลหน้า โปรไฟล์ ก่อนข้ามหน้า
       if (Get.isRegistered<ProfileController>()) {
         Get.find<ProfileController>().loadProfileData();
       }
-      Get.to(() => const ProfilePage());
+      Get.off(() => const ProfilePage());
     }
   }
 

@@ -44,6 +44,10 @@ class SignupController extends GetxController {
       _showWarning("แจ้งเตือน", "เบอร์โทรต้องมี 10 หลัก");
       return;
     }
+    if (!GetUtils.isEmail(email)) {
+      _showWarning("แจ้งเตือน", "รูปแบบอีเมลไม่ถูกต้อง");
+      return;
+    }
     if (password.length < 6) {
       _showWarning("แจ้งเตือน", "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
       return;

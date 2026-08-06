@@ -1162,14 +1162,16 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             borderRadius: BorderRadius.circular(6),
             child: Row(
               children: [
+                // ใช้ .ceil() แทน .toInt() กันยอดเศษต่ำกว่า 1 บาท (เช่น 0.5) ถูกปัดเป็น
+                // flex: 0 ซึ่ง Expanded ไม่ยอมรับ (flex ต้อง >= 1) จน throw assertion error
                 if (data.safe > 0)
                   Expanded(
-                    flex: data.safe.toInt(),
+                    flex: data.safe.ceil(),
                     child: Container(height: 8, color: _kGreen),
                   ),
                 if (data.warning > 0)
                   Expanded(
-                    flex: data.warning.toInt(),
+                    flex: data.warning.ceil(),
                     child: Container(
                       height: 8,
                       margin: const EdgeInsets.symmetric(horizontal: 1.5),
@@ -1178,7 +1180,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   ),
                 if (data.danger > 0)
                   Expanded(
-                    flex: data.danger.toInt(),
+                    flex: data.danger.ceil(),
                     child: Container(height: 8, color: const Color(0xFFFF5A6A)),
                   ),
               ],
