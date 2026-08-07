@@ -78,12 +78,15 @@ class CheckoutPage extends StatelessWidget {
                           ),
                         ),
                         Expanded(
-                          child: Obx(() {
-                            if (controller.isSearching.value) {
-                              return _buildSearchResults(controller);
-                            }
-                            return _buildCartList(context, controller);
-                          }),
+                          child: RefreshIndicator(
+                            onRefresh: controller.fetchFreshProducts,
+                            child: Obx(() {
+                              if (controller.isSearching.value) {
+                                return _buildSearchResults(controller);
+                              }
+                              return _buildCartList(context, controller);
+                            }),
+                          ),
                         ),
                       ],
                     ),
@@ -104,20 +107,35 @@ class CheckoutPage extends StatelessWidget {
   }
 
   Widget _buildSearchResults(CheckoutController controller) {
-    if (controller.isSearching.value && controller.searchResults.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+    if (controller.isSearchLoading.value && controller.searchResults.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          Center(
+            heightFactor: 3,
+            child: CircularProgressIndicator(),
+          ),
+        ],
+      );
     }
     if (controller.searchResults.isEmpty) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          const Icon(Icons.search_off, size: 60, color: Colors.grey),
-          const SizedBox(height: 10),
-          const Text("ไม่พบสินค้า", style: TextStyle(color: Colors.grey)),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 80),
+              const Icon(Icons.search_off, size: 60, color: Colors.grey),
+              const SizedBox(height: 10),
+              const Text("ไม่พบสินค้า", style: TextStyle(color: Colors.grey)),
+            ],
+          ),
         ],
       );
     }
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 10),
       itemCount: controller.searchResults.length,
       separatorBuilder: (c, i) => const Divider(height: 1),
@@ -184,7 +202,7 @@ class CheckoutPage extends StatelessWidget {
               ),
               Obx(() {
                 final parkCtrl = Get.find<ParkOrderController>();
-                final count = parkCtrl.parkedOrders.length;
+                final count = parkCtrl.visibleOrders.length;
                 if (count == 0) return const SizedBox.shrink();
                 return GestureDetector(
                   onTap: () => _showParkedOrdersSheet(context, controller),
@@ -215,22 +233,26 @@ class CheckoutPage extends StatelessWidget {
         Expanded(
           child: Obx(() {
             if (controller.cartItems.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_basket_outlined,
-                      size: 80,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "ตะกร้าว่างเปล่า",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 80),
+                      Icon(
+                        Icons.shopping_basket_outlined,
+                        size: 80,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "ตะกร้าว่างเปล่า",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ],
               );
             }
             final groupedItems = <String, List<ProductItem>>{};
@@ -241,6 +263,7 @@ class CheckoutPage extends StatelessWidget {
               groupedItems[item.id]!.add(item);
             }
             return ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               itemCount: groupedItems.keys.length,
               separatorBuilder: (c, i) =>

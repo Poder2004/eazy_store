@@ -4,6 +4,7 @@ class ParkedOrder {
   final List<ParkedItem> items;
   final double totalPrice;
   final DateTime parkedAt;
+  final int shopId;
 
   ParkedOrder({
     required this.id,
@@ -11,6 +12,7 @@ class ParkedOrder {
     required this.items,
     required this.totalPrice,
     required this.parkedAt,
+    required this.shopId,
   });
 }
 

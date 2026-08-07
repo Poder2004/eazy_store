@@ -22,7 +22,12 @@ class CheckoutController extends GetxController {
   // 🔍 คลังสินค้า
   var allProducts = <ProductResponse>[];
   var searchResults = <ProductResponse>[].obs;
+  // isSearching = มีคำค้นหาอยู่ในช่องไหม (คุมว่าจะโชว์หน้าค้นหาหรือหน้าตะกร้า)
+  // isSearchLoading = กำลังยิง request ค้นหาอยู่ไหม (คุมแค่ spinner)
+  // ต้องแยกกันเพราะเดิมใช้ตัวเดียวกัน พอค้นหาเสร็จ (ไม่ว่าจะเจอหรือไม่เจอ) จะถูกเซ็ตเป็น
+  // false ทันที ทำให้หน้าค้นหาหลุดกลับไปเป็นหน้าตะกร้าทั้งที่ยังมีคำค้นหาค้างอยู่ในช่อง
   var isSearching = false.obs;
+  var isSearchLoading = false.obs;
 
   // 💰 การชำระเงิน
   var isDebtMode = false.obs;
@@ -89,6 +94,10 @@ class CheckoutController extends GetxController {
   Future<void> checkShopAndLoadData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int currentShopId = prefs.getInt('shopId') ?? 0;
+
+    // ✅ ซิงค์ร้านปัจจุบันให้ ParkOrderController เสมอ (คอนโทรลเลอร์นี้เป็น permanent
+    // singleton อยู่ข้ามการสลับร้าน) กันออเดอร์ที่พักไว้ของร้านอื่นรั่วมาโชว์/กู้คืนข้ามร้าน
+    _parkCtrl.currentShopId.value = currentShopId;
 
     if (loadedShopId != currentShopId) {
       print(
@@ -198,16 +207,28 @@ class CheckoutController extends GetxController {
     }
   }
 
+  // ป้องกัน race condition: ทุกครั้งที่พิมพ์จะยิง onSearchChanged ใหม่แบบ async
+  // ถ้าคำค้นหาเก่า (เช่น "a") ยิง API ช้ากว่าคำค้นหาใหม่ (เช่น "ab") ที่หาเจอจาก local
+  // cache แล้วเสร็จก่อน ผลลัพธ์เก่าที่มาทีหลังจะทับผลลัพธ์ใหม่ทำให้รายการที่เพิ่งขึ้น
+  // หายไปเฉยๆ (ยิ่งตะกร้าใหญ่ยิ่ง jank ทำให้พิมพ์ติดกันถี่ๆ จนโดนชนกันง่ายขึ้น)
+  // แก้โดยให้ทุก request มีเลขกำกับ (_searchRequestId) แล้วเช็คก่อน apply ผลทุกจุดว่า
+  // ยังเป็น request ล่าสุดอยู่ไหม ถ้าไม่ใช่ (มี request ใหม่กว่าแซงไปแล้ว) ก็ทิ้งผลนั้น
+  int _searchRequestId = 0;
+
   void onSearchChanged(String query) async {
     if (query.isEmpty) {
+      _searchRequestId++;
       isSearching.value = false;
+      isSearchLoading.value = false;
       searchResults.clear();
       return;
     }
 
+    final int requestId = ++_searchRequestId;
     isSearching.value = true;
+    isSearchLoading.value = true;
 
-    // ✅ ครอบทั้งฟังก์ชันด้วย try/finally กัน isSearching ค้างเป็น true ตลอดกาล
+    // ✅ ครอบทั้งฟังก์ชันด้วย try/finally กัน isSearchLoading ค้างเป็น true ตลอดกาล
     // (เดิมถ้าเจอใน local cache หรือค้นหาไม่เจอเลย จะไม่มีจุดไหนตั้งกลับเป็น false
     // ทำให้จอค้างเป็น spinner ไม่มีทางรู้ว่าค้นหาจบแล้ว)
     try {
@@ -219,6 +240,7 @@ class CheckoutController extends GetxController {
       }).toList();
 
       if (localMatches.isNotEmpty) {
+        if (requestId != _searchRequestId) return; // มี request ใหม่กว่าแซงไปแล้ว
         searchResults.assignAll(localMatches);
         return;
       }
@@ -232,6 +254,8 @@ class CheckoutController extends GetxController {
         currentShopId,
       );
 
+      if (requestId != _searchRequestId) return; // มี request ใหม่กว่าแซงไปแล้ว
+
       if (product != null && product.status == true) {
         searchResults.assignAll([product]);
       } else {
@@ -239,9 +263,9 @@ class CheckoutController extends GetxController {
       }
     } catch (e) {
       print("Search API Error: $e");
-      searchResults.clear();
+      if (requestId == _searchRequestId) searchResults.clear();
     } finally {
-      isSearching.value = false;
+      if (requestId == _searchRequestId) isSearchLoading.value = false;
     }
   }
 
