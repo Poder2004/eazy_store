@@ -44,9 +44,17 @@ class ManualListController extends GetxController {
   var itemsPerPageBarcode = 10.obs;
   var totalPagesBarcode = 1.obs;
 
+  // ✅ ส่งมาจาก ScanBarcodeController ตอน push หน้านี้ (เช็คมาก่อนแล้วว่าหน้าที่พา
+  // มาสแกนคือ CheckoutPage ไหม) เพราะพอมาถึงหน้านี้ Get.previousRoute จะเป็น
+  // หน้าสแกนเองเสมอ ไม่มีทางเช็คย้อนไปถึง CheckoutPage ได้อีกที
+  bool _cameFromCheckout = false;
+
   @override
   void onInit() {
     super.onInit();
+    if (Get.arguments is Map && Get.arguments['cameFromCheckout'] == true) {
+      _cameFromCheckout = true;
+    }
     fetchInitialData();
     debounce(searchQuery, (_) => filterProducts(), time: 300.milliseconds);
   }
@@ -322,10 +330,11 @@ class ManualListController extends GetxController {
       // อัปเดต Nav Index เพื่อให้ Tab Bar แสดงสีแดงที่เมนูขาย (Index 2)
       checkoutCtrl.currentNavIndex.value = 2;
 
-      // ล้างค่าที่เลือกไว้เพื่อให้กลับมาเลือกใหม่ได้สะอาดๆ
-      selectedIds.clear();
-
       if (addedCount > 0) {
+        // ล้างค่าที่เลือกไว้เฉพาะตอนเพิ่มสำเร็จอย่างน้อย 1 ชิ้น เพื่อให้กลับมา
+        // เลือกใหม่ได้สะอาดๆ (เดิมล้างทิ้งแม้เพิ่มไม่สำเร็จเลยสักชิ้น ทำให้ผู้ใช้
+        // ต้องเลือกสินค้าใหม่ทั้งหมดแทนที่จะแก้ไข/ลองใหม่เฉพาะตัวที่พลาด)
+        selectedIds.clear();
         Get.snackbar(
           "สำเร็จ",
           "เพิ่มสินค้า $addedCount รายการลงตะกร้าแล้ว",
@@ -344,9 +353,11 @@ class ManualListController extends GetxController {
         return; // ไม่เปลี่ยนหน้าถ้าไม่มีสินค้าถูกเพิ่มเลย
       }
 
-      // จัดการหน้าจอ
-      if (Get.previousRoute.contains('CheckoutPage')) {
-        Get.back();
+      // จัดการหน้าจอ: ถ้ามาจาก CheckoutPage (ผ่านหน้าสแกนอีกที) ให้ปิด 2 หน้า
+      // (หน้ารายการนี้ + หน้าสแกน) เพื่อย้อนกลับไปหน้า Checkout เดิม แทนที่จะ
+      // push ซ้อนหน้าใหม่ทับ ถ้าไม่ได้มาจาก Checkout ค่อย push หน้าใหม่
+      if (_cameFromCheckout) {
+        Get.close(2);
       } else {
         Get.to(() => const CheckoutPage());
       }

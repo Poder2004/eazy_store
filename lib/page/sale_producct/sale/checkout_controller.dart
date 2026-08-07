@@ -52,8 +52,8 @@ class CheckoutController extends GetxController {
 
     receivedAmountController.addListener(() {
       double received = double.tryParse(receivedAmountController.text) ?? 0;
-      if (received >= totalPrice) {
-        changeAmount.value = received - totalPrice;
+      if (received >= totalPriceRounded) {
+        changeAmount.value = received - totalPriceRounded;
       } else {
         changeAmount.value = 0.0;
       }
@@ -207,20 +207,23 @@ class CheckoutController extends GetxController {
 
     isSearching.value = true;
 
-    // 🔍 ค้นหาจาก local cache ก่อนเสมอ เพื่อแสดงผลหลายรายการทันที
-    final localMatches = allProducts.where((p) {
-      return p.name.toLowerCase().contains(query.toLowerCase()) ||
-          (p.barcode != null &&
-              p.barcode!.toLowerCase().contains(query.toLowerCase()));
-    }).toList();
-
-    if (localMatches.isNotEmpty) {
-      searchResults.assignAll(localMatches);
-      return;
-    }
-
-    // 🌐 ไม่พบใน local → fallback ไป API (เช่น สแกนบาร์โค้ดสินค้าใหม่)
+    // ✅ ครอบทั้งฟังก์ชันด้วย try/finally กัน isSearching ค้างเป็น true ตลอดกาล
+    // (เดิมถ้าเจอใน local cache หรือค้นหาไม่เจอเลย จะไม่มีจุดไหนตั้งกลับเป็น false
+    // ทำให้จอค้างเป็น spinner ไม่มีทางรู้ว่าค้นหาจบแล้ว)
     try {
+      // 🔍 ค้นหาจาก local cache ก่อนเสมอ เพื่อแสดงผลหลายรายการทันที
+      final localMatches = allProducts.where((p) {
+        return p.name.toLowerCase().contains(query.toLowerCase()) ||
+            (p.barcode != null &&
+                p.barcode!.toLowerCase().contains(query.toLowerCase()));
+      }).toList();
+
+      if (localMatches.isNotEmpty) {
+        searchResults.assignAll(localMatches);
+        return;
+      }
+
+      // 🌐 ไม่พบใน local → fallback ไป API (เช่น สแกนบาร์โค้ดสินค้าใหม่)
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
 
@@ -237,6 +240,8 @@ class CheckoutController extends GetxController {
     } catch (e) {
       print("Search API Error: $e");
       searchResults.clear();
+    } finally {
+      isSearching.value = false;
     }
   }
 
@@ -340,9 +345,19 @@ class CheckoutController extends GetxController {
     }
   }
 
+  // เอาสต็อกปัจจุบันจาก allProducts (รีเฟรชแล้วตอนเปิดหน้า) แทนค่า snapshot เดิม
+  // ที่ติดมากับตะกร้า กันขายเกินสต็อกจริงถ้าสต็อกลดลงหลังหยิบใส่ตะกร้าไปแล้ว
+  int _currentMaxStock(ProductItem item) {
+    final match = allProducts.firstWhereOrNull(
+      (p) => p.productId.toString() == item.id,
+    );
+    return match?.stock ?? item.maxStock;
+  }
+
   void increaseItem(ProductItem item) {
+    final int maxStock = _currentMaxStock(item);
     int currentQty = cartItems.where((i) => i.id == item.id).length;
-    if (currentQty < item.maxStock) {
+    if (currentQty < maxStock) {
       cartItems.add(
         ProductItem(
           id: item.id,
@@ -350,7 +365,7 @@ class CheckoutController extends GetxController {
           price: item.price,
           category: item.category,
           imagePath: item.imagePath,
-          maxStock: item.maxStock,
+          maxStock: maxStock,
           unit: item.unit,
         ),
       );
@@ -372,7 +387,8 @@ class CheckoutController extends GetxController {
 
   // ✨ ตั้งจำนวนสินค้าโดยตรง (ใช้ตอนพิมพ์จำนวนเอง แทนการกด +/- ทีละครั้ง)
   void setItemQuantity(ProductItem item, int newQty) {
-    final clamped = newQty.clamp(0, item.maxStock);
+    final int maxStock = _currentMaxStock(item);
+    final clamped = newQty.clamp(0, maxStock);
     final currentQty = cartItems.where((i) => i.id == item.id).length;
 
     if (clamped == currentQty) return;
@@ -393,7 +409,7 @@ class CheckoutController extends GetxController {
             price: item.price,
             category: item.category,
             imagePath: item.imagePath,
-            maxStock: item.maxStock,
+            maxStock: maxStock,
             unit: item.unit,
           ),
         ),
@@ -446,6 +462,11 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> resumeOrder(String parkId) async {
+    // ✅ เช็คว่าเจอออเดอร์ที่พักไว้จริงก่อน ค่อยล้างตะกร้าปัจจุบัน
+    // (เดิมล้างตะกร้าไปก่อนแล้วค่อยเช็ค ถ้าไม่เจอออเดอร์ที่พักไว้จะเสียของในตะกร้าปัจจุบันไปฟรีๆ)
+    final parked = _parkCtrl.retrieveOrder(parkId);
+    if (parked == null) return;
+
     if (cartItems.isNotEmpty) {
       _parkCtrl.parkCurrentOrder(cartItems.toList());
     }
@@ -453,17 +474,17 @@ class CheckoutController extends GetxController {
     noteController.clear();
     receivedAmountController.clear();
     changeAmount.value = 0.0;
-    final parked = _parkCtrl.retrieveOrder(parkId);
-    if (parked == null) return;
 
     if (allProducts.isEmpty) await _loadAllProducts();
 
+    bool stockReduced = false;
     for (final pi in parked.items) {
       final match = allProducts.firstWhereOrNull(
         (p) => p.productId.toString() == pi.id,
       );
       final effectiveMaxStock = match?.stock ?? pi.maxStock;
       final qty = pi.quantity.clamp(0, effectiveMaxStock);
+      if (qty < pi.quantity) stockReduced = true;
       for (int i = 0; i < qty; i++) {
         cartItems.add(ProductItem(
           id: pi.id,
@@ -476,9 +497,25 @@ class CheckoutController extends GetxController {
         ));
       }
     }
+
+    // ✅ แจ้งเตือนถ้าสต็อกลดลงระหว่างที่พักออเดอร์ไว้ จนต้องปรับจำนวนลง
+    // (เดิมปรับลดเงียบๆ แคชเชียร์ไม่รู้ว่าจำนวนที่กู้กลับมาน้อยกว่าที่พักไว้จริง)
+    if (stockReduced) {
+      Get.snackbar(
+        'สต็อกไม่พอ',
+        'สินค้าบางรายการมีสต็อกลดลงตั้งแต่พักออเดอร์ไว้ ระบบปรับจำนวนในตะกร้าให้อัตโนมัติแล้ว กรุณาตรวจสอบก่อนขาย',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
+    }
   }
 
   double get totalPrice => cartItems.fold(0, (sum, item) => sum + item.price);
+
+  // ยอดที่ปัดเป็นจำนวนเต็มบาท ใช้แสดงผลและเช็คยอดเงินรับมา
+  // ให้ตรงกับตัวเลขที่แคชเชียร์เห็นบนจอ (ไม่ตัดเศษทิ้งแบบ .toInt() ที่ทำให้เช็คยอดผิด)
+  int get totalPriceRounded => totalPrice.round();
 
   void openPaymentSheet(
     BuildContext context,
@@ -522,8 +559,8 @@ class CheckoutController extends GetxController {
 
     double received = double.tryParse(receivedAmountController.text) ?? 0;
 
-    // เช็คยอดเงินรับมาเฉพาะเงินสด
-    if (paymentMethod.value == "จ่ายเงินสด" && received < totalPrice) {
+    // เช็คยอดเงินรับมาเฉพาะเงินสด (เทียบกับยอดปัดเต็มบาทที่แสดงบนจอ ไม่ใช่ค่าทศนิยมเป๊ะๆ)
+    if (paymentMethod.value == "จ่ายเงินสด" && received < totalPriceRounded) {
       _showWarningDialog(
         "ยอดเงินไม่พอ",
         "จำนวนเงินที่รับมาน้อยกว่าราคาสินค้ารวม",
@@ -651,7 +688,7 @@ class CheckoutController extends GetxController {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                "${totalPrice.toInt()} ฿",
+                                "$totalPriceRounded ฿",
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -672,6 +709,7 @@ class CheckoutController extends GetxController {
                       child: OutlinedButton(
                         onPressed: () => Get.back(),
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade100,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           side: BorderSide(color: Colors.grey.shade300),
                           shape: RoundedRectangleBorder(
@@ -759,11 +797,15 @@ class CheckoutController extends GetxController {
         int productId = int.parse(item.id);
         if (groupedItems.containsKey(productId)) {
           var existingItem = groupedItems[productId]!;
+          // รวมราคาจริงของทุกชิ้น ไม่ใช้ราคาชิ้นล่าสุดคูณจำนวน เผื่อราคาสินค้าเดียวกัน
+          // เปลี่ยนกลางทางขณะที่ตะกร้ายังมีของราคาเก่าค้างอยู่
+          final int newAmount = existingItem.amount + 1;
+          final double newTotal = existingItem.totalPrice + item.price;
           groupedItems[productId] = SaleItemRequest(
             productId: productId,
-            amount: existingItem.amount + 1,
-            pricePerUnit: item.price,
-            totalPrice: (existingItem.amount + 1) * item.price,
+            amount: newAmount,
+            pricePerUnit: newTotal / newAmount,
+            totalPrice: newTotal,
           );
         } else {
           groupedItems[productId] = SaleItemRequest(

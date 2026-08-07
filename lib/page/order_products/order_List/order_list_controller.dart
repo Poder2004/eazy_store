@@ -20,6 +20,11 @@ class OrderItem {
   // เริ่มต้นจาก `unit` เดิม แต่ผู้ใช้พิมพ์ทับได้ เช่นเปลี่ยน "คู่" เป็น "1 โหล"
   final TextEditingController unitController;
 
+  // จำนวนล่าสุดที่ยังถูกต้อง (>0) ไว้ใช้คืนค่าตอนกดยกเลิกลบ เพราะพอผู้ใช้พิมพ์
+  // เลขในช่องจนกลายเป็น "0" ไปแล้ว ตัว TextField เองจะอัปเดต .text ไปก่อน
+  // ที่ onChanged จะทำงาน ทำให้อ่าน .text ตอนนั้นไม่ได้ค่าเดิมที่แท้จริงอีกต่อไป
+  String lastValidQuantity;
+
   OrderItem({
     required this.id,
     required this.name,
@@ -31,7 +36,8 @@ class OrderItem {
          text: initialQuantity.toString(),
        ),
        noteController = TextEditingController(text: initialNote),
-       unitController = TextEditingController(text: unit);
+       unitController = TextEditingController(text: unit),
+       lastValidQuantity = initialQuantity.toString();
 
   // สั่งปิดการทำงานของ Controller เมื่อไม่ได้ใช้
   void dispose() {
@@ -113,7 +119,7 @@ class OrderListController extends GetxController {
   }
 
   // 🔥 ฟังก์ชันสำหรับ Export PDF ที่เพิ่มเข้าไป
-  Future<void> exportToPdf() async {
+  void exportToPdf() {
     if (orderItems.isEmpty) {
       Get.snackbar(
         "แจ้งเตือน",
@@ -124,6 +130,151 @@ class OrderListController extends GetxController {
       return;
     }
 
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5390F2).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFF5390F2),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "ยืนยันส่งออก PDF",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "รายการสินค้า ${orderItems.length} รายการที่จะส่งออก",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Scrollbar(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      itemCount: orderItems.length,
+                      separatorBuilder: (context, index) =>
+                          Divider(height: 1, color: Colors.grey.shade200),
+                      itemBuilder: (context, index) {
+                        final item = orderItems[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: Color(0xFF6B8E23),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  item.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "${item.quantityController.text} ${item.unitController.text}",
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        "ยกเลิก",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        _performExport();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5390F2),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        "ส่งออก PDF",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _performExport() async {
     try {
       // 1. แสดง Loading
       Get.dialog(
@@ -216,6 +367,16 @@ class OrderListController extends GetxController {
       showDeleteConfirmation(item, isFromButton: true);
     } else {
       item.quantityController.text = newQuantity.toString();
+      item.lastValidQuantity = newQuantity.toString();
+    }
+  }
+
+  // เรียกจากช่องกรอกจำนวนตอนพิมพ์เอง (ต่างจาก updateQuantity ที่มาจากปุ่ม +/-)
+  void onQuantityTyped(OrderItem item, String value) {
+    if (value.isEmpty || value == '0') {
+      showDeleteConfirmation(item);
+    } else if ((int.tryParse(value) ?? 0) > 0) {
+      item.lastValidQuantity = value;
     }
   }
 
@@ -227,7 +388,6 @@ class OrderListController extends GetxController {
   }
 
   void showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {
-    String originalQuantity = item.quantityController.text;
     ConfirmDialog.show(
       title: 'ลบรายการสินค้า',
       message: 'คุณต้องการลบ "${item.name}" ออกหรือไม่?',
@@ -235,9 +395,9 @@ class OrderListController extends GetxController {
       onCancel: () {
         if (isFromButton ||
             (int.tryParse(item.quantityController.text) ?? 0) <= 0) {
-          item.quantityController.text = (originalQuantity == '0' || originalQuantity.trim().isEmpty)
-              ? '1'
-              : originalQuantity;
+          // ใช้ lastValidQuantity แทนการอ่าน .text ตอนนี้ตรงๆ เพราะถ้ามาจาก
+          // การพิมพ์ในช่อง .text จะถูกอัปเดตเป็นค่าใหม่ (เช่น "0") ไปแล้วก่อนหน้านี้
+          item.quantityController.text = item.lastValidQuantity;
         }
       },
       onConfirm: () => removeItem(item.id),

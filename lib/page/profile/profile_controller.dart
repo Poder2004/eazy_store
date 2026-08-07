@@ -104,8 +104,14 @@ class ProfileController extends GetxController {
 
   // ฟังก์ชันช่วยสร้างตัวย่อชื่อ (เช่น Sarah Mitchell -> SM)
   String _getInitials(String name) {
-    if (name.isEmpty) return "U";
-    List<String> nameParts = name.trim().split(" ");
+    // ใช้ RegExp(r'\s+') + กรองค่าว่างออก กันชื่อที่มีเว้นวรรคติดกันหลายตัว
+    // (เช่น "John  Doe") ทำให้ได้ element ว่างแล้ว index [0] เข้าไป crash
+    final nameParts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (nameParts.isEmpty) return "U";
     if (nameParts.length > 1) {
       return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
     } else {
@@ -310,6 +316,7 @@ class ProfileController extends GetxController {
                   child: OutlinedButton(
                     onPressed: () => Get.back(),
                     style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: Colors.grey.shade200),
                       shape: RoundedRectangleBorder(

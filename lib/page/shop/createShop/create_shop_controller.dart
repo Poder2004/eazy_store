@@ -164,9 +164,9 @@ class CreateShopController extends GetxController {
     String phone = shopPhoneController.text.trim();
 
     // เช็คว่ากรอกครบทุกช่องไหม
-    if (shopNameController.text.isEmpty ||
+    if (shopNameController.text.trim().isEmpty ||
         phone.isEmpty ||
-        addressController.text.isEmpty ||
+        addressController.text.trim().isEmpty ||
         selectedProvince.value == null ||
         profileImage.value == null ||
         qrImage.value == null) {
@@ -423,14 +423,9 @@ class CreateShopController extends GetxController {
       isLoading.value = false;
 
       if (isSuccess) {
-        // หา shopId ของร้านที่เพิ่งสร้างจาก getShops()
-        final shops = await ApiShop().getShops();
-        for (var shop in shops) {
-          if (shop.name == shopNameController.text) {
-            await prefs.setInt('shopId', shop.shopId);
-            break;
-          }
-        }
+        // ✅ ApiShop().createShop() เซฟ shopId ที่ถูกต้องจาก response ของเซิร์ฟเวอร์
+        // ('shop_id') ลง prefs ให้เองแล้ว ไม่ต้องมาหาซ้ำด้วยการ match ชื่อร้าน
+        // (เดิมถ้ามีร้านชื่อซ้ำกัน อาจได้ shopId ผิดร้านมาทับของถูกต้อง)
         await prefs.setString('shopName', shopNameController.text);
         _showShopCreatedSuccessDialog();
       } else {

@@ -2,17 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'edit_profile_controller.dart';
 
-class EditProfilePage extends StatelessWidget {
+class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
 
+  @override
+  State<EditProfilePage> createState() => _EditProfilePageState();
+}
+
+class _EditProfilePageState extends State<EditProfilePage> {
   final Color primaryColor = const Color(0xFF4F46E5);
   final Color bgColor = const Color(0xFFF4F7FA);
   final Color textColor = const Color(0xFF0F172A);
 
+  late final EditProfileController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ สร้าง controller ใหม่ทุกครั้งที่เปิดหน้านี้ กันข้อมูล/รหัสผ่านเก่าค้าง
+    // จากการเปิดหน้านี้รอบก่อนหน้าในเซสชันเดียวกัน
+    controller = Get.put(EditProfileController());
+  }
+
+  @override
+  void dispose() {
+    Get.delete<EditProfileController>();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final EditProfileController controller = Get.put(EditProfileController());
-
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(

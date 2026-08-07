@@ -321,6 +321,7 @@ void _showProductFilterSheet(
                           onClear();
                         },
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade100,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

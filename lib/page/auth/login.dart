@@ -18,6 +18,13 @@ class LoginController extends GetxController {
 
   final Color primaryColor = const Color(0xFF00A3FF);
 
+  @override
+  void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.onClose();
+  }
+
   Future<void> login() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       _showSnackbar("แจ้งเตือน", "กรุณากรอกข้อมูลให้ครบ", Colors.orange);
@@ -229,10 +236,22 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
+  late final LoginController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(LoginController());
+  }
+
+  @override
+  void dispose() {
+    Get.delete<LoginController>();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final LoginController controller = Get.put(LoginController());
     const Color primaryColor = Color(0xFF00A3FF);
     const Color backgroundColor = Color(0xFFF3F7FB);
 

@@ -395,7 +395,13 @@ class AddProductScreen extends StatelessWidget {
       onDisable: () => controller.disableCategory(category),
       onRefreshCategories: (CategoryModel? movedToCategory) async {
         await controller.fetchCategories();
-        controller.selectedCategoryObject.value = movedToCategory;
+        // เปลี่ยน/ล้างหมวดหมู่ที่เลือกในฟอร์ม เฉพาะตอนหมวดหมู่ที่กำลังปิดใช้งาน
+        // เป็นหมวดหมู่เดียวกับที่เลือกอยู่ในฟอร์มนี้เท่านั้น ไม่งั้นปิดหมวดหมู่อื่น
+        // ที่ไม่เกี่ยวข้องก็จะไปรีเซ็ตหมวดหมู่ที่เลือกไว้ในฟอร์มด้วย
+        if (controller.selectedCategoryObject.value?.categoryId ==
+            category.categoryId) {
+          controller.selectedCategoryObject.value = movedToCategory;
+        }
       },
       onReopenBottomSheet: () {
         if (context.mounted) {
@@ -474,6 +480,7 @@ class AddProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(
@@ -600,6 +607,7 @@ class AddProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(

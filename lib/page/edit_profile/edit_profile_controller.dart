@@ -149,6 +149,26 @@ class EditProfileController extends GetxController {
       return;
     }
 
+    if (!GetUtils.isEmail(emailCtrl.text.trim())) {
+      _showPremiumDialog(
+        title: "อีเมลไม่ถูกต้อง",
+        message: "กรุณากรอกอีเมลให้ถูกต้อง",
+        icon: Icons.warning_rounded,
+        color: const Color(0xFFF59E0B),
+      );
+      return;
+    }
+
+    if (phoneCtrl.text.trim().isNotEmpty && phoneCtrl.text.trim().length != 10) {
+      _showPremiumDialog(
+        title: "เบอร์โทรไม่ถูกต้อง",
+        message: "เบอร์โทรต้องมี 10 หลัก",
+        icon: Icons.warning_rounded,
+        color: const Color(0xFFF59E0B),
+      );
+      return;
+    }
+
     if (passwordCtrl.text.isNotEmpty && passwordCtrl.text.length < 6) {
       _showPremiumDialog(
         title: "รหัสผ่านสั้นเกินไป",
@@ -211,6 +231,7 @@ class EditProfileController extends GetxController {
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),

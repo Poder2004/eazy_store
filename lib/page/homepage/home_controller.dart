@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeController extends GetxController {
- var currentIndex = 0.obs;
   var shopName = "กำลังโหลด...".obs;
   var shopId = 0.obs;
 
@@ -73,8 +72,4 @@ class HomeController extends GetxController {
 
   // Getter สำหรับแสดงผลยอดขายแบบ Format แล้ว
   String get formattedTotal => NumberFormat('#,##0').format(dailyTotal.value);
-
-  void changeTab(int index) {
-    currentIndex.value = index;
-  }
 }

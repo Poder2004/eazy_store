@@ -12,6 +12,7 @@ import '../../sale_producct/sale/checkout_controller.dart';
 import '../../homepage/home_page.dart';
 import '../debtRegister/debt_register.dart';
 import 'debtor_book_sheet.dart';
+import '../../../widgets/confirm_dialog.dart';
 
 class DebtSaleController extends GetxController {
   final debtorNameController = TextEditingController();
@@ -34,6 +35,9 @@ class DebtSaleController extends GetxController {
   Timer? debounce;
 
   var payAmount = 0.0.obs;
+
+  // กันกดยืนยันซ้ำจนบันทึกรายการค้างชำระซ้ำสองครั้ง
+  var isSubmitting = false.obs;
 
   @override
   void onInit() {
@@ -245,13 +249,13 @@ class DebtSaleController extends GetxController {
         "เลือก ${result.name} เป็นผู้ค้างชำระเรียบร้อยแล้ว",
         backgroundColor: Colors.green,
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
       );
     }
   }
 
   // ✨ Popup ยืนยันที่แก้ไขใหม่ โชว์ปุ่มครบ ไม่ต้องเลื่อนหา
-  void confirmSubmit(CheckoutController checkoutController) {
+  void confirmSubmit(CheckoutController checkoutController) async {
     // 1. สั่งปิดคีย์บอร์ดก่อนเสมอ เพื่อไม่ให้จอโดนดันจน Popup เล็กลง
     FocusManager.instance.primaryFocus?.unfocus();
 
@@ -278,6 +282,21 @@ class DebtSaleController extends GetxController {
                   "กรุณาบันทึกเป็นการขายเงินสดแทน",
       );
       return;
+    }
+
+    // ✅ ขอข้อมูลลูกหนี้ล่าสุดจากเซิร์ฟเวอร์ก่อนเช็ควงเงิน กันตัวเลขที่แคชเชียร์
+    // เห็นไม่ทันข้อมูลจริง ถ้ามีการบันทึกหนี้จากเครื่อง/เซสชันอื่นพร้อมกัน
+    // (เช็คไม่ได้ก็ไม่เป็นไร ปล่อยให้ใช้ข้อมูล cache เดิม เซิร์ฟเวอร์เช็คซ้ำอีกชั้นตอนบันทึกอยู่แล้ว)
+    try {
+      final fresh = await ApiDebtor.searchDebtor(selectedDebtor!.phone);
+      final match = fresh.firstWhereOrNull(
+        (d) => d.debtorId == selectedDebtor!.debtorId,
+      );
+      if (match != null) {
+        selectedDebtorRx.value = match;
+      }
+    } catch (e) {
+      debugPrint("รีเฟรชข้อมูลลูกหนี้ไม่สำเร็จ: $e");
     }
 
     // เช็ควงเงินคงเหลือของลูกหนี้ก่อน (เซิร์ฟเวอร์เช็คซ้ำอีกชั้น)
@@ -403,6 +422,7 @@ class DebtSaleController extends GetxController {
                       child: OutlinedButton(
                         onPressed: () => Get.back(),
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade100,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: BorderSide(color: Colors.grey.shade300),
                           shape: RoundedRectangleBorder(
@@ -482,6 +502,8 @@ class DebtSaleController extends GetxController {
   }
 
   Future<void> submitDebt(CheckoutController checkoutController) async {
+    if (isSubmitting.value) return;
+    isSubmitting.value = true;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
@@ -542,7 +564,7 @@ class DebtSaleController extends GetxController {
           "บันทึกการค้างชำระเรียบร้อยแล้ว",
           backgroundColor: Colors.green,
           colorText: Colors.white,
-          snackPosition: SnackPosition.BOTTOM,
+          snackPosition: SnackPosition.TOP,
         );
         checkoutController.clearAll();
         Get.offAll(() => const HomePage());
@@ -554,6 +576,8 @@ class DebtSaleController extends GetxController {
       Get.back();
       debugPrint("บันทึกค้างชำระไม่สำเร็จ: $e");
       showErrorDialog("ไม่สามารถบันทึกรายการได้ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      isSubmitting.value = false;
     }
   }
 
@@ -636,5 +660,15 @@ class DebtSaleController extends GetxController {
     debtRemarkController.clear();
     selectedDebtorRx.value = null;
     checkoutController.clearAll();
+  }
+
+  void confirmClearForm(CheckoutController checkoutController) {
+    ConfirmDialog.show(
+      title: "ล้างรายการ",
+      message: "ต้องการล้างข้อมูลที่กรอกในหน้านี้ทั้งหมด (ลูกหนี้ที่เลือกและรายการสินค้า) ใช่หรือไม่?",
+      icon: Icons.delete_sweep_rounded,
+      confirmLabel: "ล้าง",
+      onConfirm: () => clearForm(checkoutController),
+    );
   }
 }

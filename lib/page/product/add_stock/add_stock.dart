@@ -267,25 +267,28 @@ class AddStockScreen extends StatelessWidget {
         Container(
           height: 80,
           width: 80,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
             ],
-            image: DecorationImage(
-              image: NetworkImage(
-                controller.foundProduct.value?.imgProduct ?? '',
-              ),
-              fit: BoxFit.cover,
-              onError: (e, s) {},
-            ),
           ),
+          // ใช้ Image.network + errorBuilder แทน DecorationImage.onError ที่ว่างเปล่า
+          // (เดิมโหลดรูปพัง/ลิงก์เสียแล้วเงียบ กลายเป็นกล่องขาวไม่มี fallback icon)
           child:
               controller.foundProduct.value?.imgProduct == null ||
                   controller.foundProduct.value!.imgProduct.isEmpty
               ? const Icon(Icons.image_not_supported, color: Colors.grey)
-              : null,
+              : Image.network(
+                  controller.foundProduct.value!.imgProduct,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.image_not_supported,
+                    color: Colors.grey,
+                  ),
+                ),
         ),
       ],
     );
@@ -597,107 +600,6 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 
-  // 🛡️ ปรับ Popup มาไว้ใน View
-  void _showSaveCheckDialog(AddStockController controller) {
-    if (controller.foundProduct.value == null) return;
-
-    int amount = int.tryParse(controller.addAmountController.text) ?? 0;
-    if (amount <= 0) {
-      Get.snackbar(
-        "แจ้งเตือน",
-        "กรุณาระบุจำนวนที่ต้องการเพิ่ม",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.playlist_add_check_circle,
-                size: 60,
-                color: _kPrimaryColor,
-              ),
-              const SizedBox(height: 15),
-              const Text(
-                "ยืนยันเพิ่มสต็อก",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const Divider(height: 30),
-              _buildConfirmRow("สินค้า", controller.nameController.text),
-              _buildConfirmRow(
-                "คงเหลือเดิม",
-                "${controller.currentStockController.text} ${controller.unitController.text}",
-              ),
-              _buildConfirmRow(
-                "เพิ่มจำนวน",
-                "+$amount ${controller.unitController.text}",
-                valueColor: Colors.green,
-              ),
-              const Divider(),
-              _buildConfirmRow(
-                "รวมสุทธิ",
-                "${controller.calculatedTotal.value} ${controller.unitController.text}",
-                isBold: true,
-              ),
-              const SizedBox(height: 30),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "แก้ไข",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back(); // ปิด Popup
-                        controller.executeSave(amount); // ยิง API
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _kPrimaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "ยืนยัน",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-  }
-
   // 🟢 Dialog ยืนยันแบบใหม่ (แสดงสิ่งที่จะเปลี่ยน)
   void _showConfirmDialog(AddStockController controller) {
     if (controller.foundProduct.value == null) return;
@@ -814,6 +716,7 @@ class AddStockScreen extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Get.back(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -905,31 +808,6 @@ class AddStockScreen extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildConfirmRow(
-    String label,
-    String value, {
-    Color? valueColor,
-    bool isBold = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor ?? Colors.black87,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

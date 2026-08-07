@@ -102,9 +102,7 @@ class HomePage extends StatelessWidget {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 0,
-        onTap: (index) {
-          controller.changeTab(index);
-        },
+        onTap: (_) {},
       ),
     );
   }
@@ -438,7 +436,6 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildScanToSellCard(BuildContext context) {
-    final HomeController homeController = Get.find<HomeController>();
     return InkWell(
       onTap: () async {
         var barcode = await Get.to(() => const ScanBarcodePage(showBookButton: true));
@@ -452,7 +449,6 @@ class HomePage extends StatelessWidget {
             await checkoutCtrl.checkShopAndLoadData();
             await checkoutCtrl.fetchFreshProducts();
             checkoutCtrl.addProductByBarcode(barcode);
-            homeController.changeTab(2);
           });
         }
       },

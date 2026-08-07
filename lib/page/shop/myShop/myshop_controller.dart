@@ -37,6 +37,14 @@ class MyShopController extends GetxController {
     try {
       var result = await _apiShop.getShops();
       shops.assignAll(result);
+    } catch (e) {
+      Get.snackbar(
+        "เกิดข้อผิดพลาด",
+        "โหลดรายชื่อร้านค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+      );
     } finally {
       isLoading.value = false;
     }
@@ -65,10 +73,15 @@ class MyShopController extends GetxController {
   }
   
   Future<void> _processDelete(int shopId) async {
-    isLoading.value = true;
+    // ✅ ใช้ loading dialog แยกต่างหาก ไม่ใช้ isLoading ตัวเดียวกับตอนโหลดทั้งลิสต์
+    // (เดิมลบร้านเดียวแต่จอทั้งหน้าเด้งเป็น spinner เต็มจอ)
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
     bool success = await _apiShop.deleteShop(shopId);
-    isLoading.value = false;
-    
+    Get.back(); // ปิด loading dialog
+
     if (success) {
       shops.removeWhere((item) => item.shopId == shopId);
       _showCustomDialog(title: "สำเร็จ", message: "ลบร้านค้าเรียบร้อยแล้ว", color: Colors.green, icon: Icons.check_circle);
@@ -86,7 +99,7 @@ class MyShopController extends GetxController {
         "ลบร้านค้าเรียบร้อยแล้ว",
         backgroundColor: Colors.green,
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
       );
     } else {
       Get.snackbar(
@@ -94,7 +107,7 @@ class MyShopController extends GetxController {
         "ไม่สามารถลบร้านค้าได้",
         backgroundColor: Colors.red,
         colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
+        snackPosition: SnackPosition.TOP,
       );
     }
   }

@@ -34,8 +34,9 @@ class SalesAccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ SalesAccountController.onInit() โหลดข้อมูลให้ครั้งแรกอยู่แล้ว ไม่ต้องยิงซ้ำที่นี่
+    // (เดิมยิงซ้ำทุกครั้งที่ build() ทำงานใหม่ เช่นตอนคีย์บอร์ดเปิด/ปิด)
     final c = Get.put(SalesAccountController());
-    WidgetsBinding.instance.addPostFrameCallback((_) => c.fetchSummaryData());
 
     final mq = MediaQuery.of(context);
     return MediaQuery(
