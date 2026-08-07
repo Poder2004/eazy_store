@@ -121,7 +121,7 @@ class CheckoutController extends GetxController {
   Future<List<ProductResponse>> _fetchProductsFromApi(int shopId) async {
     List<ProductResponse> allFetched = [];
     try {
-      var response = await ApiProduct.getProductsByShop(shopId);
+      var response = await ApiProduct.getProductsByShop(shopId, limit: 1000);
       List<ProductResponse> list = [];
       if (response is List<ProductResponse>) {
         list = response;
