@@ -11,6 +11,7 @@ import '../createShop/create_shop.dart';
 import '../editShop/edit_shop.dart';
 import '../../homepage/home_page.dart';
 import '../../../widgets/confirm_dialog.dart';
+import '../../../utils/auth_guard.dart';
 
 class MyShopController extends GetxController {
   final ApiShop _apiShop = ApiShop();
@@ -123,6 +124,111 @@ class MyShopController extends GetxController {
     // 3. นำทางไปหน้าถัดไป (เช่น หน้าที่มี Bottom Navigation Bar)
     Get.offAll(() => const HomePage());
     print("เลือกใช้งานร้าน: ${shop.name} (ID: ${shop.shopId})");
+  }
+
+  // ✨ ออกจากระบบ — เหมือนหน้าโปรไฟล์ (แจ้ง backend revoke refresh token พร้อมบันทึก revoked_reason)
+  void logout() {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFFE11D48),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "ออกจากระบบ",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "คุณต้องการออกจากระบบใช่หรือไม่?",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.blueGrey.shade400),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: Colors.grey.shade200),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      "ยกเลิก",
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Get.back(); // ปิด bottom sheet ก่อนเรียก logout
+                      await AuthGuard.logout();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE11D48),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      "ออกจากระบบ",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
   }
 
   void _showCustomDialog({required String title, required String message, required Color color, required IconData icon}) {

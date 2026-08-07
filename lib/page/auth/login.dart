@@ -3,6 +3,7 @@ import 'package:eazy_store/page/auth/forgot_password.dart';
 import 'package:eazy_store/page/auth/register.dart';
 import 'package:eazy_store/page/auth/verify_register.dart';
 import 'package:eazy_store/model/request/login_request.dart';
+import 'package:eazy_store/model/request/change_email_verify_request.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
 import 'package:eazy_store/utils/device_id.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   var isLoading = false.obs;
+  var isSendingOtp = false.obs;
 
   final Color primaryColor = const Color(0xFF00A3FF);
 
@@ -140,29 +142,36 @@ class LoginController extends GetxController {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        Get.to(
-                          () => const VerifyRegistrationPage(),
-                          arguments: {"email": email, "username": username},
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                    child: Obx(
+                      () => ElevatedButton(
+                        onPressed: isSendingOtp.value
+                            ? null
+                            : () => _sendOtpThenGoToVerify(email, username),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        "ไปหน้ายืนยัน OTP",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                        child: isSendingOtp.value
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                "ไปหน้ายืนยัน OTP",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                       ),
                     ),
                   ),
@@ -173,6 +182,24 @@ class LoginController extends GetxController {
         ),
       ),
     );
+  }
+
+  Future<void> _sendOtpThenGoToVerify(String email, String username) async {
+    isSendingOtp.value = true;
+    final res = await ApiAuth.changeEmailVerify(
+      ChangeEmailVerifyRequest(username: username, newEmail: email),
+    );
+    isSendingOtp.value = false;
+
+    if (res.error == null) {
+      Get.back();
+      Get.to(
+        () => const VerifyRegistrationPage(),
+        arguments: {"email": email, "username": username},
+      );
+    } else {
+      _showSnackbar("ผิดพลาด", res.error!, Colors.red);
+    }
   }
 
   void _showSnackbar(String title, String msg, Color color) {

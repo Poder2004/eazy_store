@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:eazy_store/page/my_blank/advanced_report_controller.dart';
 import 'package:eazy_store/model/response/advanced_report_response.dart';
@@ -59,6 +60,9 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
+    // ดึงข้อมูลใหม่ทุกครั้งที่เข้าหน้านี้ เผื่อกรณี GetX เก็บ controller
+    // เดิมไว้ (เช่น ลูกหนี้เพิ่งมาชำระเงินจากหน้าอื่นก่อนกลับเข้ามาหน้านี้)
+    c.fetchReportData();
   }
 
   @override
@@ -117,27 +121,33 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   }
                   return FadeTransition(
                     opacity: _fadeAnim,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 48),
-                      child: Column(
-                        children: [
-                          _buildPeriodNav(context),
-                          const SizedBox(height: 10),
-                          _buildKpiRow(data.debtSummary),
-                          const SizedBox(height: 10),
-                          _buildSalesCard(data.salesChart),
-                          const SizedBox(height: 10),
-                          _buildPaymentCard(data.paymentMethods),
-                          const SizedBox(height: 10),
-                          _buildTopProductsCard(data.topProducts),
-                          const SizedBox(height: 10),
-                          _buildAgingCard(data.agingReport),
-                          const SizedBox(height: 10),
-                          _buildTopDebtorsCard(data.topDebtors),
-                          const SizedBox(height: 10),
-                          _buildCashFlowCard(data.debtCollection),
-                        ],
+                    child: RefreshIndicator(
+                      onRefresh: () => c.fetchReportData(),
+                      color: _kBlue,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 48),
+                        child: Column(
+                          children: [
+                            _buildPeriodNav(context),
+                            const SizedBox(height: 10),
+                            _buildKpiRow(data.debtSummary),
+                            const SizedBox(height: 10),
+                            _buildSalesCard(data.salesChart),
+                            const SizedBox(height: 10),
+                            _buildPaymentCard(data.paymentMethods),
+                            const SizedBox(height: 10),
+                            _buildTopProductsCard(data.topProducts),
+                            const SizedBox(height: 10),
+                            _buildAgingCard(data.agingReport),
+                            const SizedBox(height: 10),
+                            _buildTopDebtorsCard(data.topDebtors),
+                            const SizedBox(height: 10),
+                            _buildCashFlowCard(data.debtCollection),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -1380,6 +1390,14 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
     );
   }
 
+  String? _formatDebtSince(String raw) {
+    if (raw.isEmpty) return null;
+    final datePart = raw.length >= 10 ? raw.substring(0, 10) : raw;
+    final date = DateTime.tryParse(datePart);
+    if (date == null) return null;
+    return '${DateFormat('d MMM').format(date)} ${date.year + 543}';
+  }
+
   Widget _agingDebtorTile(
     AgingBucketDebtorItem item,
     Color accent,
@@ -1459,6 +1477,13 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                     ),
                   ],
                 ),
+                if (_formatDebtSince(item.debtSince) case final since when since != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'ตั้งแต่ $since',
+                    style: const TextStyle(fontSize: 10, color: _kInk3),
+                  ),
+                ],
               ],
             ),
           ),

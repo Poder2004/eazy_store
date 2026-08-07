@@ -142,34 +142,31 @@ class TopDebtorItem {
 }
 
 class AgingBucketDebtorItem {
-  final int saleId;
   final int debtorId;
   final String name;
   final String phone;
   final String imgDebtor;
-  final String saleDate;
+  final String debtSince;
   final double amountOwed;
   final int daysOverdue;
 
   AgingBucketDebtorItem({
-    required this.saleId,
     required this.debtorId,
     required this.name,
     required this.phone,
     required this.imgDebtor,
-    required this.saleDate,
+    required this.debtSince,
     required this.amountOwed,
     required this.daysOverdue,
   });
 
   factory AgingBucketDebtorItem.fromJson(Map<String, dynamic> json) {
     return AgingBucketDebtorItem(
-      saleId: json['sale_id'] ?? 0,
       debtorId: json['debtor_id'] ?? 0,
       name: json['name'] ?? '',
       phone: json['phone'] ?? '',
       imgDebtor: json['img_debtor'] ?? '',
-      saleDate: json['sale_date'] ?? '',
+      debtSince: json['debt_since'] ?? '',
       amountOwed: (json['amount_owed'] ?? 0).toDouble(),
       daysOverdue: json['days_overdue'] ?? 0,
     );

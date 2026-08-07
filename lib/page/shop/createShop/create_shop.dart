@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../widgets/image_picker_sheet.dart';
@@ -97,6 +98,10 @@ class CreateShopPage extends StatelessWidget {
                 hint: "เบอร์ร้าน",
                 controller: controller.shopPhoneController,
                 inputType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
               ),
 
               const SizedBox(height: 20),
@@ -279,6 +284,7 @@ class CreateShopPage extends StatelessWidget {
     required TextEditingController controller,
     TextInputType inputType = TextInputType.text,
     bool noLabel = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,6 +299,7 @@ class CreateShopPage extends StatelessWidget {
         TextField(
           controller: controller,
           keyboardType: inputType,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400]),

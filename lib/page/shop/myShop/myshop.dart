@@ -19,6 +19,21 @@ class MyShopPage extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
+            // --- Top Left (Logout) ---
+            Positioned(
+              top: 20,
+              left: 20,
+              child: IconButton(
+                onPressed: controller.logout,
+                icon: const Icon(Icons.logout_rounded, color: Colors.black87),
+                tooltip: "ออกจากระบบ",
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey[100],
+                  shape: const CircleBorder(),
+                ),
+              ),
+            ),
+
             // --- Top Section (Profile) ---
             Positioned(
               top: 20,
