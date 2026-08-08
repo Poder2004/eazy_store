@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../api/api_user.dart';
 import '../../utils/auth_guard.dart';
@@ -39,7 +40,14 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> checkLogin() async {
-    await Future.delayed(const Duration(seconds: 2));
+    // ✅ โหลดฟอนต์ Prompt ให้เสร็จก่อนเข้าหน้าถัดไป กัน bug ตอนเปิดแอปครั้งแรกหลังติดตั้ง
+    // (google_fonts จะดึงไฟล์ฟอนต์จากเน็ตตอนใช้ครั้งแรกเท่านั้น ถ้ายังโหลดไม่เสร็จตอนพิมพ์
+    // ในช่อง user/password ตัวอักษรจะไม่ขึ้นจนกว่าฟอนต์จะโหลดเสร็จ) รวมกับดีเลย์ 2 วิ
+    // เดิมไปเลย เพื่อไม่ให้หน้า splash ช้าลงถ้าเน็ตปกติ (โหลดฟอนต์เสร็จเร็วกว่า 2 วิอยู่แล้ว)
+    await Future.wait([
+      Future.delayed(const Duration(seconds: 2)),
+      _warmUpFont(),
+    ]);
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -70,6 +78,20 @@ class _SplashScreenState extends State<SplashScreen>
       Get.off(() => const MyShopPage());
     } else {
       Get.off(() => const HomePage());
+    }
+  }
+
+  Future<void> _warmUpFont() async {
+    try {
+      GoogleFonts.promptTextTheme();
+      // จำกัดเวลารอไว้ 5 วิ กันเน็ตช้า/ออฟไลน์ตอนเปิดแอปครั้งแรกทำให้ splash ค้าง
+      // ถ้าไม่ทันก็ปล่อยผ่าน หน้าถัดไปจะ fallback ไปฟอนต์ระบบก่อนจนกว่าฟอนต์จะโหลดเสร็จเอง
+      await GoogleFonts.pendingFonts().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => [],
+      );
+    } catch (_) {
+      // ไม่ critical ปล่อยผ่านได้ ไม่ต้อง block การเข้าแอป
     }
   }
 

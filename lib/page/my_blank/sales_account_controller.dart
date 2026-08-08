@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SalesAccountController extends GetxController {
   var isLoading = true.obs;
+  var hasLoadedOnce = false.obs;
   var selectedView = 'วันนี้'.obs;
   var currentDate = DateTime.now().obs;
   var currentNavIndex = 1.obs;
@@ -404,6 +405,7 @@ class SalesAccountController extends GetxController {
       print(e);
     } finally {
       isLoading(false);
+      hasLoadedOnce(true);
     }
   }
 

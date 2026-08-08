@@ -57,6 +57,19 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
       facing: CameraFacing.back,
       torchEnabled: false,
       returnImage: false,
+      // ✅ จำกัดให้อ่านเฉพาะฟอร์แมตบาร์โค้ดสินค้า ไม่รวม QR Code/Data Matrix/PDF417/Aztec
+      // กันกล้องไปอ่าน QR code หรือลิงก์ที่ไม่เกี่ยวข้องเข้ามาแทนรหัสสินค้า
+      formats: const [
+        BarcodeFormat.ean13,
+        BarcodeFormat.ean8,
+        BarcodeFormat.upcA,
+        BarcodeFormat.upcE,
+        BarcodeFormat.code128,
+        BarcodeFormat.code39,
+        BarcodeFormat.code93,
+        BarcodeFormat.codabar,
+        BarcodeFormat.itf,
+      ],
     );
   }
 

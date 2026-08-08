@@ -7,6 +7,7 @@ import 'package:eazy_store/model/response/advanced_report_response.dart';
 
 class AdvancedReportController extends GetxController {
   var isLoading = true.obs;
+  var hasLoadedOnce = false.obs;
   // เหลือแค่ 2 ตัวเลือก: เดือนนี้ / ปีนี้
   var selectedView = 'เดือนนี้'.obs;
   var currentDate = DateTime.now().obs;
@@ -39,6 +40,7 @@ class AdvancedReportController extends GetxController {
       debugPrint('Error fetching advanced report: $e');
     } finally {
       isLoading(false);
+      hasLoadedOnce(true);
     }
   }
 
@@ -76,7 +78,12 @@ class AdvancedReportController extends GetxController {
     };
   }
 
-  String formatNumber(double value) => NumberFormat('#,##0.##').format(value);
+  String formatNumber(double value) {
+    // จำนวนเต็ม -> ไม่โชว์ทศนิยม (13,699), มีเศษ -> โชว์เต็ม 2 ตำแหน่งเสมอ (13,699.50) ไม่ปัดทิ้ง
+    final hasCents = (value * 100).round() % 100 != 0;
+    final pattern = hasCents ? '#,##0.00' : '#,##0';
+    return NumberFormat(pattern).format(value);
+  }
 
   String formatCompact(double value) {
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
