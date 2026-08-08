@@ -1,9 +1,10 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../model/response/debtor_response.dart';
 import '../../../model/request/debtor_history_model.dart';
 import '../../../model/response/debtor_history_model.dart';
+import '../../../widgets/confirm_dialog.dart';
 import 'debtor_detail_controller.dart';
 
 class DebtorDetailScreen extends StatefulWidget {
@@ -128,9 +129,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   size: 22,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  message,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ],
             ),
@@ -252,7 +255,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           _buildFormField(nameController, "ชื่อ-นามสกุล", Icons.person_outline),
                           const SizedBox(height: 12),
                           _buildFormField(phoneController, "เบอร์โทรศัพท์", Icons.phone_outlined,
-                              keyboardType: TextInputType.phone),
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ]),
                           const SizedBox(height: 12),
                           _buildFormField(addressController, "ที่อยู่", Icons.home_outlined, maxLines: 2),
                           const SizedBox(height: 12),
@@ -276,7 +283,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           ),
                           onPressed: isLoading
                               ? null
-                              : () async {
+                              : () {
                                   // ตรวจสอบข้อมูลให้ครบถ้วนก่อนบันทึก
                                   final String? errorMessage = _validateDebtorForm(
                                     name: nameController.text,
@@ -289,26 +296,39 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                                     return;
                                   }
 
-                                  setStateSheet(() => isLoading = true);
-                                  final bool success = await _controller.updateDebtorData(
-                                    name: nameController.text.trim(),
-                                    phone: phoneController.text.trim(),
-                                    address: addressController.text.trim(),
-                                    creditLimit:
-                                        double.tryParse(creditController.text.trim()) ?? 0,
-                                    imageFile: selectedImage,
+                                  // ให้ยืนยันอีกครั้งก่อนบันทึกทับข้อมูลเดิมจริง
+                                  ConfirmDialog.show(
+                                    title: 'ยืนยันบันทึกข้อมูล',
+                                    message:
+                                        'ต้องการบันทึกการแก้ไขข้อมูลลูกหนี้ '
+                                        '"${nameController.text.trim()}" ใช่หรือไม่?',
+                                    icon: Icons.save_outlined,
+                                    iconColor: Colors.blue,
+                                    confirmLabel: 'บันทึก',
+                                    confirmColor: Colors.blue,
+                                    onConfirm: () async {
+                                      setStateSheet(() => isLoading = true);
+                                      final bool success = await _controller.updateDebtorData(
+                                        name: nameController.text.trim(),
+                                        phone: phoneController.text.trim(),
+                                        address: addressController.text.trim(),
+                                        creditLimit:
+                                            double.tryParse(creditController.text.trim()) ?? 0,
+                                        imageFile: selectedImage,
+                                      );
+                                      if (sheetContext.mounted) {
+                                        Navigator.pop(sheetContext);
+                                      }
+                                      if (success) {
+                                        _showTopNotification("บันทึกข้อมูลสำเร็จ");
+                                      } else {
+                                        _showTopNotification(
+                                          "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+                                          isError: true,
+                                        );
+                                      }
+                                    },
                                   );
-                                  if (sheetContext.mounted) {
-                                    Navigator.pop(sheetContext);
-                                  }
-                                  if (success) {
-                                    _showTopNotification("บันทึกข้อมูลสำเร็จ");
-                                  } else {
-                                    _showTopNotification(
-                                      "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
-                                      isError: true,
-                                    );
-                                  }
                                 },
                           child: isLoading
                               ? const SizedBox(
@@ -363,11 +383,13 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
     IconData icon, {
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.blue.shade400, size: 20),
