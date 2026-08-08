@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
 import 'order_list_controller.dart'; // Import controller ที่แยกออกมา
 
 // --- CONSTANTS ---
@@ -16,7 +15,21 @@ class OrderListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // เรียกใช้งาน Controller
+    // ⚠️ OrderListController เป็น singleton (Get.put คืนตัวเดิมถ้ามีอยู่แล้ว)
+    // onInit() จะรันแค่ครั้งแรกครั้งเดียว ถ้าไปหน้า buy_products แล้วกลับมา
+    // หน้านี้อีกครั้ง (ผ่านการ push ใหม่) ต้อง sync รายการใหม่ทุกครั้งที่ build
+    // ไม่งั้นรายการที่เพิ่งเลือกเพิ่ม/ลบไปจะไม่อัปเดต
+    //
+    // ⚠️ ห้ามเรียก loadItemsFromBuyPage() ตรงๆ ใน build() เพราะมันแก้ orderItems
+    // (Obx ตัวแปร) ทันที ซึ่งจะไปสั่ง rebuild หน้า OrderListScreen ตัวเก่าที่ยัง
+    // ค้างอยู่ใต้ Navigator (ยังไม่ถูก dispose เพราะ Get.to แค่ push ซ้อน) ระหว่างที่
+    // Flutter กำลัง build หน้าใหม่อยู่พอดี ทำให้เกิด "setState()/markNeedsBuild()
+    // called during build" หน้าจอเลยค้าง/สลับไปมา ต้องเลื่อนไปเรียกหลัง frame
+    // ปัจจุบัน build เสร็จแล้วแทน
     final controller = Get.put(OrderListController());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadItemsFromBuyPage();
+    });
 
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
@@ -323,7 +336,15 @@ class OrderListScreen extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () => Get.to(() => const BuyProductsScreen())),
+              child: _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () {
+                // หน้านี้ (order_list) ถูกเปิดมาจากหน้า buy_products เสมอ
+                // (Get.to จาก buy_products.dart) ดังนั้นหน้า buy_products
+                // เดิมยังค้างอยู่ใต้ stack พอดี แค่ Get.back() กลับไปหาของเดิม
+                // ก็พอ ไม่ต้อง Get.to() push หน้าใหม่ซ้อนขึ้นไปอีก เพราะจะทำให้
+                // stack โตขึ้นเรื่อยๆ ทุกครั้งที่สลับไปมาระหว่างสองหน้านี้ และ
+                // กดปุ่มย้อนกลับกี่ทีก็ไม่ถึงหน้า homepage สักที
+                Get.back();
+              }),
             ),
             const SizedBox(width: 10),
             Expanded(

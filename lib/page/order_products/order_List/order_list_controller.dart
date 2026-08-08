@@ -97,22 +97,40 @@ class OrderListController extends GetxController {
     super.onClose();
   }
 
+  // เรียกทุกครั้งที่กลับมาที่หน้านี้ (ไม่ใช่แค่ตอนสร้าง controller ครั้งแรก)
+  // เพื่อให้ orderItems ตรงกับสินค้าที่ติ๊กเลือกไว้ในหน้า buy_products เสมอ
+  // - ลบรายการที่ถูกเลือก/ลบออกไปแล้วในหน้า buy_products
+  // - เพิ่มรายการที่เพิ่งถูกเลือกใหม่
+  // - คงจำนวน/หมายเหตุของรายการเดิมที่ยังเลือกอยู่ไว้ ไม่รีเซ็ตทับ
   void loadItemsFromBuyPage() {
     try {
       final buyController = Get.find<BuyProductsController>();
-      var selectedFromBuyPage = buyController.selectedProducts;
+      final selectedFromBuyPage = buyController.selectedProducts;
+      final selectedIds = selectedFromBuyPage
+          .map((p) => p.productId.toString())
+          .toSet();
 
-      if (selectedFromBuyPage.isNotEmpty) {
-        orderItems.value = selectedFromBuyPage.map((item) {
-          return OrderItem(
-            id: item.productId.toString(),
-            name: item.name ?? 'ไม่มีชื่อสินค้า',
-            unit: item.unit ?? 'ชิ้น',
-            imageUrl: item.imgProduct ?? '',
-            initialQuantity: 1,
-          );
-        }).toList();
+      final noLongerSelected = orderItems
+          .where((item) => !selectedIds.contains(item.id))
+          .toList();
+      for (final item in noLongerSelected) {
+        item.dispose();
       }
+      orderItems.removeWhere((item) => !selectedIds.contains(item.id));
+
+      final existingIds = orderItems.map((item) => item.id).toSet();
+      final newItems = selectedFromBuyPage
+          .where((p) => !existingIds.contains(p.productId.toString()))
+          .map(
+            (item) => OrderItem(
+              id: item.productId.toString(),
+              name: item.name,
+              unit: item.unit,
+              imageUrl: item.imgProduct,
+              initialQuantity: 1,
+            ),
+          );
+      orderItems.addAll(newItems);
     } catch (e) {
       debugPrint("Error: $e");
     }
@@ -385,6 +403,21 @@ class OrderListController extends GetxController {
     final item = orderItems.firstWhere((element) => element.id == id);
     item.dispose();
     orderItems.removeWhere((element) => element.id == id);
+
+    // ยกเลิกติ๊กเลือกสินค้าตัวนี้ในหน้า buy_products ด้วย ไม่งั้นพอกลับไปหน้า
+    // เลือกสินค้าหรือกดเพิ่มรายการ จะยังเห็นสินค้าที่ลบไปแล้วติ๊กเลือกค้างอยู่
+    try {
+      final buyController = Get.find<BuyProductsController>();
+      for (final p in buyController.allProducts) {
+        if (p.productId.toString() == id) {
+          p.isSelected = false;
+        }
+      }
+      buyController.allProducts.refresh();
+      buyController.products.refresh();
+    } catch (e) {
+      debugPrint("Error unselecting product: $e");
+    }
   }
 
   void showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {
