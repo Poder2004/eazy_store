@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 // ✅ นำเข้า Controller ที่แยกไว้
 import 'add_stock_controller.dart';
@@ -13,6 +14,12 @@ const Color _kPrimaryColor = Color(0xFF6B8E23);
 const Color _kBackgroundColor = Color(0xFFF7F7F7);
 const Color _kInputFillColor = Color(0xFFF0F0E0);
 const Color _kReadOnlyColor = Color(0xFFEEEEEE);
+
+// จำนวนเต็ม -> ไม่โชว์ทศนิยม (200), มีเศษสตางค์ -> โชว์เต็ม 2 ตำแหน่งเสมอ (199.50) ไม่ปัดทิ้ง
+String _fmtPrice(double value) {
+  final hasCents = (value * 100).round() % 100 != 0;
+  return NumberFormat(hasCents ? '#,##0.00' : '#,##0').format(value);
+}
 
 class AddStockScreen extends StatelessWidget {
   const AddStockScreen({super.key});
@@ -678,16 +685,16 @@ class AddStockScreen extends StatelessWidget {
                       _buildChangeRow(
                         icon: Icons.sell_outlined,
                         label: "ราคาขาย",
-                        from: "฿${origSell.toStringAsFixed(0)}",
-                        to: "฿${newSell?.toStringAsFixed(0) ?? '-'}",
+                        from: "฿${_fmtPrice(origSell)}",
+                        to: "฿${newSell != null ? _fmtPrice(newSell) : '-'}",
                         changed: newSell != origSell,
                       ),
                       const SizedBox(height: 10),
                       _buildChangeRow(
                         icon: Icons.shopping_bag_outlined,
                         label: "ราคาต้นทุน",
-                        from: "฿${origCost.toStringAsFixed(0)}",
-                        to: "฿${newCost?.toStringAsFixed(0) ?? '-'}",
+                        from: "฿${_fmtPrice(origCost)}",
+                        to: "฿${newCost != null ? _fmtPrice(newCost) : '-'}",
                         changed: newCost != origCost,
                       ),
                     ],
