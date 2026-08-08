@@ -12,8 +12,16 @@ import 'package:eazy_store/page/sale_producct/sale/park_order_controller.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/model/response/shop_response.dart';
+
+// แสดงราคาตามจริง ไม่ปัดเศษทิ้ง แต่ไม่บังคับ .00 ต่อท้ายถ้าเป็นจำนวนเต็ม
+String formatMoney(num value) => NumberFormat('#,##0.##').format(value);
+
+// เหมือน formatMoney แต่ไม่มี comma คั่นหลักพัน ใช้ตอน prefill ข้อความลงช่องแก้ไข
+// ที่ต้อง parse กลับเป็นตัวเลขตอนบันทึก (comma จะทำให้ double.tryParse() พังเงียบๆ)
+String formatMoneyPlain(num value) => NumberFormat('0.##').format(value);
 
 class CheckoutController extends GetxController {
   // 🛒 ตะกร้าสินค้า
@@ -57,8 +65,8 @@ class CheckoutController extends GetxController {
 
     receivedAmountController.addListener(() {
       double received = double.tryParse(receivedAmountController.text) ?? 0;
-      if (received >= totalPriceRounded) {
-        changeAmount.value = received - totalPriceRounded;
+      if (received >= totalPrice) {
+        changeAmount.value = received - totalPrice;
       } else {
         changeAmount.value = 0.0;
       }
@@ -537,10 +545,6 @@ class CheckoutController extends GetxController {
 
   double get totalPrice => cartItems.fold(0, (sum, item) => sum + item.price);
 
-  // ยอดที่ปัดเป็นจำนวนเต็มบาท ใช้แสดงผลและเช็คยอดเงินรับมา
-  // ให้ตรงกับตัวเลขที่แคชเชียร์เห็นบนจอ (ไม่ตัดเศษทิ้งแบบ .toInt() ที่ทำให้เช็คยอดผิด)
-  int get totalPriceRounded => totalPrice.round();
-
   void openPaymentSheet(
     BuildContext context,
     bool initialDebtMode,
@@ -583,8 +587,8 @@ class CheckoutController extends GetxController {
 
     double received = double.tryParse(receivedAmountController.text) ?? 0;
 
-    // เช็คยอดเงินรับมาเฉพาะเงินสด (เทียบกับยอดปัดเต็มบาทที่แสดงบนจอ ไม่ใช่ค่าทศนิยมเป๊ะๆ)
-    if (paymentMethod.value == "จ่ายเงินสด" && received < totalPriceRounded) {
+    // เช็คยอดเงินรับมาเฉพาะเงินสด เทียบกับยอดจริงเป๊ะๆ (ไม่ปัดเต็มบาท กันเงินขาดตอนราคาสินค้ามีทศนิยม)
+    if (paymentMethod.value == "จ่ายเงินสด" && received < totalPrice) {
       _showWarningDialog(
         "ยอดเงินไม่พอ",
         "จำนวนเงินที่รับมาน้อยกว่าราคาสินค้ารวม",
@@ -712,7 +716,7 @@ class CheckoutController extends GetxController {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                "$totalPriceRounded ฿",
+                                "${formatMoney(totalPrice)} ฿",
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,

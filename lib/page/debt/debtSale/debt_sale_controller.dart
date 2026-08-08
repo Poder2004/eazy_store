@@ -8,7 +8,7 @@ import '../../../api/api_debtor.dart';
 import '../../../api/api_sale.dart';
 import '../../../model/request/sales_model_request.dart';
 import '../../../model/response/debtor_response.dart';
-import '../../sale_producct/sale/checkout_controller.dart';
+import '../../sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney() จากไฟล์นี้ด้วย
 import '../../homepage/home_page.dart';
 import '../debtRegister/debt_register.dart';
 import 'debtor_book_sheet.dart';
@@ -17,7 +17,8 @@ import '../../../widgets/confirm_dialog.dart';
 class DebtSaleController extends GetxController {
   final debtorNameController = TextEditingController();
   final debtorPhoneController = TextEditingController();
-  final payAmountController = TextEditingController();
+  // ตั้ง default เป็น "0" เพราะช่องนี้ไม่บังคับกรอก กดยืนยันเลยได้โดยไม่ต้องแตะช่องนี้
+  final payAmountController = TextEditingController(text: '0');
   final debtRemarkController = TextEditingController();
 
   // ลูกหนี้ที่เลือกอยู่ (เป็น Rx เพื่อให้การ์ดเลือกลูกหนี้อัปเดตอัตโนมัติ)
@@ -276,7 +277,7 @@ class DebtSaleController extends GetxController {
     if (debtValue <= 0) {
       showErrorDialog(
         change > 0
-            ? "ลูกค้าจ่ายเกินยอดสินค้า (เงินทอน ${change.toInt()} บาท)\n"
+            ? "ลูกค้าจ่ายเกินยอดสินค้า (เงินทอน ${formatMoney(change)} บาท)\n"
                   "รายการนี้ไม่มียอดค้างชำระ กรุณาบันทึกเป็นการขายเงินสดแทน"
             : "ลูกค้าจ่ายครบตามยอดสินค้าแล้ว ไม่มียอดค้างชำระ\n"
                   "กรุณาบันทึกเป็นการขายเงินสดแทน",
@@ -302,13 +303,11 @@ class DebtSaleController extends GetxController {
     // เช็ควงเงินคงเหลือของลูกหนี้ก่อน (เซิร์ฟเวอร์เช็คซ้ำอีกชั้น)
     if (debtValue > creditRemain) {
       showErrorDialog(
-        "ยอดที่เซ็นค้าง ${debtValue.toInt()} บาท เกินวงเงินที่ลูกหนี้ค้างได้\n"
-        "วงเงินคงเหลือของ ${selectedDebtor!.name} คือ ${creditRemain.toInt()} บาท",
+        "ยอดที่เซ็นค้าง ${formatMoney(debtValue)} บาท เกินวงเงินที่ลูกหนี้ค้างได้\n"
+        "วงเงินคงเหลือของ ${selectedDebtor!.name} คือ ${formatMoney(creditRemain)} บาท",
       );
       return;
     }
-
-    int debt = debtValue.toInt();
 
     Get.dialog(
       MediaQuery(
@@ -373,16 +372,16 @@ class DebtSaleController extends GetxController {
                     children: [
                       _rowPopupInfo("ลูกหนี้:", selectedDebtor?.name ?? ""),
                       const SizedBox(height: 10),
-                      _rowPopupInfo("ยอดสินค้า:", "${total.toInt()} ฿"),
+                      _rowPopupInfo("ยอดสินค้า:", "${formatMoney(total)} ฿"),
                       const SizedBox(height: 10),
                       _rowPopupInfo(
                         "จ่ายล่วงหน้า:",
-                        "${payAmount.value.toInt()} ฿",
+                        "${formatMoney(payAmount.value)} ฿",
                       ),
                       const SizedBox(height: 10),
                       _rowPopupInfo(
                         "วงเงินคงเหลือหลังเซ็น:",
-                        "${(creditRemain - debtValue).toInt()} ฿",
+                        "${formatMoney(creditRemain - debtValue)} ฿",
                       ),
                       const Divider(height: 24, thickness: 1),
                       Row(
@@ -399,7 +398,7 @@ class DebtSaleController extends GetxController {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                "$debt ฿",
+                                "${formatMoney(debtValue)} ฿",
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -656,7 +655,7 @@ class DebtSaleController extends GetxController {
   void clearForm(CheckoutController checkoutController) {
     debtorNameController.clear();
     debtorPhoneController.clear();
-    payAmountController.clear();
+    payAmountController.text = '0'; // กลับไปที่ default เหมือนตอนเปิดหน้าครั้งแรก
     debtRemarkController.clear();
     selectedDebtorRx.value = null;
     checkoutController.clearAll();

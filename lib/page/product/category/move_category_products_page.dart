@@ -63,12 +63,16 @@ class _MoveCategoryProductsPageState extends State<MoveCategoryProductsPage> {
     _categories.assignAll(available);
 
     final productResult = results[1];
-    final loadedProducts = <ProductResponse>[];
+    final fetchedProducts = <ProductResponse>[];
     if (productResult is ProductPagedResponse) {
-      loadedProducts.addAll(productResult.items);
+      fetchedProducts.addAll(productResult.items);
     } else if (productResult is List<ProductResponse>) {
-      loadedProducts.addAll(productResult);
+      fetchedProducts.addAll(productResult);
     }
+    // API ไม่กรองสถานะให้ (คืนสินค้าที่ถูกปิดใช้งาน/soft-delete มาด้วย) ต้องกรองเอง
+    // ฝั่ง client เหมือนหน้าอื่นๆ ที่เรียก getProductsByShop ไม่งั้นสินค้าที่ถูก
+    // ลบไปแล้วจะโผล่มาให้เลือกย้ายได้อีก
+    final loadedProducts = fetchedProducts.where((p) => p.status == true).toList();
     loadedProducts.sort(
       (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
     );

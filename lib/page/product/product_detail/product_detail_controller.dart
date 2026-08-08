@@ -4,11 +4,13 @@ import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/widgets/info_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/utils/error_message.dart';
 
 class ProductDetailController extends GetxController {
   late Rx<ProductResponse> product;
   var isStatusLoading = false.obs;
+  var isRefreshing = false.obs;
 
   @override
   void onInit() {
@@ -16,6 +18,9 @@ class ProductDetailController extends GetxController {
     // รับค่า Product มาจาก arguments
     if (Get.arguments != null && Get.arguments is ProductResponse) {
       product = (Get.arguments as ProductResponse).obs;
+      // ค่าที่ส่งมาอาจเป็นข้อมูลเก่า (เช่น มีคนเพิ่มสต็อกไว้จากหน้าอื่นแล้วยังไม่กลับ
+      // มาหน้านี้) ดึงข้อมูลล่าสุดซ้ำอีกทีทันทีที่เปิดหน้า กันโชว์เลขสต็อกเก่าค้าง
+      refreshProduct();
     } else {
       // ตั้งค่าว่างที่ปลอดภัยไว้ก่อน กัน build() รอบแรก (ที่ทำงานก่อน addPostFrameCallback)
       // อ่านค่า late field ที่ยังไม่ได้ assign แล้วแอป crash ระหว่างรอเด้งกลับ
@@ -35,6 +40,40 @@ class ProductDetailController extends GetxController {
         Get.back();
         Get.snackbar("เกิดข้อผิดพลาด", "ไม่พบข้อมูลสินค้า");
       });
+    }
+  }
+
+  // ดึงข้อมูลสินค้าตัวนี้ซ้ำจากเซิร์ฟเวอร์ (ใช้ตอนเปิดหน้า, pull-to-refresh,
+  // และตอนกลับมาจากหน้าแก้ไข/เพิ่มสต็อก) กันโชว์ข้อมูลเก่าค้างที่ได้มาตอนแรก
+  // ผ่าน Get.arguments เฉยๆ ไม่เคยอัปเดตเองอีกเลย
+  Future<void> refreshProduct() async {
+    isRefreshing.value = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final shopId = prefs.getInt('shopId') ?? product.value.shopId;
+
+      final result = await ApiProduct.getProductsByShop(
+        shopId,
+        search: product.value.name,
+        limit: 100,
+      );
+
+      List<ProductResponse> list = [];
+      if (result is ProductPagedResponse) {
+        list = result.items;
+      } else if (result is List<ProductResponse>) {
+        list = result;
+      }
+
+      final refreshed = list.firstWhere(
+        (p) => p.productId == product.value.productId,
+        orElse: () => product.value,
+      );
+      product.value = refreshed;
+    } catch (e) {
+      debugPrint("Refresh product error: $e");
+    } finally {
+      isRefreshing.value = false;
     }
   }
 

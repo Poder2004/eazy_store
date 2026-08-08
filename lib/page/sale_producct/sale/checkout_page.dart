@@ -168,7 +168,7 @@ class CheckoutPage extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
-            "฿${product.sellPrice.toStringAsFixed(0)} | คงเหลือ: ${product.stock}",
+            "฿${formatMoney(product.sellPrice)} | คงเหลือ: ${product.stock}",
           ),
           trailing: IconButton(
             icon: const Icon(
@@ -359,7 +359,7 @@ class CheckoutPage extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    "${totalItemPrice.toInt()} บาท",
+                    "${formatMoney(totalItemPrice)} บาท",
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -368,7 +368,7 @@ class CheckoutPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  "หน่วยละ ${item.price.toInt()} บาท",
+                  "หน่วยละ ${formatMoney(item.price)} บาท",
                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
               ],
@@ -603,7 +603,7 @@ class CheckoutPage extends StatelessWidget {
                 ),
                 Obx(
                   () => Text(
-                    "${controller.totalPriceRounded} บาท",
+                    "${formatMoney(controller.totalPrice)} บาท",
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -844,7 +844,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                   () => FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      "${controller.totalPriceRounded} บาท",
+                      "${formatMoney(controller.totalPrice)} บาท",
                       style: const TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -955,7 +955,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                               () => FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  "${controller.changeAmount.value.round()} ฿",
+                                  "${formatMoney(controller.changeAmount.value)} ฿",
                                   style: TextStyle(
                                     fontSize: 26,
                                     fontWeight: FontWeight.bold,

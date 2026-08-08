@@ -104,7 +104,7 @@ class DebtLedgerScreen extends StatelessWidget {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            debtor.phone,
+                            "(${debtor.phone})",
                             style: TextStyle(
                               fontSize: 12.5,
                               color: Colors.grey[500],

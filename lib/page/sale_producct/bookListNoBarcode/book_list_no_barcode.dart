@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:eazy_store/model/request/baskets_model.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
 import 'package:eazy_store/widgets/product_filter_sheet.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'book_list_no_barcode_controller.dart';
 
 // ----------------------------------------------------------------------
@@ -246,7 +247,7 @@ class ManualListPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    "${product.price.toStringAsFixed(0)} บาท",
+                    "${formatMoney(product.price)} บาท",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

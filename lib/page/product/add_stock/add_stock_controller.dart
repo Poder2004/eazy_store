@@ -6,6 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class AddStockController extends GetxController {
+  // ถ้าเปิดหน้านี้มาจากหน้าอื่นที่รู้อยู่แล้วว่าจะเพิ่มสต็อกสินค้าตัวไหน
+  // (เช่น กด "เพิ่มสต็อก" จากหน้าแก้ไขสินค้า) จะเลือกสินค้าตัวนี้ให้ทันทีที่เปิดหน้า
+  // แทนที่จะให้ผู้ใช้ต้องพิมพ์ค้นหาสินค้าตัวเดิมซ้ำอีกรอบ
+  final ProductResponse? initialProduct;
+  AddStockController({this.initialProduct});
+
   // ---------------- State Variables ----------------
   var selectedIndex = 1.obs; // เมนู Stock ลำดับที่ 1
   var isSearching = false.obs;
@@ -52,6 +58,10 @@ class AddStockController extends GetxController {
         calculatedTotal.value = current + add;
       }
     });
+
+    if (initialProduct != null) {
+      selectProduct(initialProduct!);
+    }
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
@@ -14,14 +15,37 @@ const Color _kBackgroundColor = Color(0xFFF7F7F7);
 const Color _kInputFillColor = Color(0xFFF0F0E0);
 const Color _kReadOnlyColor = Color(0xFFEEEEEE);
 
-class AddStockScreen extends StatelessWidget {
-  const AddStockScreen({super.key});
+class AddStockScreen extends StatefulWidget {
+  // ถ้าระบุมา จะเปิดหน้านี้พร้อมเลือกสินค้าตัวนี้ให้ทันที (เช่น กด "เพิ่มสต็อก"
+  // จากหน้าแก้ไขสินค้า) แทนที่จะเปิดมาเป็นหน้าค้นหาว่างๆ
+  final ProductResponse? initialProduct;
+  const AddStockScreen({super.key, this.initialProduct});
+
+  @override
+  State<AddStockScreen> createState() => _AddStockScreenState();
+}
+
+class _AddStockScreenState extends State<AddStockScreen> {
+  late final AddStockController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ สร้าง controller ใหม่ทุกครั้งที่เปิดหน้านี้ กันสินค้า/ข้อมูลที่เคยค้นหา
+    // ไว้ในรอบก่อนหน้าค้างอยู่ (โดยเฉพาะตอนระบุ initialProduct มาจากหน้าอื่น
+    // ถ้ายังใช้ controller ตัวเดิมที่ Get.put ค้างไว้ ค่านี้จะถูกมองข้ามไปเงียบๆ)
+    Get.delete<AddStockController>(force: true);
+    controller = Get.put(AddStockController(initialProduct: widget.initialProduct));
+  }
+
+  @override
+  void dispose() {
+    Get.delete<AddStockController>();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ เรียกใช้ Controller
-    final AddStockController controller = Get.put(AddStockController());
-
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
@@ -853,3 +877,4 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 }
+

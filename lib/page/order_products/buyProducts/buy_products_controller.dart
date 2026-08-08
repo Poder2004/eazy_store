@@ -38,6 +38,10 @@ class BuyProductsController extends GetxController {
   // แบ่งหน้า ซึ่ง default เป็น limit=10 ถ้าไม่ส่งค่ามา
   static const int _fetchAllLimit = 100000;
 
+  // นับลำดับตอนติ๊กเลือกสินค้า (เพิ่มขึ้นเรื่อยๆ ไม่มีวันย้อนกลับ) ใช้เรียง
+  // รายการสั่งของตามลำดับที่เลือกจริง แทนลำดับในคลังสินค้า
+  int _selectionCounter = 0;
+
   @override
   void onInit() {
     super.onInit();
@@ -80,14 +84,14 @@ class BuyProductsController extends GetxController {
     try {
       isLoading(true);
 
-      // ✅ จำ id สินค้าที่เลือกไว้ก่อนโหลดใหม่ เพราะเปลี่ยนตัวกรอง/ค้นหา
-      // จะเรียก fetchProducts() ใหม่ทุกครั้ง แทนที่ allProducts ด้วย object
-      // ใหม่ทั้งหมดจาก API (isSelected เริ่มเป็น false เสมอ) ถ้าไม่จำไว้
-      // การเลือกที่ทำค้างไว้ข้ามหน้าจะหายไปเงียบๆ
-      final selectedIds = allProducts
-          .where((p) => p.isSelected)
-          .map((p) => p.productId)
-          .toSet();
+      // ✅ จำ id สินค้าที่เลือกไว้ (พร้อมลำดับที่เลือก) ก่อนโหลดใหม่ เพราะเปลี่ยน
+      // ตัวกรอง/ค้นหาจะเรียก fetchProducts() ใหม่ทุกครั้ง แทนที่ allProducts
+      // ด้วย object ใหม่ทั้งหมดจาก API (isSelected/selectionOrder เริ่มใหม่เสมอ)
+      // ถ้าไม่จำไว้ การเลือก/ลำดับที่ทำค้างไว้ข้ามหน้าจะหายไปเงียบๆ
+      final selectedOrders = <int?, int>{
+        for (final p in allProducts.where((p) => p.isSelected))
+          p.productId: p.selectionOrder,
+      };
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
@@ -109,12 +113,18 @@ class BuyProductsController extends GetxController {
       } else {
         fetched = [];
       }
+      // API ไม่กรองสถานะให้ (คืนสินค้าที่ถูกปิดใช้งาน/soft-delete มาด้วย) ต้องกรอง
+      // เองฝั่ง client เหมือนหน้าอื่นๆ ที่เรียก getProductsByShop ไม่งั้นสินค้าที่
+      // ถูกลบไปแล้วจะโผล่มาให้เลือกสั่งของได้อีก
+      fetched = fetched.where((p) => p.status == true).toList();
 
-      // คืนสถานะ "เลือกไว้" ให้สินค้าตัวเดิม แม้จะเป็น object คนละตัวจาก API รอบนี้
-      if (selectedIds.isNotEmpty) {
+      // คืนสถานะ "เลือกไว้" + ลำดับที่เลือก ให้สินค้าตัวเดิม แม้จะเป็น object
+      // คนละตัวจาก API รอบนี้
+      if (selectedOrders.isNotEmpty) {
         for (final p in fetched) {
-          if (selectedIds.contains(p.productId)) {
+          if (selectedOrders.containsKey(p.productId)) {
             p.isSelected = true;
+            p.selectionOrder = selectedOrders[p.productId]!;
           }
         }
       }
@@ -171,14 +181,25 @@ class BuyProductsController extends GetxController {
   }
 
   void toggleProduct(int index) {
-    products[index].isSelected = !products[index].isSelected;
+    final product = products[index];
+    product.isSelected = !product.isSelected;
+    // ตีตราลำดับใหม่ทุกครั้งที่ "เลือก" (ไม่ใช่ตอนยกเลิก) เพื่อให้ติ๊กใหม่
+    // ทีหลัง ไปอยู่ท้ายรายการสั่งของเสมอ แม้จะเคยติ๊ก/ยกเลิกตัวนี้มาก่อนแล้ว
+    if (product.isSelected) {
+      product.selectionOrder = ++_selectionCounter;
+    }
     products.refresh();
     allProducts.refresh();
   }
 
   int get selectedCount => allProducts.where((p) => p.isSelected).length;
-  List<ProductResponse> get selectedProducts =>
-      allProducts.where((p) => p.isSelected).toList();
+
+  // เรียงตามลำดับที่ถูกติ๊กเลือกจริง (selectionOrder) ไม่ใช่ลำดับในคลังสินค้า
+  List<ProductResponse> get selectedProducts {
+    final list = allProducts.where((p) => p.isSelected).toList();
+    list.sort((a, b) => a.selectionOrder.compareTo(b.selectionOrder));
+    return list;
+  }
 
   @override
   void onClose() {

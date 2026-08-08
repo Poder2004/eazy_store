@@ -5,6 +5,7 @@ import '../../../model/response/debtor_response.dart';
 import '../../../model/request/debtor_history_model.dart';
 import '../../../model/response/debtor_history_model.dart';
 import '../../../widgets/confirm_dialog.dart';
+import '../../sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'debtor_detail_controller.dart';
 
 class DebtorDetailScreen extends StatefulWidget {
@@ -150,7 +151,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
     final phoneController = TextEditingController(text: _controller.currentDebtor.phone);
     final addressController = TextEditingController(text: _controller.currentDebtor.address ?? "");
     final creditController = TextEditingController(
-      text: _controller.currentDebtor.creditLimit.toStringAsFixed(0),
+      text: formatMoneyPlain(_controller.currentDebtor.creditLimit),
     );
 
     // ใช้ XFile + bytes แทน File เพื่อให้รองรับทั้งเว็บและมือถือ
@@ -656,7 +657,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                       style: TextStyle(fontSize: 16),
                     ),
                     Text(
-                      "${debtor.currentDebt.toStringAsFixed(0)} บาท",
+                      "${formatMoney(debtor.currentDebt)} บาท",
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -684,11 +685,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    "วงเงิน: ${debtor.creditLimit.toStringAsFixed(0)}",
+                    "วงเงิน: ${formatMoney(debtor.creditLimit)}",
                     style: TextStyle(color: Colors.grey[600],fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                   Text(
-                    "เครดิตคงเหลือ: ${availableCredit.toStringAsFixed(0)}",
+                    "เครดิตคงเหลือ: ${formatMoney(availableCredit)}",
                     style: TextStyle(
                       color: Colors.green[700],
                       fontWeight: FontWeight.bold,
@@ -879,7 +880,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          "${pricePerUnit.toStringAsFixed(0)}฿",
+                          "${formatMoney(pricePerUnit)}฿",
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade500,
@@ -887,7 +888,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          "${item.price.toStringAsFixed(0)} ฿",
+                          "${formatMoney(item.price)} ฿",
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -909,7 +910,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                       ),
                     ),
                     Text(
-                      "${history.totalAmount.toStringAsFixed(0)} บาท",
+                      "${formatMoney(history.totalAmount)} บาท",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -984,7 +985,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              "${amount.toStringAsFixed(0)}฿",
+              "${formatMoney(amount)}฿",
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -1086,7 +1087,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                         ),
                       ),
                       Text(
-                        "${pay.amountPaid.toStringAsFixed(0)} บาท",
+                        "${formatMoney(pay.amountPaid)} บาท",
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -1150,8 +1151,8 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.grey.shade200),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -1161,15 +1162,19 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                         color: Colors.grey.shade500,
                       ),
                       const SizedBox(width: 5),
-                      Text(
-                        "บันทึกโดย: ${pay.recordedBy}",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
+                      Flexible(
+                        child: Text(
+                          "บันทึกโดย: ${pay.recordedBy}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Text(
@@ -1179,14 +1184,17 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           color: Colors.grey.shade600,
                         ),
                       ),
-                      Text(
-                        "${pay.remainingDebt.toStringAsFixed(0)} ฿",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: pay.remainingDebt > 0
-                              ? Colors.orange.shade700
-                              : Colors.green.shade700,
+                      Flexible(
+                        child: Text(
+                          "${formatMoney(pay.remainingDebt)} ฿",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: pay.remainingDebt > 0
+                                ? Colors.orange.shade700
+                                : Colors.green.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

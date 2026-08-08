@@ -2,6 +2,7 @@ import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/page/product/check_price/check_price_controller.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -199,7 +200,7 @@ class CheckPriceScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                product.sellPrice.toStringAsFixed(0),
+                formatMoney(product.sellPrice),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,

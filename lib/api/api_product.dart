@@ -264,19 +264,23 @@ class ApiProduct {
     required int shopId,
     required int categoryId,
   }) async {
+    // ⚠️ ห้ามใช้ totalItems จาก paged response ตรงๆ เพราะฝั่ง backend นับรวม
+    // สินค้าที่ถูกปิดใช้งาน/soft-delete (status = false) มาด้วย ต้องดึงมาทั้งหมด
+    // แล้วกรอง status ฝั่ง client เอง เหมือนหน้าอื่นๆ ที่เรียก getProductsByShop
+    // ไม่งั้น dialog จะโชว์จำนวนสินค้าในหมวดหมู่เกินความจริง
     final result = await getProductsByShop(
       shopId,
       page: 1,
-      limit: 1,
+      limit: 1000,
       categoryId: categoryId,
     );
+    List<ProductResponse> items = [];
     if (result is ProductPagedResponse) {
-      return result.totalItems;
+      items = result.items;
+    } else if (result is List<ProductResponse>) {
+      items = result;
     }
-    if (result is List) {
-      return result.length;
-    }
-    return 0;
+    return items.where((p) => p.status == true).length;
   }
 
   static Future<Map<String, dynamic>> _sendCategoryRequest({

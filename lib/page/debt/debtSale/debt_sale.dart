@@ -226,7 +226,7 @@ class DebtSalePage extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              "วงเงินคงเหลือ ${controller.creditRemain.toInt()} ฿",
+                              "วงเงินคงเหลือ ${formatMoney(controller.creditRemain)} ฿",
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: 13,
@@ -344,7 +344,7 @@ class DebtSalePage extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    "${(item.price * items.length).toInt()} ฿",
+                    "${formatMoney(item.price * items.length)} ฿",
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -378,7 +378,7 @@ class DebtSalePage extends StatelessWidget {
           Obx(
             () => _rowLabelValue(
               "รวมทั้งหมด",
-              "${checkoutController.totalPrice.toInt()} บาท",
+              "${formatMoney(checkoutController.totalPrice)} บาท",
               isBold: true,
               valueSize: 22,
               valueColor: Colors.black87,
@@ -415,7 +415,7 @@ class DebtSalePage extends StatelessWidget {
                 // ยอดค้างไม่ติดลบ จ่ายเกินถือว่าค้าง 0
                 _rowInfo(
                   "ยอดที่เซ็นค้าง",
-                  "${debt.toInt()} บาท",
+                  "${formatMoney(debt)} บาท",
                   isRed: debt > 0,
                   valueSize: 18,
                 ),
@@ -424,7 +424,7 @@ class DebtSalePage extends StatelessWidget {
                 if (change > 0)
                   _rowInfo(
                     "เงินทอน",
-                    "${change.toInt()} บาท",
+                    "${formatMoney(change)} บาท",
                     isBold: true,
                     valueSize: 18,
                   ),

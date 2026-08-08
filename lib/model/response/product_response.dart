@@ -21,6 +21,10 @@ class ProductResponse {
   final String? categoryName;
   bool isSelected;
 
+  // ลำดับตอนถูกติ๊กเลือก (ไม่ได้มาจาก API) ใช้เรียงรายการสั่งของตามลำดับที่
+  // เลือกจริง แทนลำดับในคลังสินค้า ดู BuyProductsController.toggleProduct()
+  int selectionOrder;
+
   ProductResponse({
     this.productId,
     required this.shopId,
@@ -37,6 +41,7 @@ class ProductResponse {
     this.category, 
     this.categoryName, 
     this.isSelected = false,
+    this.selectionOrder = 0,
   });
 
   factory ProductResponse.fromJson(Map<String, dynamic> json) {
