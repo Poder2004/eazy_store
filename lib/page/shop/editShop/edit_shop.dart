@@ -27,7 +27,7 @@ class EditShopScreen extends StatelessWidget {
       backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(
-          "แก้ไขร้านค้า",
+          "แก้ไขข้อมูลร้านค้า",
           style: TextStyle(
             color: textColor,
             fontWeight: FontWeight.bold,
@@ -146,6 +146,9 @@ class EditShopScreen extends StatelessWidget {
                       controller.phoneController,
                       Icons.phone_outlined,
                       inputType: TextInputType.phone,
+                      maxLength: 10,
+                      isNumberOnly: true,
+                      errorText: controller.phoneError,
                     ),
                     const SizedBox(height: 16),
 
@@ -243,6 +246,7 @@ class EditShopScreen extends StatelessWidget {
                       obscureText: !controller.isPinVisible.value,
                       maxLength: 6,
                       isNumberOnly: true,
+                      errorText: controller.pinError,
                       suffixIcon: IconButton(
                         icon: Icon(
                           controller.isPinVisible.value
@@ -342,45 +346,67 @@ class EditShopScreen extends StatelessWidget {
     String? hint,
     bool isNumberOnly = false,
     Widget? suffixIcon,
+    RxString? errorText,
   }) {
-    return TextField(
-      controller: controller,
-      keyboardType: inputType,
-      obscureText: obscureText,
-      maxLines: maxLines,
-      maxLength: maxLength,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF1E293B),
-      ),
-      inputFormatters: isNumberOnly
-          ? [FilteringTextInputFormatter.digitsOnly]
-          : [],
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: const Color(0xFFF8FAFC),
-        hintText: hint,
-        prefixIcon: Icon(icon, color: Colors.blueGrey.shade400, size: 20),
-        suffixIcon: suffixIcon,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          keyboardType: inputType,
+          obscureText: obscureText,
+          maxLines: maxLines,
+          maxLength: maxLength,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E293B),
+          ),
+          inputFormatters: isNumberOnly
+              ? [FilteringTextInputFormatter.digitsOnly]
+              : [],
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            hintText: hint,
+            prefixIcon: Icon(icon, color: Colors.blueGrey.shade400, size: 20),
+            suffixIcon: suffixIcon,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+            ),
+            counterText: "",
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: 15,
+            ),
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryGreen, width: 1.5),
-        ),
-        counterText: "",
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 15,
-        ),
-      ),
+        // ✨ ข้อความแจ้งเตือนสีแดงแบบ real-time เมื่อกรอกไม่ตรงเงื่อนไข
+        if (errorText != null)
+          Obx(() {
+            if (errorText.value.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 6, left: 4),
+              child: Text(
+                errorText.value,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+          }),
+      ],
     );
   }
 }

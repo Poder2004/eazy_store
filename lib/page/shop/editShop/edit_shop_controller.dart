@@ -30,6 +30,10 @@ class EditShopController extends GetxController {
 
   var isLoading = false.obs;
 
+  // ✨ ข้อความแจ้งเตือนแบบ real-time ใต้ช่องเบอร์โทรศัพท์/PIN (ว่าง = ไม่มีปัญหา)
+  var phoneError = "".obs;
+  var pinError = "".obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -38,10 +42,24 @@ class EditShopController extends GetxController {
     phoneController = TextEditingController(text: shop.phone);
     addressController = TextEditingController(text: shop.address);
     pinCodeController = TextEditingController(text: shop.pinCode ?? "");
+    phoneController.addListener(_validatePhone);
+    pinCodeController.addListener(_validatePin);
+  }
+
+  void _validatePhone() {
+    final v = phoneController.text.trim();
+    phoneError.value = (v.isNotEmpty && v.length != 10) ? "ยังไม่ครบ 10 หลัก" : "";
+  }
+
+  void _validatePin() {
+    final v = pinCodeController.text.trim();
+    pinError.value = (v.isNotEmpty && v.length != 6) ? "ยังไม่ครบ 6 หลัก" : "";
   }
 
   @override
   void onClose() {
+    phoneController.removeListener(_validatePhone);
+    pinCodeController.removeListener(_validatePin);
     nameController.dispose();
     phoneController.dispose();
     addressController.dispose();

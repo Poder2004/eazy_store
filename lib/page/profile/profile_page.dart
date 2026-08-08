@@ -57,8 +57,8 @@ class ProfilePage extends StatelessWidget {
                       _MenuItem(
                         icon: Icons.store_rounded,
                         iconColor: const Color(0xFF6366F1),
-                        title: 'จัดการร้านค้า',
-                        subtitle: 'แก้ไขข้อมูลร้าน ที่อยู่ และรูปภาพ',
+                        title: 'แก้ไขข้อมูลร้าน',
+                        subtitle: 'เปลี่ยนชื่อร้าน ที่อยู่ เบอร์โทรศัพท์ และข้อมูลอื่นๆ',
                         onTap: controller.goToManageStores,
                       ),
                       _MenuItem(

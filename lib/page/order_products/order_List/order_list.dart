@@ -147,8 +147,10 @@ class OrderListScreen extends StatelessWidget {
           ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(7),
@@ -167,53 +169,17 @@ class OrderListScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    item.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 3),
-                _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
-                _buildQtyField(
-                  item.quantityController,
-                  (v) => controller.onQuantityTyped(item, v),
-                ),
-                _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
-                const SizedBox(width: 3),
-                SizedBox(
-                  width: 34,
-                  child: isUnitEditing
-                      ? TextField(
-                          controller: item.unitController,
-                          autofocus: true,
-                          maxLines: 1,
-                          style: const TextStyle(fontSize: 10.5, color: Colors.black87),
-                          onSubmitted: (_) => controller.toggleUnitEdit(item.id),
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 4),
-                            border: UnderlineInputBorder(),
-                          ),
-                        )
-                      : FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            item.unitController.text,
-                            style: const TextStyle(fontSize: 10.5, color: Colors.black45),
-                            maxLines: 1,
-                          ),
-                        ),
-                ),
-                _buildIconToggle(
-                  icon: Icons.edit_outlined,
-                  active: isUnitEditing,
-                  onTap: () => controller.toggleUnitEdit(item.id),
-                  color: const Color(0xFF5390F2),
-                  bgColor: const Color(0xFFEAF1FD),
-                ),
                 _buildIconToggle(
                   icon: Icons.note_alt_outlined,
                   active: isNoteOpen || hasNote,
@@ -229,6 +195,58 @@ class OrderListScreen extends StatelessWidget {
                   bgColor: const Color(0xFFFCE9E9),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 42),
+              child: Row(
+                children: [
+                  const Text(
+                    'จำนวน',
+                    style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
+                  _buildQtyField(
+                    item.quantityController,
+                    (v) => controller.onQuantityTyped(item, v),
+                  ),
+                  _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 60,
+                    child: isUnitEditing
+                        ? TextField(
+                            controller: item.unitController,
+                            autofocus: true,
+                            maxLines: 1,
+                            style: const TextStyle(fontSize: 12, color: Color.fromARGB(228, 22, 22, 22)),
+                            onSubmitted: (_) => controller.toggleUnitEdit(item.id),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 4),
+                              border: UnderlineInputBorder(),
+                            ),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              item.unitController.text,
+                              style: const TextStyle(fontSize: 12, color: Color.fromARGB(228, 22, 22, 22)),
+                              maxLines: 1,
+                            ),
+                          ),
+                  ),
+                  _buildIconToggle(
+                    icon: Icons.edit_outlined,
+                    active: isUnitEditing,
+                    onTap: () => controller.toggleUnitEdit(item.id),
+                    color: const Color(0xFF5390F2),
+                    bgColor: const Color(0xFFEAF1FD),
+                  ),
+                ],
+              ),
             ),
             AnimatedSize(
               duration: const Duration(milliseconds: 160),
@@ -273,31 +291,31 @@ class OrderListScreen extends StatelessWidget {
   }
 
   Widget _buildQtyField(TextEditingController ctrl, Function(String) onChange) {
-    return SizedBox(
+    // วาดกรอบ/พื้นหลังเองด้วย Container (แบบเดียวกับ _buildQtyBtn) แทนการพึ่ง
+    // border ของ InputDecoration เพราะตอนใช้ isCollapsed:true มันจะไม่วาด
+    // fillColor/border ให้ ทำให้กรอบหายไปเหลือแต่ตัวเลขลอยๆ
+    return Container(
       width: 30, height: 27,
-      child: TextField(
-        controller: ctrl,
-        keyboardType: TextInputType.number,
-        // กันพิมพ์เลขติดลบ/ตัวอักษรเข้าไปในช่องจำนวน (ทำให้จำนวนสั่งของเพี้ยนตอน export PDF)
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-        onChanged: onChange,
-        decoration: InputDecoration(
-          filled: true, fillColor: _kInputFillColor,
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: _kPrimaryColor, width: 1.5),
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: _kInputFillColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Center(
+        child: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          // กันพิมพ์เลขติดลบ/ตัวอักษรเข้าไปในช่องจำนวน (ทำให้จำนวนสั่งของเพี้ยนตอน export PDF)
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+          onChanged: onChange,
+          decoration: const InputDecoration(
+            isCollapsed: true,
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
           ),
         ),
       ),

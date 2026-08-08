@@ -60,7 +60,7 @@ class HomePage extends StatelessWidget {
                         icon: Icons.add_circle_outline,
                         iconColor: iconColor,
                         title: "เพิ่มสินค้า",
-                        subtitle: "สร้างรายการสินค้าใหม่สำหรับร้านนี้",
+                        subtitle: "สร้างรายการสินค้าใหม่",
                         onTap: () => Get.to(() => const AddProductScreen()),
                       ),
                       _buildMenuTile(
@@ -81,7 +81,7 @@ class HomePage extends StatelessWidget {
                         icon: Icons.fact_check_outlined,
                         iconColor: Colors.purple.shade500,
                         title: "เช็คสต็อกสินค้า",
-                        subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
+                        subtitle: "ตรวจสอบยอดคงเหลือในคลัง",
                         onTap: () => Get.to(() => const CheckStockScreen()),
                       ),
                       _buildMenuTile(

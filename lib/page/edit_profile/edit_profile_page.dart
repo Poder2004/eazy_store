@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'edit_profile_controller.dart';
 
@@ -93,6 +94,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       label: "เบอร์โทรศัพท์",
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
+                      errorText: controller.phoneError,
                     ),
 
                     const Padding(
@@ -109,10 +115,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       keyboardType: TextInputType.emailAddress,
                       helperText:
                           "* หากเปลี่ยนอีเมล ระบบจะส่งรหัสไปให้ยืนยันใหม่",
+                      errorText: controller.emailError,
                     ),
                     const SizedBox(height: 16),
 
-                 
+
                     _buildTextField(
                       controller: controller.passwordCtrl,
                       label: "รหัสผ่านใหม่",
@@ -120,6 +127,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       isPassword: true,
                       mainController: controller,
                       helperText: "* เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน",
+                      errorText: controller.passwordError,
                     ),
                   ],
                 ),
@@ -194,6 +202,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     TextInputType keyboardType = TextInputType.text,
     String? helperText,
     EditProfileController? mainController,
+    List<TextInputFormatter>? inputFormatters,
+    RxString? errorText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,17 +237,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 onPressed: mainController.togglePasswordVisibility, // กดสลับตา
               ),
+              inputFormatters: inputFormatters,
             ),
           )
         else
-       
+
           _buildInputForm(
             controller: controller,
             icon: icon,
             keyboardType: keyboardType,
             isObscure: false,
             suffixIcon: null,
+            inputFormatters: inputFormatters,
           ),
+
+        // ✨ ข้อความแจ้งเตือนสีแดงแบบ real-time เมื่อกรอกไม่ตรงเงื่อนไข
+        if (errorText != null)
+          Obx(() {
+            if (errorText.value.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                errorText.value,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+          }),
 
         if (helperText != null) ...[
           const SizedBox(height: 6),
@@ -263,11 +292,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
     required TextInputType keyboardType,
     required bool isObscure,
     Widget? suffixIcon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: isObscure,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: const TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w600,
