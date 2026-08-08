@@ -10,6 +10,7 @@ import '../../../api/api_debtor.dart';
 import '../../../api/api_service_image.dart';
 import '../../../model/request/debtor_request.dart';
 import '../../../model/response/debtor_response.dart';
+import '../../../widgets/confirm_dialog.dart';
 import '../../../widgets/image_picker_sheet.dart';
 
 class DebtRegisterController extends GetxController {
@@ -33,7 +34,12 @@ class DebtRegisterController extends GetxController {
   var districts = <String>[].obs;
   var subdistricts = <String>[].obs;
 
-  final Color primaryColor = const Color(0xFF6B8E23);
+  // ข้อความ error ของช่องเบอร์โทร แสดงสดขณะพิมพ์ (ไม่ใช่แค่ตอนกดบันทึก)
+  var phoneError = Rx<String?>(null);
+
+  // สีเดียวกับปุ่ม "บันทึกข้อมูลลูกหนี้" ในหน้า UI (เขียว) ให้ต่อเนื่องกับ
+  // dialog ยืนยันและ loading spinner ตอนกดปุ่มนั้น
+  final Color primaryColor = const Color(0xFF10B981);
 
   @override
   void onInit() {
@@ -97,6 +103,20 @@ class DebtRegisterController extends GetxController {
     if (selectedDistrictData == null) return;
     final List<dynamic>? rawSubs = selectedDistrictData['sub_districts'] as List<dynamic>?;
     subdistricts.value = rawSubs?.map((s) => s['name_th'] as String).toList() ?? [];
+  }
+
+  // ตรวจเบอร์โทร: ต้องขึ้นต้นด้วย 0 และมีครบ 10 หลักเท่านั้น
+  // คืนค่า null = ถูกต้อง (หรือยังพิมพ์ไม่ครบ/ว่างอยู่ ปล่อยให้ validateForm
+  // ตอน submit เป็นคนเตือนแทน ไม่ต้องขึ้น error สีแดงกวนตาระหว่างพิมพ์)
+  String? _phoneValidationMessage(String phone) {
+    if (phone.isEmpty) return null;
+    if (!phone.startsWith('0')) return 'เบอร์โทรต้องขึ้นต้นด้วยเลข 0';
+    if (phone.length != 10) return 'เบอร์โทรต้องมี 10 หลัก (ตอนนี้ ${phone.length} หลัก)';
+    return null;
+  }
+
+  void onPhoneChanged(String value) {
+    phoneError.value = _phoneValidationMessage(value.trim());
   }
 
   void showImagePickerOptions() {
@@ -174,20 +194,20 @@ class DebtRegisterController extends GetxController {
       return false;
     }
 
-    // 3) เบอร์โทรศัพท์
+    // 3) เบอร์โทรศัพท์ (ต้องขึ้นต้นด้วย 0 และครบ 10 หลักเท่านั้น)
     final phone = phoneController.text.trim();
     if (phone.isEmpty) {
+      phoneError.value = null;
       _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกเบอร์โทรศัพท์");
       return false;
     }
-    if (phone.length != 10 || !RegExp(r'^[0-9]{10}$').hasMatch(phone)) {
-      _showWarning("เบอร์โทรไม่ถูกต้อง", "กรุณากรอกเบอร์โทรเป็นตัวเลข 10 หลัก");
+    final phoneMsg = _phoneValidationMessage(phone);
+    if (phoneMsg != null) {
+      phoneError.value = phoneMsg;
+      _showWarning("เบอร์โทรไม่ถูกต้อง", phoneMsg);
       return false;
     }
-    if (!phone.startsWith('0')) {
-      _showWarning("เบอร์โทรไม่ถูกต้อง", "เบอร์โทรศัพท์ต้องขึ้นต้นด้วยเลข 0");
-      return false;
-    }
+    phoneError.value = null;
 
     // 4) ที่อยู่ (จังหวัด / อำเภอ / ตำบล / รายละเอียด)
     if (selectedProvince.value == null) {
@@ -230,6 +250,21 @@ class DebtRegisterController extends GetxController {
   Future<void> submitDebtorData() async {
     if (!validateForm()) return;
 
+    // ให้ยืนยันอีกครั้งก่อนบันทึกจริง กันกดพลาด/กดรัวจนสร้างลูกหนี้ซ้ำ
+    ConfirmDialog.show(
+      title: 'ยืนยันบันทึกข้อมูลลูกหนี้',
+      message:
+          'ต้องการบันทึกข้อมูลลูกหนี้ "${nameController.text.trim()}" '
+          'ใช่หรือไม่?',
+      icon: Icons.person_add_alt_1_rounded,
+      iconColor: primaryColor,
+      confirmLabel: 'บันทึก',
+      confirmColor: primaryColor,
+      onConfirm: _performSubmit,
+    );
+  }
+
+  Future<void> _performSubmit() async {
     // แสดง Loading
     Get.dialog(
       Center(child: CircularProgressIndicator(color: primaryColor)),

@@ -5,10 +5,19 @@ import 'package:get/get.dart';
 // --- Import Controller ที่เราเพิ่งสร้าง ---
 import 'debt_register_controller.dart';
 
-const Color _kPrimaryColor = Color(0xFF6B8E23);
-const Color _kBackgroundColor = Color(0xFFF7F7F7);
-const Color _kFieldFillColor = Color(0xFFFAFFEF);
-const Color _kBorderColor = Color(0xFFE0E0E0);
+// สีชุดเดียวกับหน้า "บันทึกค้างชำระ" (debt_sale.dart) เพราะเป็นหน้าที่เปิดต่อ
+// กันในโฟลว์เดียวกัน (กด "สร้างลูกหนี้ใหม่" จากหน้านั้นมาหน้านี้) เดิมหน้านี้
+// ใช้สีเขียวมะกอกของโมดูลสั่งซื้อสินค้า เลยดูหลุดธีมไปคนละทาง
+const Color _kPrimaryColor = Color(0xFF2563EB); // ฟ้าพรีเมียม
+const Color _kSuccessColor = Color(
+  0xFF10B981,
+); // เขียว ใช้กับปุ่มยืนยัน/บันทึกจริง
+const Color _kBackgroundColor = Color(0xFFF4F7FA);
+const Color _kFieldFillColor = Color(0xFFECEFF1); // blueGrey.shade50
+const Color _kBorderColor = Color(0xFFE2E8F0);
+const Color _kErrorColor = Color(0xFFDC2626);
+const Color _kTextColor = Color(0xFF2A2A2A);
+const Color _kLabelColor = Colors.blueGrey;
 
 class DebtRegisterScreen extends StatelessWidget {
   DebtRegisterScreen({super.key});
@@ -21,122 +30,151 @@ class DebtRegisterScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.black87,
+            size: 20,
+          ),
+          onPressed: () => Get.back(),
+        ),
         title: const Text(
           'สมัครบัญชีลูกหนี้',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+            fontSize: 20,
+          ),
         ),
         centerTitle: true,
-        backgroundColor: _kBackgroundColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10.0),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildProfileImageUploader(),
-            const SizedBox(height: 30),
+            const SizedBox(height: 28),
 
-            _buildInputField(
-              label: 'ชื่อคนค้างชำระ',
-              hint: 'ชื่อคนค้างชำระ',
-              controller: controller.nameController,
-            ),
-            _buildInputField(
-              label: 'เบอร์โทรศัพท์',
-              hint: 'เบอร์โทรศัพท์',
-              controller: controller.phoneController,
-              keyboardType: TextInputType.phone,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(10),
+            _buildSectionCard(
+              icon: Icons.badge_outlined,
+              title: 'ข้อมูลลูกหนี้',
+              children: [
+                _buildTextField(
+                  label: 'ชื่อคนค้างชำระ',
+                  hint: 'เช่น นายสมชาย',
+                  icon: Icons.person_outline,
+                  controller: controller.nameController,
+                ),
+                const SizedBox(height: 16),
+                Obx(
+                  () => _buildTextField(
+                    label: 'เบอร์โทรศัพท์',
+                    hint: '08XXXXXXXX',
+                    icon: Icons.call_outlined,
+                    controller: controller.phoneController,
+                    keyboardType: TextInputType.phone,
+                    errorText: controller.phoneError.value,
+                    onChanged: controller.onPhoneChanged,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
+                  ),
+                ),
               ],
             ),
 
-            const Padding(
-              padding: EdgeInsets.only(top: 15.0),
-              child: Text(
-                'ที่อยู่',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
+            const SizedBox(height: 16),
 
-            Obx(() {
-              if (controller.fullAddressData.value == null) {
-                return const LinearProgressIndicator(color: _kPrimaryColor);
-              }
+            _buildSectionCard(
+              icon: Icons.location_on_outlined,
+              title: 'ที่อยู่',
+              children: [
+                Obx(() {
+                  if (controller.fullAddressData.value == null) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: LinearProgressIndicator(
+                        color: _kPrimaryColor,
+                        backgroundColor: _kFieldFillColor,
+                      ),
+                    );
+                  }
 
-              final List<String> provinces = controller
-                  .fullAddressData
-                  .value!
-                  .keys
-                  .toList();
-              return Column(
-                children: [
-                  _buildAddressDropdown(
-                    hint: 'จังหวัด',
-                    selectedValue: controller.selectedProvince.value,
-                    items: provinces,
-                    onChanged: controller.onProvinceChanged,
-                  ),
-                  _buildAddressDropdown(
-                    hint: 'อำเภอ',
-                    selectedValue: controller.selectedDistrict.value,
-                    items: controller.districts,
-                    onChanged: controller.onDistrictChanged,
-                    disabled: controller.selectedProvince.value == null,
-                  ),
-                  _buildAddressDropdown(
-                    hint: 'ตำบล',
-                    selectedValue: controller.selectedSubdistrict.value,
-                    items: controller.subdistricts,
-                    onChanged: (v) => controller.selectedSubdistrict.value = v,
-                    disabled: controller.selectedDistrict.value == null,
-                  ),
-                ],
-              );
-            }),
-
-            _buildInputField(
-              hint: 'บ้านเลขที่/ซอย/ถนน',
-              label: '',
-              isAddress: true,
-              controller: controller.addressDetailController,
-            ),
-
-            _buildInputField(
-              label: 'วงเงินค้างชำระ',
-              hint: 'วงเงินค้างชำระ',
-              controller: controller.creditLimitController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                  final List<String> provinces = controller
+                      .fullAddressData
+                      .value!
+                      .keys
+                      .toList();
+                  return Column(
+                    children: [
+                      _buildAddressDropdown(
+                        hint: 'จังหวัด',
+                        selectedValue: controller.selectedProvince.value,
+                        items: provinces,
+                        onChanged: controller.onProvinceChanged,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAddressDropdown(
+                        hint: 'อำเภอ/เขต',
+                        selectedValue: controller.selectedDistrict.value,
+                        items: controller.districts,
+                        onChanged: controller.onDistrictChanged,
+                        disabled: controller.selectedProvince.value == null,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildAddressDropdown(
+                        hint: 'ตำบล/แขวง',
+                        selectedValue: controller.selectedSubdistrict.value,
+                        items: controller.subdistricts,
+                        onChanged: (v) =>
+                            controller.selectedSubdistrict.value = v,
+                        disabled: controller.selectedDistrict.value == null,
+                      ),
+                    ],
+                  );
+                }),
+                const SizedBox(height: 16),
+                _buildTextField(
+                  label: 'บ้านเลขที่ / ซอย / ถนน',
+                  hint: 'เช่น 99/1 ถ.สุขุมวิท',
+                  icon: Icons.home_outlined,
+                  controller: controller.addressDetailController,
+                ),
               ],
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 16),
 
-            ElevatedButton(
-              onPressed: controller
-                  .submitDebtorData, // เรียกฟังก์ชันจาก Controller ได้โดยตรง
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kPrimaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15.0),
+            _buildSectionCard(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'วงเงินค้างชำระ',
+              children: [
+                _buildTextField(
+                  label: 'วงเงินค้างชำระ',
+                  hint: '0.00',
+                  icon: Icons.payments_outlined,
+                  suffixText: 'บาท',
+                  controller: controller.creditLimitController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*\.?\d{0,2}'),
+                    ),
+                  ],
                 ),
-              ),
-              child: const Text(
-                'เพิ่ม',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+              ],
             ),
-            const SizedBox(height: 30),
+
+            const SizedBox(height: 32),
+
+            _buildSubmitButton(),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -145,46 +183,131 @@ class DebtRegisterScreen extends StatelessWidget {
 
   // --- Reusable Widgets ---
 
-  Widget _buildInputField({
+  Widget _buildSectionCard({
+    required IconData icon,
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: _kPrimaryColor, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _kLabelColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
     required String label,
     required String hint,
+    required IconData icon,
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
-    bool isAddress = false,
+    String? errorText,
+    String? suffixText,
+    ValueChanged<String>? onChanged,
   }) {
+    final bool hasError = errorText != null && errorText.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!isAddress)
-          Padding(
-            padding: const EdgeInsets.only(top: 15.0, bottom: 5.0),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF333333),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _kLabelColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          onChanged: onChanged,
+          style: const TextStyle(fontSize: 15, color: _kTextColor),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            prefixIcon: Icon(
+              icon,
+              size: 20,
+              color: hasError ? _kErrorColor : Colors.grey.shade500,
+            ),
+            suffixText: suffixText,
+            suffixStyle: const TextStyle(
+              color: Colors.black54,
+              fontWeight: FontWeight.w600,
+            ),
+            errorText: errorText,
+            errorStyle: const TextStyle(fontSize: 12, color: _kErrorColor),
+            filled: true,
+            fillColor: _kFieldFillColor,
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 14,
+              horizontal: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _kBorderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: hasError ? _kErrorColor : _kBorderColor,
               ),
             ),
-          ),
-        Container(
-          height: 50,
-          margin: EdgeInsets.only(top: isAddress ? 10.0 : 0),
-          decoration: BoxDecoration(
-            color: _kFieldFillColor,
-            borderRadius: BorderRadius.circular(10.0),
-            border: Border.all(color: _kBorderColor),
-          ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            inputFormatters: inputFormatters,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 15),
-              hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey.shade400),
-              border: InputBorder.none,
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: hasError ? _kErrorColor : _kPrimaryColor,
+                width: 1.6,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _kErrorColor),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: _kErrorColor, width: 1.6),
             ),
           ),
         ),
@@ -200,29 +323,50 @@ class DebtRegisterScreen extends StatelessWidget {
     bool disabled = false,
   }) {
     return Container(
-      height: 50,
-      margin: const EdgeInsets.only(top: 10.0),
-      padding: const EdgeInsets.symmetric(horizontal: 15),
+      height: 52,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: disabled ? Colors.grey.shade200 : _kFieldFillColor,
-        borderRadius: BorderRadius.circular(10.0),
+        color: disabled ? Colors.grey.shade100 : _kFieldFillColor,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _kBorderColor),
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          hint: Text(
-            hint,
-            style: TextStyle(
-              color: disabled ? Colors.grey : Colors.grey.shade600,
+      child: Row(
+        children: [
+          Icon(
+            Icons.map_outlined,
+            size: 18,
+            color: disabled ? Colors.grey.shade400 : Colors.grey.shade500,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: disabled ? Colors.grey.shade400 : _kPrimaryColor,
+                ),
+                hint: Text(
+                  hint,
+                  style: TextStyle(
+                    color: disabled ? Colors.grey : Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+                value: selectedValue,
+                onChanged: disabled ? null : onChanged,
+                items: items
+                    .map(
+                      (val) => DropdownMenuItem(
+                        value: val,
+                        child: Text(val, style: const TextStyle(fontSize: 14)),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
           ),
-          value: selectedValue,
-          onChanged: disabled ? null : onChanged,
-          items: items
-              .map((val) => DropdownMenuItem(value: val, child: Text(val)))
-              .toList(),
-        ),
+        ],
       ),
     );
   }
@@ -231,40 +375,107 @@ class DebtRegisterScreen extends StatelessWidget {
     return Center(
       child: GestureDetector(
         onTap: controller.showImagePickerOptions,
-        child: Obx(
-          () => Container(
-            width: 130,
-            height: 130,
-            decoration: BoxDecoration(
-              color: _kFieldFillColor,
-              border: Border.all(
-                color: _kPrimaryColor.withOpacity(0.5),
-                width: 2,
-              ),
-              borderRadius: BorderRadius.circular(15.0),
-              image: controller.imageBytes.value != null
-                  ? DecorationImage(
-                      image: MemoryImage(controller.imageBytes.value!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: controller.imageBytes.value == null
-                ? const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.camera_alt_outlined,
+        child: Column(
+          children: [
+            Obx(() {
+              final bytes = controller.imageBytes.value;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 124,
+                    height: 124,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _kFieldFillColor,
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                      image: bytes != null
+                          ? DecorationImage(
+                              image: MemoryImage(bytes),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: bytes == null
+                        ? Icon(
+                            Icons.person_outline_rounded,
+                            size: 52,
+                            color: _kPrimaryColor.withValues(alpha: 0.4),
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 2,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
                         color: _kPrimaryColor,
-                        size: 40,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
                       ),
-                      Text(
-                        'เพิ่มรูปภาพ',
-                        style: TextStyle(fontSize: 14, color: _kPrimaryColor),
+                      child: const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 15,
                       ),
-                    ],
-                  )
-                : null,
+                    ),
+                  ),
+                ],
+              );
+            }),
+            const SizedBox(height: 10),
+            Text(
+              'แตะเพื่อเพิ่มรูปภาพลูกหนี้',
+              style: TextStyle(fontSize: 12.5, color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: _kSuccessColor.withValues(alpha: 0.32),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        height: 56,
+        child: ElevatedButton.icon(
+          onPressed: controller
+              .submitDebtorData, // เรียกฟังก์ชันจาก Controller ได้โดยตรง
+          icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+          label: const Text(
+            'บันทึกข้อมูลลูกหนี้',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _kSuccessColor,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ),
