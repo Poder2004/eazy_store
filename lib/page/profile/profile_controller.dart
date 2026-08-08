@@ -33,8 +33,7 @@ class ProfileController extends GetxController {
   var shopImage = "".obs;
 
   // ข้อมูลยอดขาย
-  var todaySales = "0".obs;
-  var isSalesLoading = true.obs;
+  var todaySales = 0.0.obs;
 
   @override
   void onInit() {
@@ -68,8 +67,6 @@ class ProfileController extends GetxController {
     // 3. ดึงยอดขายวันนี้
     if (shopId.value != 0) {
       fetchTodaySales();
-    } else {
-      isSalesLoading.value = false;
     }
 
     // ✨ เสริม: ดึงข้อมูลโปรไฟล์ล่าสุดจาก API เผื่อมีการแก้ไขจากเครื่องอื่น
@@ -78,7 +75,6 @@ class ProfileController extends GetxController {
 
   // ดึง API ยอดขายวันนี้
   Future<void> fetchTodaySales() async {
-    isSalesLoading.value = true;
     try {
       DateTime now = DateTime.now();
       String todayStr = DateFormat('yyyy-MM-dd').format(now);
@@ -90,15 +86,13 @@ class ProfileController extends GetxController {
       );
 
       if (summary != null) {
-        todaySales.value = NumberFormat('#,##0').format(summary.actualPaid);
+        todaySales.value = summary.actualPaid;
       } else {
-        todaySales.value = "0";
+        todaySales.value = 0.0;
       }
     } catch (e) {
       print("Profile - Error fetching today sales: $e");
-      todaySales.value = "0";
-    } finally {
-      isSalesLoading.value = false;
+      todaySales.value = 0.0;
     }
   }
 

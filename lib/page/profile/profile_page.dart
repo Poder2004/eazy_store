@@ -1,4 +1,5 @@
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/widgets/money_flow.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'profile_controller.dart';
@@ -355,15 +356,6 @@ class ProfilePage extends StatelessWidget {
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
           const SizedBox(height: 16),
           Obx(() {
-            if (controller.isSalesLoading.value) {
-              return const Center(
-                child: SizedBox(
-                  height: 28,
-                  width: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              );
-            }
             return InkWell(
               onTap: controller.goToSalesReport,
               borderRadius: BorderRadius.circular(12),
@@ -390,13 +382,11 @@ class ProfilePage extends StatelessWidget {
                           'ยอดขายวันนี้',
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
-                        Text(
-                          '฿${controller.todaySales.value}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
+                        moneyFlow(
+                          controller.todaySales.value,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
                         ),
                       ],
                     ),

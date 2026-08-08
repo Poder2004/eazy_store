@@ -854,7 +854,20 @@ class AddProductScreen extends StatelessWidget {
               onTap: () async {
                 var result = await Get.to(() => const ScanBarcodePage());
                 if (result != null && result is String) {
-                  controller.idController.text = result;
+                  // ✅ กันเผื่อสแกนเจอฟอร์แมตที่มีตัวอักษรปน (เช่น Code128/Code39)
+                  // ช่องนี้รับเฉพาะตัวเลขเหมือนตอนพิมพ์เอง (digitsOnly formatter)
+                  final digitsOnly = result.replaceAll(RegExp(r'[^0-9]'), '');
+                  if (digitsOnly.isEmpty) {
+                    Get.snackbar(
+                      "ไม่สามารถใช้ได้",
+                      "รหัสที่สแกนได้ไม่ใช่บาร์โค้ดสินค้า กรุณาสแกนใหม่หรือพิมพ์เอง",
+                      backgroundColor: Colors.orange,
+                      colorText: Colors.white,
+                      margin: const EdgeInsets.all(16),
+                    );
+                    return;
+                  }
+                  controller.idController.text = digitsOnly;
                 }
               },
               borderRadius: BorderRadius.circular(12),
