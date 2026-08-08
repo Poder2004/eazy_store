@@ -27,9 +27,13 @@ class SalesAccountController extends GetxController {
 
   var currentIndex = 0.obs;
 
-  // 💰 ยอดหนี้รวม (ตามช่วงเวลาที่เลือก)
+  // 💰 หนี้ใหม่ที่เกิดขึ้น + เก็บหนี้ได้ (ตามช่วงเวลาที่เลือก — เปลี่ยนตามตัวกรอง)
   var totalDebt = 0.0.obs;
   var totalCollectedDebt = 0.0.obs; // ยอดเก็บหนี้ได้ในช่วงเวลานั้นๆ
+
+  // 🔒 ยอดหนี้คงค้างทั้งหมด (ไม่กรองตามวันที่ — ค่าเดียวกับหน้า home)
+  var totalOutstandingDebt = 0.0.obs;
+  var debtorCount = 0.obs; // จำนวนคนที่ยังติดหนี้อยู่ตอนนี้
 
   // 📝 ข้อมูลรายละเอียด (Details)
   var isDetailLoading = false.obs;
@@ -386,8 +390,16 @@ class SalesAccountController extends GetxController {
         currentRange['start']!,
         currentRange['end']!,
       );
-      totalDebt.value = advancedData?.paymentMethods.debtAmount ?? 0.0;
+      // 🔥 หนี้ใหม่ช่วงนี้ ใช้ debtCollection.newDebt (ยอดขายติดหนี้แบบ gross ของช่วงนี้)
+      // แทน paymentMethods.debtAmount เพราะ debtAmount เป็นยอดคงเหลือที่หักการชำระคืนไปแล้ว
+      // (FIFO waterfall) ซึ่งจับคู่กับ collectedDebt (ยอดเก็บได้แบบ gross ของช่วงนี้เหมือนกัน)
+      // ตรงๆ ไม่ได้ เพราะจะนับการชำระซ้อนกัน — newDebt/collectedDebt เป็นคู่ flow เข้า-ออกที่
+      // สมมาตรกัน ดูค่า net ได้ตรงไปตรงมา (เหมือนที่การ์ด cash flow ใน advanced_report_page ใช้)
+      totalDebt.value = advancedData?.debtCollection.newDebt ?? 0.0;
       totalCollectedDebt.value = advancedData?.debtCollection.collectedDebt ?? 0.0;
+      // 🔒 ยอดหนี้คงค้างทั้งหมด ไม่กรองตามวันที่ฝั่ง backend อยู่แล้ว จึงเหมือนกันทุกช่วงเวลา
+      totalOutstandingDebt.value = advancedData?.debtSummary.totalOutstanding ?? 0.0;
+      debtorCount.value = advancedData?.debtSummary.debtorCount ?? 0;
     } catch (e) {
       print(e);
     } finally {
