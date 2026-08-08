@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/page/my_blank/advanced_report_page.dart';
+import 'package:eazy_store/page/debt/debtLedger/debt_ledger.dart';
 import 'sales_account_controller.dart';
 import 'package:eazy_store/model/response/dashboard_detail_response.dart';
 
@@ -295,6 +296,10 @@ class SalesAccountScreen extends StatelessWidget {
     final trendLabel = c.getTrendTextLabel();
     return Column(
       children: [
+        // ─── ยอดหนี้คงค้างทั้งหมด (ไม่เปลี่ยนตามช่วงเวลาที่เลือก) ────────────
+        _OutstandingDebtCard(c: c),
+        const SizedBox(height: 12),
+
         // ─── แถว 1: กำไรสุทธิ + ยอดขายรวม + รับเงินจริง (การ์ดรวม) ────────
         _ProfitSalesCard(
           netProfit: c.netProfit.value,
@@ -649,7 +654,7 @@ class SalesAccountScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '฿${c.formatNumber(item.unitPrice)} × ${item.qty} ชิ้น',
+                              '฿${c.formatNumber(item.unitPrice)} x ${item.qty} ชิ้น',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: _kSub,
@@ -1325,7 +1330,168 @@ class _SalesCostCol extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// แถว 2 ซ้าย: ยอดหนี้รวม
+// ยอดหนี้คงค้างทั้งหมด (สถานะปัจจุบันของทุกลูกหนี้ — ไม่เปลี่ยนตามวันนี้/เดือนนี้/ปีนี้
+// เพราะเป็นยอดสะสมจริง ค่าเดียวกับที่หน้า home ใช้)
+// ─────────────────────────────────────────────────────────────────────────────
+class _OutstandingDebtCard extends StatelessWidget {
+  final SalesAccountController c;
+  const _OutstandingDebtCard({required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final amount = c.totalOutstandingDebt.value;
+      final count = c.debtorCount.value;
+      final isLoading = c.isLoading.value;
+
+      return GestureDetector(
+        onTap: () => Get.to(() => DebtLedgerScreen()),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _kCard,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _kBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: _kRedDim,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: _kRed,
+                      size: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'ยอดหนี้คงค้างทั้งหมด',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _kInk,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _kCard2,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _kBorder),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock_clock_rounded, size: 10, color: _kSub),
+                        SizedBox(width: 3),
+                        Text(
+                          'ไม่เปลี่ยนตามช่วงเวลา',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: _kSub,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              isLoading
+                  ? const SizedBox(
+                      height: 26,
+                      child: LinearProgressIndicator(
+                        color: _kRed,
+                        backgroundColor: _kRedDim,
+                        borderRadius: BorderRadius.all(Radius.circular(4)),
+                      ),
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: FittedBox(
+                            alignment: Alignment.centerLeft,
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '฿${c.formatNumber(amount)}',
+                              style: const TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                color: _kRed,
+                                letterSpacing: -.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _kCard2,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.people_alt_rounded,
+                                size: 12,
+                                color: _kSub,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                count > 0 ? '$count คนติดหนี้' : 'ไม่มีคนติดหนี้',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kSub,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 10),
+              const Row(
+                children: [
+                  Icon(Icons.touch_app_rounded, size: 11, color: _kMuted),
+                  SizedBox(width: 4),
+                  Text(
+                    'แตะเพื่อดูรายละเอียดลูกหนี้',
+                    style: TextStyle(fontSize: 11, color: _kMuted),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// แถว 2 ซ้าย: หนี้ใหม่ช่วงนี้ (ยอดขายติดหนี้ที่เกิดขึ้นในช่วงเวลาที่เลือก — เปลี่ยนตามตัวกรอง)
 // ─────────────────────────────────────────────────────────────────────────────
 class _DebtCompactCard extends StatelessWidget {
   final SalesAccountController c;
@@ -1387,7 +1553,7 @@ class _DebtCompactCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'ยอดหนี้รวม',
+              'หนี้ใหม่ช่วงนี้',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -1430,7 +1596,7 @@ class _DebtCompactCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    amount > 0 ? 'มีหนี้ค้างชำระ' : 'ปลอดหนี้',
+                    amount > 0 ? 'มีหนี้เกิดใหม่ช่วงนี้' : 'ไม่มีหนี้ใหม่ช่วงนี้',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,

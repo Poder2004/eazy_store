@@ -98,13 +98,19 @@ class TopProductItem {
 class DebtSummary {
   final double totalOutstanding;
   final double collectedThisMonth;
+  final int debtorCount;
 
-  DebtSummary({required this.totalOutstanding, required this.collectedThisMonth});
+  DebtSummary({
+    required this.totalOutstanding,
+    required this.collectedThisMonth,
+    required this.debtorCount,
+  });
 
   factory DebtSummary.fromJson(Map<String, dynamic> json) {
     return DebtSummary(
       totalOutstanding: (json['total_outstanding'] ?? 0).toDouble(),
       collectedThisMonth: (json['collected_this_month'] ?? 0).toDouble(),
+      debtorCount: (json['debtor_count'] ?? 0).toInt(),
     );
   }
 }
