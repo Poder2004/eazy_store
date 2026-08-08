@@ -3,8 +3,42 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:eazy_store/page/my_blank/advanced_report_controller.dart';
 import 'package:eazy_store/model/response/advanced_report_response.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (โหลดครั้งแรกเท่านั้น) ──────────
+AdvancedReportResponse _fakeReportData() => AdvancedReportResponse(
+  salesChart: List.generate(
+    7,
+    (i) => SalesChartItem(date: '2024-01-0${i + 1}', totalSales: 1000),
+  ),
+  summaryStats: SummaryStats(
+    totalTransactions: 10,
+    totalSales: 10000,
+    averageSales: 1000,
+  ),
+  paymentMethods: PaymentMethods(
+    paidCash: 4000,
+    paidTransfer: 3000,
+    debtAmount: 3000,
+  ),
+  topProducts: List.generate(
+    5,
+    (i) => TopProductItem(productName: 'สินค้า', totalQty: 10, totalSales: 1000),
+  ),
+  debtSummary: DebtSummary(
+    totalOutstanding: 5000,
+    collectedThisMonth: 2000,
+    debtorCount: 3,
+  ),
+  agingReport: AgingReport(safe: 40, warning: 30, danger: 30),
+  topDebtors: List.generate(
+    5,
+    (i) => TopDebtorItem(debtorId: i, name: 'ลูกหนี้', currentDebt: 1000),
+  ),
+  debtCollection: DebtCollection(newDebt: 3000, collectedDebt: 2000),
+);
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const _kBg = Color(0xFFEDEEF2);
@@ -91,11 +125,16 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               _buildHeader(),
               Expanded(
                 child: Obx(() {
-                  if (c.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: _kBlue,
-                        strokeWidth: 2.5,
+                  // ✨ Skeleton Loading เฉพาะตอนโหลดครั้งแรกจริงๆ เท่านั้น (ใช้ข้อมูลปลอมขึ้นโครง
+                  // การ์ด/กราฟจริง) ส่วน pull-to-refresh รอบถัดไปจะไม่ขึ้น skeleton ซ้อนกับ
+                  // spinner ของ RefreshIndicator อีกตัว — กันปัญหา "loading 2 ตัวพร้อมกัน"
+                  if (!c.hasLoadedOnce.value) {
+                    return Skeletonizer(
+                      enabled: true,
+                      child: SingleChildScrollView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 48),
+                        child: _buildReportColumn(context, _fakeReportData()),
                       ),
                     );
                   }
@@ -129,25 +168,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                           parent: AlwaysScrollableScrollPhysics(),
                         ),
                         padding: const EdgeInsets.fromLTRB(12, 12, 12, 48),
-                        child: Column(
-                          children: [
-                            _buildPeriodNav(context),
-                            const SizedBox(height: 10),
-                            _buildKpiRow(data.debtSummary),
-                            const SizedBox(height: 10),
-                            _buildSalesCard(data.salesChart),
-                            const SizedBox(height: 10),
-                            _buildPaymentCard(data.paymentMethods),
-                            const SizedBox(height: 10),
-                            _buildTopProductsCard(data.topProducts),
-                            const SizedBox(height: 10),
-                            _buildAgingCard(data.agingReport),
-                            const SizedBox(height: 10),
-                            _buildTopDebtorsCard(data.topDebtors),
-                            const SizedBox(height: 10),
-                            _buildCashFlowCard(data.debtCollection),
-                          ],
-                        ),
+                        child: _buildReportColumn(context, data),
                       ),
                     ),
                   );
@@ -157,6 +178,29 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
           ),
         ),
       ),
+    );
+  }
+
+  // ─── การ์ด/กราฟทั้งหมดของรายงาน — ใช้ร่วมกันทั้ง Skeleton (ข้อมูลปลอม) และของจริง ─────
+  Widget _buildReportColumn(BuildContext context, AdvancedReportResponse data) {
+    return Column(
+      children: [
+        _buildPeriodNav(context),
+        const SizedBox(height: 10),
+        _buildKpiRow(data.debtSummary),
+        const SizedBox(height: 10),
+        _buildSalesCard(data.salesChart),
+        const SizedBox(height: 10),
+        _buildPaymentCard(data.paymentMethods),
+        const SizedBox(height: 10),
+        _buildTopProductsCard(data.topProducts),
+        const SizedBox(height: 10),
+        _buildAgingCard(data.agingReport),
+        const SizedBox(height: 10),
+        _buildTopDebtorsCard(data.topDebtors),
+        const SizedBox(height: 10),
+        _buildCashFlowCard(data.debtCollection),
+      ],
     );
   }
 
@@ -611,7 +655,14 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               Widget chart = SizedBox(
                 width: scrollW,
                 height: 106,
-                child: LineChart(
+                child: Skeleton.replace(
+                  replacement: Container(
+                    decoration: BoxDecoration(
+                      color: _kSurface2,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: LineChart(
                   LineChartData(
                     gridData: FlGridData(
                       show: true,
@@ -759,6 +810,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                     ],
                   ),
                 ),
+                ),
               );
 
               return Column(
@@ -841,7 +893,16 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    PieChart(
+                    Skeleton.replace(
+                      replacement: Container(
+                        width: 76,
+                        height: 76,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _kSurface2,
+                        ),
+                      ),
+                      child: PieChart(
                       PieChartData(
                         sectionsSpace: 2,
                         centerSpaceRadius: 25,
@@ -882,6 +943,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                             ),
                         ],
                       ),
+                    ),
                     ),
                     Column(
                       mainAxisSize: MainAxisSize.min,

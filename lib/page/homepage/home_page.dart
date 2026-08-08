@@ -9,6 +9,7 @@ import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
+import 'package:eazy_store/widgets/money_flow.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -320,13 +321,11 @@ class HomePage extends StatelessWidget {
                   () => FittedBox(
                     alignment: Alignment.centerLeft,
                     fit: BoxFit.scaleDown,
-                    child: Text(
-                      "฿ ${controller.formattedTotal}",
-                      style: const TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D2D2D),
-                      ),
+                    child: moneyFlow(
+                      controller.dailyTotal.value,
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2D2D2D),
                     ),
                   ),
                 ),
@@ -393,7 +392,7 @@ class HomePage extends StatelessWidget {
 
   Widget _buildSummaryItem({
     required String label,
-    required RxString value,
+    required RxDouble value,
     required Color color,
     required IconData icon,
   }) {
@@ -420,13 +419,11 @@ class HomePage extends StatelessWidget {
           Obx(
             () => FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(
-                "฿ ${value.value}",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
+              child: moneyFlow(
+                value.value,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
               ),
             ),
           ),

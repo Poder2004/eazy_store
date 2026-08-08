@@ -11,8 +11,8 @@ class HomeController extends GetxController {
 
   // ตัวแปรสำหรับยอดขาย
   var dailyTotal = 0.0.obs; // เก็บเป็นตัวเลขเพื่อเปรียบเทียบ
-  var actualPaid = "0".obs;
-  var debtAmount = "0".obs;
+  var actualPaid = 0.0.obs;
+  var debtAmount = 0.0.obs;
   var isSalesLoading = true.obs;
 
   // Logic สำหรับสีและทิศทางยอดขาย
@@ -47,16 +47,15 @@ class HomeController extends GetxController {
           await ApiDashboad.getAdvancedReport(shopId.value, todayStr, todayStr);
 
       if (summary != null) {
-        final f = NumberFormat('#,##0');
         dailyTotal.value = summary.totalRevenue;
-        actualPaid.value = f.format(summary.actualPaid);
+        actualPaid.value = summary.actualPaid;
 
         // ยอดค้างชำระ = ยอดหนี้คงค้างทั้งหมดของร้านนี้ (รวมทุกลูกหนี้ ไม่จำกัดแค่วันนี้)
         // ใช้ debtSummary.totalOutstanding ซึ่งดึงจาก SUM(debtors.current_debt) ตรงๆ
         // เป็นยอดที่อัปเดตแบบเรียลไทม์ทุกครั้งที่มีการขายค้างชำระหรือลูกหนี้มาจ่ายคืน
         // (ไม่ใช้ summary.debtAmount เพราะเป็นแค่ยอดหนี้ที่เกิดใหม่วันนี้ ไม่ใช่ยอดรวมทั้งหมด)
         double totalDebt = advancedData?.debtSummary.totalOutstanding ?? summary.debtAmount;
-        debtAmount.value = f.format(totalDebt);
+        debtAmount.value = totalDebt;
 
         // --- Logic เปรียบเทียบ ---
         // สมมติ: ถ้าวันนี้มียอด > 0 และไม่มีหนี้ค้างอยู่ ให้ถือว่าเป็นเทรนด์ขาขึ้น (สีเขียว)
@@ -69,7 +68,4 @@ class HomeController extends GetxController {
       isSalesLoading.value = false;
     }
   }
-
-  // Getter สำหรับแสดงผลยอดขายแบบ Format แล้ว
-  String get formattedTotal => NumberFormat('#,##0').format(dailyTotal.value);
 }

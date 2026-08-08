@@ -7,6 +7,7 @@ import 'package:eazy_store/model/response/advanced_report_response.dart';
 
 class AdvancedReportController extends GetxController {
   var isLoading = true.obs;
+  var hasLoadedOnce = false.obs;
   // เหลือแค่ 2 ตัวเลือก: เดือนนี้ / ปีนี้
   var selectedView = 'เดือนนี้'.obs;
   var currentDate = DateTime.now().obs;
@@ -39,6 +40,7 @@ class AdvancedReportController extends GetxController {
       debugPrint('Error fetching advanced report: $e');
     } finally {
       isLoading(false);
+      hasLoadedOnce(true);
     }
   }
 
