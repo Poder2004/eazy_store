@@ -1433,16 +1433,29 @@ class _OutstandingDebtCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         count > 0
-                            ? NumberFlow(
-                                value: count,
-                                format: _kCountFormat,
-                                locale: 'en_US',
-                                suffix: ' คนติดหนี้',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: _kSub,
-                                ),
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  NumberFlow(
+                                    value: count,
+                                    format: _kCountFormat,
+                                    locale: 'en_US',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: _kSub,
+                                    ),
+                                  ),
+                                  const Text(
+                                    ' คนติดหนี้',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: _kSub,
+                                    ),
+                                  ),
+                                ],
                               )
                             : const Text(
                                 'ไม่มีคนติดหนี้',
@@ -1930,17 +1943,31 @@ class _TransactionCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  NumberFlow(
-                    value: count,
-                    format: _kCountFormat,
-                    locale: 'en_US',
-                    suffix: ' รายการ',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: _kInk,
-                      letterSpacing: -.3,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      NumberFlow(
+                        value: count,
+                        format: _kCountFormat,
+                        locale: 'en_US',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _kInk,
+                          letterSpacing: -.3,
+                        ),
+                      ),
+                      const Text(
+                        ' รายการ',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _kInk,
+                          letterSpacing: -.3,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
