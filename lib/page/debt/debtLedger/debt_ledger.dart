@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 // --- Imports ไฟล์ของคุณ ---
 import 'package:eazy_store/page/debt/debtorDetail/debtor_detail.dart';
@@ -16,6 +17,20 @@ const Color _kBackgroundColor = Color(0xFFF7F7F7);
 const Color _kSearchFillColor = Color(0xFFEFEFEF);
 const Color _kCardColor = Color(0xFFFFFFFF);
 const Color _kPayButtonColor = Color(0xFF8BC34A);
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (โหลดครั้งแรกเท่านั้น) ──────────
+List<DebtorResponse> _fakeDebtors() => List.generate(
+  6,
+  (i) => DebtorResponse(
+    debtorId: i,
+    name: 'ชื่อลูกหนี้',
+    phone: '0812345678',
+    address: '',
+    imgDebtor: '',
+    creditLimit: 5000,
+    currentDebt: 1500,
+  ),
+);
 
 class DebtLedgerScreen extends StatelessWidget {
   DebtLedgerScreen({super.key});
@@ -218,8 +233,20 @@ class DebtLedgerScreen extends StatelessWidget {
               child: RefreshIndicator(
                 onRefresh: controller.fetchAllDebtors,
                 child: Obx(() {
-                  if (controller.isLoading.value) {
-                    return const Center(child: CircularProgressIndicator());
+                  if (!controller.hasLoadedOnce.value) {
+                    final fake = _fakeDebtors();
+                    return Skeletonizer(
+                      enabled: true,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0,
+                          vertical: 4,
+                        ),
+                        itemCount: fake.length,
+                        itemBuilder: (context, index) =>
+                            _buildDebtorCard(fake[index]),
+                      ),
+                    );
                   }
                   if (controller.allDebtors.isEmpty) {
                     return const Center(child: Text("ไม่พบข้อมูลลูกหนี้"));

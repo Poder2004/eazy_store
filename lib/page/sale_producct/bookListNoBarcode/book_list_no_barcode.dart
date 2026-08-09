@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:eazy_store/model/request/baskets_model.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
 import 'package:eazy_store/widgets/product_filter_sheet.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'book_list_no_barcode_controller.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading ──────────────────────────────
+List<ProductItem> _fakeProducts() => List.generate(
+  6,
+  (i) => ProductItem(
+    id: '_fake_$i',
+    name: 'ชื่อสินค้า',
+    price: 0,
+    category: '',
+    imagePath: '',
+    maxStock: 10,
+    unit: 'ชิ้น',
+  ),
+);
 
 // ----------------------------------------------------------------------
 // สมุดสินค้า — 2 แท็บ: ไม่มีบาร์โค้ด / มีบาร์โค้ด
@@ -142,7 +157,19 @@ class ManualListPage extends StatelessWidget {
         Expanded(
           child: Obx(() {
             if (controller.isLoading.value) {
-              return const Center(child: CircularProgressIndicator());
+              final fake = _fakeProducts();
+              return Skeletonizer(
+                enabled: true,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: fake.length,
+                  itemBuilder: (context, index) => _buildProductCard(
+                    fake[index],
+                    _activeBlue,
+                    controller,
+                  ),
+                ),
+              );
             }
             if (products.isEmpty) {
               return Center(

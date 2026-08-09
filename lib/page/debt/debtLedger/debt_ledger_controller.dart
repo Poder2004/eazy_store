@@ -19,6 +19,7 @@ class DebtLedgerController extends GetxController {
 
   var isSearchEmpty = true.obs;
   var isLoading = true.obs;
+  var hasLoadedOnce = false.obs;
   var isSearching = false.obs;
   var showDropdown = false.obs;
   var currentShopId = 1.obs;
@@ -87,6 +88,7 @@ class DebtLedgerController extends GetxController {
     } finally {
       if (requestGeneration == _fetchGeneration) {
         isLoading.value = false;
+        hasLoadedOnce.value = true;
       }
     }
   }

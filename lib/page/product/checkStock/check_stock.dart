@@ -3,10 +3,26 @@ import 'package:eazy_store/widgets/pagination_controls.dart';
 import 'package:eazy_store/widgets/product_filter_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (โหลดครั้งแรกเท่านั้น) ──────────
+List<ProductResponse> _fakeProducts() => List.generate(
+  6,
+  (i) => ProductResponse(
+    shopId: 0,
+    categoryId: 0,
+    name: 'ชื่อสินค้า',
+    imgProduct: '',
+    sellPrice: 0,
+    costPrice: 0,
+    stock: 10,
+    unit: 'ชิ้น',
+  ),
+);
 
 class CheckStockScreen extends StatelessWidget {
   const CheckStockScreen({super.key});
@@ -71,8 +87,15 @@ class CheckStockScreen extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value && controller.products.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: primaryColor),
+                  final fake = _fakeProducts();
+                  return Skeletonizer(
+                    enabled: true,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      itemCount: fake.length,
+                      itemBuilder: (context, index) =>
+                          _buildProductCard(fake[index], warningColor),
+                    ),
                   );
                 }
                 if (controller.filteredProducts.isEmpty) {

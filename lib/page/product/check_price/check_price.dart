@@ -5,6 +5,23 @@ import 'package:eazy_store/page/product/check_price/check_price_controller.dart'
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (ตอนกำลังค้นหา) ──────────────
+List<ProductResponse> _fakeProducts() => List.generate(
+  6,
+  (i) => ProductResponse(
+    shopId: 0,
+    categoryId: 0,
+    productCode: '000000',
+    name: 'ชื่อสินค้า',
+    imgProduct: '',
+    sellPrice: 100,
+    costPrice: 0,
+    stock: 0,
+    unit: 'ชิ้น',
+  ),
+);
 
 class CheckPriceScreen extends StatelessWidget {
   const CheckPriceScreen({super.key});
@@ -45,8 +62,17 @@ class CheckPriceScreen extends StatelessWidget {
               Expanded(
                 child: Obx(() {
                   if (controller.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: primaryColor),
+                    final fake = _fakeProducts();
+                    return Skeletonizer(
+                      enabled: true,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        itemCount: fake.length,
+                        itemBuilder: (context, index) =>
+                            _buildPriceCard(fake[index], primaryColor),
+                      ),
                     );
                   }
 

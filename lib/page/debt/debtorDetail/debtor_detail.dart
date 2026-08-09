@@ -1,12 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../../model/response/debtor_response.dart';
 import '../../../model/request/debtor_history_model.dart';
 import '../../../model/response/debtor_history_model.dart';
 import '../../../widgets/confirm_dialog.dart';
 import '../../sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'debtor_detail_controller.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (โหลดครั้งแรกเท่านั้น) ──────────
+List<DebtorHistoryResponse> _fakeHistoryList() => List.generate(
+  3,
+  (i) => DebtorHistoryResponse(
+    orderId: i,
+    date: '01/01/2026',
+    totalAmount: 1000,
+    paidAmount: 0,
+    remainingAmount: 1000,
+    items: [
+      DebtorHistoryItem(name: 'สินค้า', qty: 1, price: 1000, unit: 'ชิ้น'),
+    ],
+  ),
+);
+
+List<PaymentHistoryResponse> _fakePaymentList() => List.generate(
+  3,
+  (i) => PaymentHistoryResponse(
+    paymentId: i,
+    amountPaid: 500,
+    method: 'เงินสด',
+    remainingDebt: 500,
+    date: '01/01/2026',
+    recordedBy: 'พนักงาน',
+  ),
+);
 
 class DebtorDetailScreen extends StatefulWidget {
   final DebtorResponse debtor;
@@ -710,11 +738,16 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
   // ──────────────────────────────────────────────
 
   Widget _buildHistoryList() {
-    if (_controller.isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(),
+    if (!_controller.hasLoadedOnce) {
+      final fake = _fakeHistoryList();
+      return Skeletonizer(
+        enabled: true,
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: fake.length,
+          itemBuilder: (context, index) => _buildDebtCard(fake[index], false),
         ),
       );
     }
@@ -1003,11 +1036,16 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
   // ──────────────────────────────────────────────
 
   Widget _buildPaymentHistoryList() {
-    if (_controller.isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(),
+    if (!_controller.hasLoadedOnce) {
+      final fake = _fakePaymentList();
+      return Skeletonizer(
+        enabled: true,
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: fake.length,
+          itemBuilder: (context, index) => _buildPaymentCard(fake[index]),
         ),
       );
     }

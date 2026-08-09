@@ -12,6 +12,7 @@ class DebtorDetailController extends ChangeNotifier {
   List<DebtorHistoryResponse> historyList = [];
   List<PaymentHistoryResponse> paymentList = [];
   bool isLoading = true;
+  bool hasLoadedOnce = false;
   bool isUpdating = false;
 
   void init(DebtorResponse debtor) {
@@ -32,6 +33,7 @@ class DebtorDetailController extends ChangeNotifier {
       debugPrint("โหลดข้อมูลลูกหนี้ไม่สำเร็จ: $e");
     } finally {
       isLoading = false;
+      hasLoadedOnce = true;
       notifyListeners();
     }
   }

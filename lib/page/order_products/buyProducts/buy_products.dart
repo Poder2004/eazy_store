@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:eazy_store/config/app_config.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/widgets/product_filter_sheet.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
 import '../buyProducts/buy_products_controller.dart';
 import '../order_List/order_list.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading ──────────────────────────────
+List<ProductResponse> _fakeProducts() => List.generate(
+  6,
+  (i) => ProductResponse(
+    shopId: 0,
+    categoryId: 0,
+    name: 'ชื่อสินค้า',
+    imgProduct: '',
+    sellPrice: 0,
+    costPrice: 0,
+    stock: 10,
+    unit: 'ชิ้น',
+  ),
+);
 
 class BuyProductsScreen extends StatelessWidget {
   const BuyProductsScreen({super.key});
@@ -45,8 +61,18 @@ class BuyProductsScreen extends StatelessWidget {
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF6B8E23)),
+                final fake = _fakeProducts();
+                return Skeletonizer(
+                  enabled: true,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 25,
+                      vertical: 10,
+                    ),
+                    itemCount: fake.length,
+                    itemBuilder: (context, index) =>
+                        _buildProductItem(fake[index], index, controller),
+                  ),
                 );
               }
 
