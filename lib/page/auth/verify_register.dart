@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:eazy_store/page/auth/login.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/verify_registration_request.dart';
@@ -17,7 +18,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     6,
     (i) => TextEditingController(),
   );
-  final List<FocusNode> _nodes = List.generate(6, (i) => FocusNode());
+  final List<FocusNode> _nodes = [];
 
   int _counter = 60;
   Timer? _timer;
@@ -33,8 +34,37 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     super.initState();
     email = Get.arguments['email'];
     username = Get.arguments['username'];
+    // ผูก onKeyEvent เข้ากับ FocusNode ของแต่ละช่องโดยตรง
+    // เพื่อดักปุ่ม backspace ตอนช่องว่างอยู่แล้ว (onChanged จะไม่ยิงเพราะค่าไม่เปลี่ยน)
+    for (int i = 0; i < 6; i++) {
+      final node = FocusNode(onKeyEvent: (node, event) => _handleBackspaceKey(i, event));
+      // เลือกเลขทั้งตัวทันทีที่ช่องนี้ได้โฟกัส ไม่ว่าจะมาจากการแตะเองหรือ auto-advance ไปช่องถัดไป
+      // เพื่อให้พิมพ์เลขใหม่ทับได้ทันทีโดยไม่ต้องลบตัวเก่าก่อน
+      node.addListener(() {
+        if (node.hasFocus) {
+          _controllers[i].selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controllers[i].text.length,
+          );
+        }
+      });
+      _nodes.add(node);
+    }
     // เริ่มตัวนับเวลาทันทีเมื่อเปิดหน้า (เพราะรหัสถูกส่งมาจากหน้า Signup/Login แล้ว)
     _startTimer();
+  }
+
+  KeyEventResult _handleBackspaceKey(int index, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace &&
+        _controllers[index].text.isEmpty &&
+        index > 0) {
+      // ช่องนี้ว่างแล้ว ให้ย้อนไปลบช่องก่อนหน้าและโฟกัสไปที่ช่องนั้นแทน
+      _controllers[index - 1].clear();
+      _nodes[index - 1].requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -397,15 +427,37 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
         focusNode: _nodes[i],
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        maxLength: 1,
+        // อนุญาตให้ยาวถึง 2 ตัวชั่วคราว (ไม่ตัดที่ maxLength) เพื่อให้ onChanged เห็นค่าที่พิมพ์ทับ
+        // แล้วค่อยตัดเหลือตัวล่าสุดเองด้านล่าง จะได้ไม่พึ่งตำแหน่งเคอร์เซอร์ซึ่งเชื่อถือไม่ได้บนคีย์บอร์ดจริง
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(2),
+        ],
         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         decoration: const InputDecoration(
           counterText: "",
           border: InputBorder.none,
         ),
+        onTap: () {
+          // เลือกเลขทั้งตัวในช่องเสมอเมื่อแตะ ไม่ว่าจะแตะตรงไหนของช่อง (ช่วยให้ backspace ลบได้ทันที)
+          _controllers[i].selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controllers[i].text.length,
+          );
+        },
         onChanged: (v) {
+          // ถ้ามีเลขเดิมอยู่แล้วพิมพ์ทับเข้ามาอีกตัว ให้เก็บเฉพาะตัวล่าสุดที่เพิ่งพิมพ์เสมอ
+          // ไม่สนตำแหน่งเคอร์เซอร์ เพราะฉะนั้นพิมพ์ทับได้แน่นอนไม่ว่าจะอยู่ตรงไหนของช่อง
+          if (v.length > 1) {
+            v = v.substring(v.length - 1);
+            _controllers[i].value = TextEditingValue(
+              text: v,
+              selection: TextSelection.collapsed(offset: v.length),
+            );
+          }
+          // ไม่ auto-jump ย้อนกลับตอนช่องนี้ว่างจากการลบเอง เพื่อให้พิมพ์เลขใหม่ทับที่ช่องเดิมได้ทันที
+          // การย้อนกลับไปช่องก่อนหน้าจะเกิดเฉพาะตอนกด backspace ซ้ำตอนช่องว่างอยู่แล้ว (ดู _handleBackspaceKey)
           if (v.isNotEmpty && i < 5) _nodes[i + 1].requestFocus();
-          if (v.isEmpty && i > 0) _nodes[i - 1].requestFocus();
           if (i == 5 && v.isNotEmpty) _verify();
         },
       ),

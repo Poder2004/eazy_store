@@ -468,6 +468,10 @@ class _LoginPageState extends State<LoginPage> {
       child: TextField(
         controller: controller,
         obscureText: isPassword ? obscureText : false,
+        // ปิด autocorrect/suggestion เพื่อไม่ให้คีย์บอร์ดหน่วงตัวอักษรไว้รอคำจบ
+        // ก่อนส่งเข้าแอป (บางคีย์บอร์ดจะไม่แสดงตัวอักษรจนกว่าจะพิมพ์ครบคำ)
+        autocorrect: false,
+        enableSuggestions: false,
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,
