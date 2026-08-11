@@ -810,7 +810,7 @@ class AddProductScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "บาร์โค้ด",
+          "บาร์โค้ด (ถ้ามี)",
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,

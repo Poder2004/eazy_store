@@ -729,8 +729,19 @@ class SalesAccountScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: const [
+                    SizedBox(
+                      width: 44,
+                      child: Text(
+                        'ลำดับ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                      flex: 3,
+                      flex: 2,
                       child: Text(
                         'ชื่อสินค้า / จำนวน',
                         style: TextStyle(
@@ -784,25 +795,28 @@ class SalesAccountScreen extends StatelessWidget {
                 child: ListView.builder(
                   controller: scrollCtrl,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
-                  itemCount: items.length + 1, // เพิ่มแถวรวมยอดท้ายตาราง
+                  itemCount: items.length + 1, // เพิ่มแถวรวมยอดด้านบนตาราง
                   itemBuilder: (_, i) {
-                    // แถวสุดท้ายเป็นแถวสรุปยอดรวม (Total Row)
-                    if (i == items.length) {
+                    // แถวแรกเป็นแถวสรุปยอดรวม (Total Row)
+                    if (i == 0) {
                       return Container(
-                        margin: const EdgeInsets.only(top: 8),
+                        margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: _kBg,
+                          color: _kPurpleDim,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: _kBorder),
+                          border: Border.all(
+                            color: _kPurple.withValues(alpha: 0.25),
+                          ),
                         ),
                         child: Row(
                           children: [
+                            const SizedBox(width: 44),
                             Expanded(
-                              flex: 3,
+                              flex: 2,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -868,8 +882,8 @@ class SalesAccountScreen extends StatelessWidget {
                     }
 
                     // แถวสินค้าปกติ
-                    final item = items[i];
-                    final isEven = i % 2 == 0;
+                    final item = items[i - 1];
+                    final isEven = (i - 1) % 2 == 0;
                     return Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -883,9 +897,21 @@ class SalesAccountScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
+                          // คอลัมน์ ลำดับ
+                          SizedBox(
+                            width: 44,
+                            child: Text(
+                              '$i',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _kSub,
+                              ),
+                            ),
+                          ),
                           // คอลัมน์ ชื่อสินค้า / จำนวน
                           Expanded(
-                            flex: 3,
+                            flex: 2,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -925,7 +951,7 @@ class SalesAccountScreen extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '฿${c.formatNumber(item.totalSales)}',
+                              '${c.formatNumber(item.totalSales)}',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontSize: 13,
@@ -938,7 +964,7 @@ class SalesAccountScreen extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '฿${c.formatNumber(item.totalCost)}',
+                              '${c.formatNumber(item.totalCost)}',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontSize: 13,
@@ -951,7 +977,7 @@ class SalesAccountScreen extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '฿${c.formatNumber(item.profit)}',
+                              '${c.formatNumber(item.profit)}',
                               textAlign: TextAlign.right,
                               style: TextStyle(
                                 fontSize: 13,

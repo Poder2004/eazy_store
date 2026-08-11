@@ -822,7 +822,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
               Row(
                 children: [
                   _buildAmountChip(
-                    label: "ยอดบิล",
+                    label: "รวมยอดบิล",
                     amount: history.totalAmount,
                     color: Colors.blue.shade700,
                     bgColor: Colors.blue.shade50,
@@ -841,7 +841,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   if (!isPaid) ...[
                     const SizedBox(width: 8),
                     _buildAmountChip(
-                      label: "คงเหลือ",
+                      label: "ยอดค้างชำระ",
                       amount: history.remainingAmount,
                       color: Colors.red.shade700,
                       bgColor: Colors.red.shade50,
@@ -911,14 +911,16 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                             color: Colors.grey.shade500,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          "${formatMoney(pricePerUnit)}฿",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
+                        if (item.qty > 1) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            "${formatMoney(pricePerUnit)}฿",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
                           ),
-                        ),
+                        ],
                         const SizedBox(width: 12),
                         Text(
                           "${formatMoney(item.price)} ฿",
