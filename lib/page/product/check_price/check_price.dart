@@ -80,12 +80,14 @@ class CheckPriceScreen extends StatelessWidget {
                   if (controller.filteredProducts.isEmpty) {
                     return ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 100),
+                      children: [
+                        const SizedBox(height: 100),
                         Center(
                           child: Text(
-                            "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด", // ✅ แก้ไขตรงนี้แล้ว
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                            controller.hasSearched.value
+                                ? "ไม่พบข้อมูลสินค้า"
+                                : "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด",
+                            style: const TextStyle(color: Colors.grey, fontSize: 16),
                           ),
                         ),
                       ],

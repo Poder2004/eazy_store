@@ -102,6 +102,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     padding: EdgeInsets.only(top: 50),
                     child: CircularProgressIndicator(color: _kPrimaryColor),
                   );
+                } else if (controller.noResults.value) {
+                  return _buildNotFoundState();
                 } else {
                   return _buildEmptyState();
                 }
@@ -131,6 +133,22 @@ class _AddStockScreenState extends State<AddStockScreen> {
           const SizedBox(height: 10),
           Text(
             "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด",
+            style: TextStyle(color: Colors.grey[400], fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotFoundState() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 50),
+      child: Column(
+        children: [
+          Icon(Icons.search_off_rounded, size: 80, color: Colors.grey[300]),
+          const SizedBox(height: 10),
+          Text(
+            "ไม่พบข้อมูลสินค้า",
             style: TextStyle(color: Colors.grey[400], fontSize: 16),
           ),
         ],

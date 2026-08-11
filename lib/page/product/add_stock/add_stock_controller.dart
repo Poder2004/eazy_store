@@ -25,6 +25,8 @@ class AddStockController extends GetxController {
   // แทนการเดาให้ ป้องกันเพิ่มสต็อกผิดสินค้า)
   var searchMatches = <ProductResponse>[].obs;
   var showDropdown = false.obs;
+  // ค้นหาแล้วไม่เจอสินค้าเลย (แยกจากสถานะยังไม่ได้พิมพ์ค้นหา)
+  var noResults = false.obs;
 
   // ส่วนแก้ไขราคา พับเก็บไว้ก่อนเพราะไม่ใช่สิ่งที่ทำทุกครั้งที่เพิ่มสต็อก
   var isPriceEditExpanded = false.obs;
@@ -113,6 +115,7 @@ class AddStockController extends GetxController {
     }
 
     isSearching.value = true;
+    noResults.value = false;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
@@ -146,6 +149,7 @@ class AddStockController extends GetxController {
       } else if (activeList.isEmpty) {
         foundProduct.value = null;
         showDropdown.value = false;
+        noResults.value = true;
       } else {
         // เจอ 1 ตัวหรือหลายตัวจากชื่อ ให้ผู้ใช้กดเลือกเองจาก dropdown เสมอ
         foundProduct.value = null;
@@ -164,6 +168,7 @@ class AddStockController extends GetxController {
     _debounce?.cancel();
     foundProduct.value = match;
     showDropdown.value = false;
+    noResults.value = false;
     isPriceEditExpanded.value = false;
 
     _suppressSearch = true;
@@ -228,6 +233,7 @@ class AddStockController extends GetxController {
     foundProduct.value = null;
     searchMatches.clear();
     showDropdown.value = false;
+    noResults.value = false;
     isPriceEditExpanded.value = false;
     nameController.clear();
     costController.clear();
