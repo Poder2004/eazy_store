@@ -112,7 +112,7 @@ class ManualListController extends GetxController {
       final result = await ApiProduct.getProductsByShop(
         shopId,
         categoryId: categoryId,
-        limit: 1000,
+        limit: 10,
       );
 
       List<ProductResponse> list = [];
