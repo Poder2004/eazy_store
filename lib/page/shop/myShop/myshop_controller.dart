@@ -74,8 +74,6 @@ class MyShopController extends GetxController {
   }
 
   Future<void> _processDelete(int shopId) async {
-    // ✅ ใช้ loading dialog แยกต่างหาก ไม่ใช้ isLoading ตัวเดียวกับตอนโหลดทั้งลิสต์
-    // (เดิมลบร้านเดียวแต่จอทั้งหน้าเด้งเป็น spinner เต็มจอ)
     Get.dialog(
       const Center(child: CircularProgressIndicator()),
       barrierDismissible: false,
@@ -97,28 +95,6 @@ class MyShopController extends GetxController {
         message: "ไม่สามารถลบร้านค้าได้",
         color: Colors.orange,
         icon: Icons.warning,
-      );
-    }
-  }
-
-  Future<void> deleteShop(int shopId) async {
-    bool success = await _apiShop.deleteShop(shopId);
-    if (success) {
-      shops.removeWhere((item) => item.shopId == shopId);
-      Get.snackbar(
-        "สำเร็จ",
-        "ลบร้านค้าเรียบร้อยแล้ว",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
-      );
-    } else {
-      Get.snackbar(
-        "ผิดพลาด",
-        "ไม่สามารถลบร้านค้าได้",
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        snackPosition: SnackPosition.TOP,
       );
     }
   }

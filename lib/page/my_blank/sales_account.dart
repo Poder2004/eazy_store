@@ -40,8 +40,6 @@ class SalesAccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ SalesAccountController.onInit() โหลดข้อมูลให้ครั้งแรกอยู่แล้ว ไม่ต้องยิงซ้ำที่นี่
-    // (เดิมยิงซ้ำทุกครั้งที่ build() ทำงานใหม่ เช่นตอนคีย์บอร์ดเปิด/ปิด)
     final c = Get.put(SalesAccountController());
 
     final mq = MediaQuery.of(context);
@@ -1452,11 +1450,7 @@ class _OutstandingDebtCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.people_alt_rounded,
-                          size: 12,
-                          color: _kSub,
-                        ),
+                        Icon(Icons.people_alt_rounded, size: 12, color: _kSub),
                         const SizedBox(width: 4),
                         count > 0
                             ? Row(
@@ -1609,7 +1603,9 @@ class _DebtCompactCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    amount > 0 ? 'มีหนี้เกิดใหม่ช่วงนี้' : 'ไม่มีหนี้ใหม่ช่วงนี้',
+                    amount > 0
+                        ? 'มีหนี้เกิดใหม่ช่วงนี้'
+                        : 'ไม่มีหนี้ใหม่ช่วงนี้',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,

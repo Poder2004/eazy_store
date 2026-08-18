@@ -33,9 +33,7 @@ class MyApp extends StatelessWidget {
 
       debugShowCheckedModeBanner: false,
       title: 'Eazy Store',
-      // ✨ ใช้ฟอนต์ Prompt เป็นฟอนต์เดียวกันทั้งแอป (ของเดิม 'AbhayaLibre' ไม่ได้
-      // ถูกประกาศไว้ใน pubspec.yaml เลย ทำให้ทุกหน้าตกไปใช้ฟอนต์ default ของ
-      // เครื่องแทนแบบเงียบๆ โดยไม่มีใครตั้งใจ)
+
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.promptTextTheme(Theme.of(context).textTheme),

@@ -40,10 +40,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> checkLogin() async {
-    // ✅ โหลดฟอนต์ Prompt ให้เสร็จก่อนเข้าหน้าถัดไป กัน bug ตอนเปิดแอปครั้งแรกหลังติดตั้ง
-    // (google_fonts จะดึงไฟล์ฟอนต์จากเน็ตตอนใช้ครั้งแรกเท่านั้น ถ้ายังโหลดไม่เสร็จตอนพิมพ์
-    // ในช่อง user/password ตัวอักษรจะไม่ขึ้นจนกว่าฟอนต์จะโหลดเสร็จ) รวมกับดีเลย์ 2 วิ
-    // เดิมไปเลย เพื่อไม่ให้หน้า splash ช้าลงถ้าเน็ตปกติ (โหลดฟอนต์เสร็จเร็วกว่า 2 วิอยู่แล้ว)
     await Future.wait([
       Future.delayed(const Duration(seconds: 2)),
       _warmUpFont(),
@@ -58,13 +54,11 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // ถ้า token ใกล้หมดหรือหมดแล้ว ลอง refresh ก่อน
     await AuthGuard.checkAndRefreshIfNeeded();
 
     // ยืนยันกับ backend ว่า token ยังใช้ได้
     bool isTokenValid = await ApiUser.verifyToken();
     if (!isTokenValid) {
-      // Refresh ไม่ได้แล้ว → ล้าง session ไปหน้า Login
       await prefs.remove('token');
       await prefs.remove('refresh_token');
       await prefs.remove('token_expires_at');
@@ -84,15 +78,12 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _warmUpFont() async {
     try {
       GoogleFonts.promptTextTheme();
-      // จำกัดเวลารอไว้ 5 วิ กันเน็ตช้า/ออฟไลน์ตอนเปิดแอปครั้งแรกทำให้ splash ค้าง
-      // ถ้าไม่ทันก็ปล่อยผ่าน หน้าถัดไปจะ fallback ไปฟอนต์ระบบก่อนจนกว่าฟอนต์จะโหลดเสร็จเอง
+
       await GoogleFonts.pendingFonts().timeout(
         const Duration(seconds: 5),
         onTimeout: () => [],
       );
-    } catch (_) {
-      // ไม่ critical ปล่อยผ่านได้ ไม่ต้อง block การเข้าแอป
-    }
+    } catch (_) {}
   }
 
   @override

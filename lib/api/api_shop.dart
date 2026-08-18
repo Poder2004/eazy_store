@@ -5,9 +5,7 @@ import '../model/response/shop_response.dart';
 import 'package:eazy_store/config/app_config.dart';
 import 'package:eazy_store/utils/auth_guard.dart';
 
-
 class ApiShop {
-  // ไม่ต้องรับ File แยกแล้ว เพราะมันอยู่ใน request object แล้ว
   Future<bool> createShop(ShopResponse request) async {
     final url = Uri.parse("${AppConfig.baseUrl}/api/shops");
 
@@ -22,8 +20,8 @@ class ApiShop {
           "Content-Type": "application/json",
           if (token != null) "Authorization": "Bearer $token",
         },
-        // ✅ 3. ใช้ toRawJson() หรือ json.encode(request.toJson())
-        body: request.toRawJson(), 
+
+        body: request.toRawJson(),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -140,7 +138,7 @@ class ApiShop {
     }
   }
 
-  // เปลี่ยนชื่อฟังก์ชันเป็น getCurrentShop 
+  // เปลี่ยนชื่อฟังก์ชันเป็น getCurrentShop
   Future<ShopResponse?> getCurrentShop() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
