@@ -338,8 +338,11 @@ class OrderListController extends GetxController {
 
       if (bytes != null && bytes.isNotEmpty) {
         final directory = await getApplicationDocumentsDirectory();
-        final String filePath =
-            '${directory.path}/order_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        final now = DateTime.now();
+        final dateStr = '${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}';
+        final shopName = prefs.getString('shopName') ?? 'shop';
+        final cleanShopName = shopName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final String filePath = '${directory.path}/${dateStr}-$cleanShopName.pdf';
         final file = File(filePath);
 
         // เขียนข้อมูลลงไฟล์และรอให้เสร็จจริงๆ
