@@ -264,7 +264,7 @@ class ApiProduct {
     required int shopId,
     required int categoryId,
   }) async {
-    // ⚠️ ห้ามใช้ totalItems จาก paged response ตรงๆ เพราะฝั่ง backend นับรวม
+    //  ห้ามใช้ totalItems จาก paged response ตรงๆ เพราะฝั่ง backend นับรวม
     // สินค้าที่ถูกปิดใช้งาน/soft-delete (status = false) มาด้วย ต้องดึงมาทั้งหมด
     // แล้วกรอง status ฝั่ง client เอง เหมือนหน้าอื่นๆ ที่เรียก getProductsByShop
     // ไม่งั้น dialog จะโชว์จำนวนสินค้าในหมวดหมู่เกินความจริง
@@ -543,7 +543,7 @@ class ApiProduct {
     }
   }
 
-  // ✅ ฟังก์ชันสำหรับลบสินค้า (Smart Delete)
+  // ฟังก์ชันสำหรับลบสินค้า (Smart Delete)
   static Future<Map<String, dynamic>> deleteProduct(int productId) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId');
 
