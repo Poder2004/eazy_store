@@ -22,7 +22,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   final List<FocusNode> _focusNodes = [];
 
   bool _isLoading = false;
-  int _secondsRemaining = 60; // ตัวนับเวลาถอยหลัง 60 วินาที
+  int _secondsRemaining = 60; 
   Timer? _timer;
   bool _canResend = false;
 
@@ -33,12 +33,10 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   void initState() {
     super.initState();
     _email = Get.arguments ?? "";
-    // ผูก onKeyEvent เข้ากับ FocusNode ของแต่ละช่องโดยตรง
-    // เพื่อดักปุ่ม backspace ตอนช่องว่างอยู่แล้ว (onChanged จะไม่ยิงเพราะค่าไม่เปลี่ยน)
+   
     for (int i = 0; i < 6; i++) {
       final node = FocusNode(onKeyEvent: (node, event) => _handleBackspaceKey(i, event));
-      // เลือกเลขทั้งตัวทันทีที่ช่องนี้ได้โฟกัส ไม่ว่าจะมาจากการแตะเองหรือ auto-advance ไปช่องถัดไป
-      // เพื่อให้พิมพ์เลขใหม่ทับได้ทันทีโดยไม่ต้องลบตัวเก่าก่อน
+      
       node.addListener(() {
         if (node.hasFocus) {
           _controllers[i].selection = TextSelection(
@@ -49,7 +47,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
       });
       _focusNodes.add(node);
     }
-    _startTimer(); // เริ่มนับเวลาถอยหลังทันทีที่เข้าหน้านี้
+    _startTimer();
   }
 
   KeyEventResult _handleBackspaceKey(int index, KeyEvent event) {
@@ -57,7 +55,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         event.logicalKey == LogicalKeyboardKey.backspace &&
         _controllers[index].text.isEmpty &&
         index > 0) {
-      // ช่องนี้ว่างแล้ว ให้ย้อนไปลบช่องก่อนหน้าและโฟกัสไปที่ช่องนั้นแทน
+     
       _controllers[index - 1].clear();
       _focusNodes[index - 1].requestFocus();
       return KeyEventResult.handled;
@@ -74,7 +72,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     super.dispose();
   }
 
-  // ฟังก์ชันนับเวลาถอยหลังสำหรับการส่งรหัสใหม่
+
   void _startTimer() {
     _secondsRemaining = 60;
     _canResend = false;
@@ -90,7 +88,6 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     });
   }
 
-  // ฟังก์ชันขอส่งรหัส OTP อีกครั้ง
   void _handleResendOTP() async {
     setState(() => _isLoading = true);
     final response = await ApiAuth.requestResetOTP(ResetRequest(email: _email));
@@ -104,7 +101,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         icon: Icons.mark_email_read,
         color: Colors.green,
       );
-      _startTimer(); // รีเซ็ตเวลาถอยหลังใหม่
+      _startTimer(); 
     } else {
       _showPopup(
         title: "ผิดพลาด",
@@ -260,7 +257,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
               children: List.generate(6, (index) => _buildOtpInput(index)),
             ),
             const SizedBox(height: 40),
-            // 3. ปุ่ม "ส่งรหัสอีกครั้ง" พร้อมตัวนับเวลา
+     
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -324,8 +321,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         focusNode: _focusNodes[index],
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        // อนุญาตให้ยาวถึง 2 ตัวชั่วคราว (ไม่ตัดที่ maxLength) เพื่อให้ onChanged เห็นค่าที่พิมพ์ทับ
-        // แล้วค่อยตัดเหลือตัวล่าสุดเองด้านล่าง จะได้ไม่พึ่งตำแหน่งเคอร์เซอร์ซึ่งเชื่อถือไม่ได้บนคีย์บอร์ดจริง
+       
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(2),
@@ -336,15 +332,14 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
           border: InputBorder.none,
         ),
         onTap: () {
-          // เลือกเลขทั้งตัวในช่องเสมอเมื่อแตะ ไม่ว่าจะแตะตรงไหนของช่อง (ช่วยให้ backspace ลบได้ทันที)
+         
           _controllers[index].selection = TextSelection(
             baseOffset: 0,
             extentOffset: _controllers[index].text.length,
           );
         },
         onChanged: (value) {
-          // ถ้ามีเลขเดิมอยู่แล้วพิมพ์ทับเข้ามาอีกตัว ให้เก็บเฉพาะตัวล่าสุดที่เพิ่งพิมพ์เสมอ
-          // ไม่สนตำแหน่งเคอร์เซอร์ เพราะฉะนั้นพิมพ์ทับได้แน่นอนไม่ว่าจะอยู่ตรงไหนของช่อง
+
           if (value.length > 1) {
             value = value.substring(value.length - 1);
             _controllers[index].value = TextEditingValue(
@@ -352,13 +347,12 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
               selection: TextSelection.collapsed(offset: value.length),
             );
           }
-          // ไม่ auto-jump ย้อนกลับตอนช่องนี้ว่างจากการลบเอง เพื่อให้พิมพ์เลขใหม่ทับที่ช่องเดิมได้ทันที
-          // การย้อนกลับไปช่องก่อนหน้าจะเกิดเฉพาะตอนกด backspace ซ้ำตอนช่องว่างอยู่แล้ว (ดู _handleBackspaceKey)
+          
           if (value.isNotEmpty && index < 5) {
             _focusNodes[index + 1].requestFocus();
           }
           if (value.isNotEmpty && index == 5) {
-            _handleVerify(); // พิมพ์ครบ 6 ตัวให้ Verify ทันที
+            _handleVerify(); 
           }
         },
       ),

@@ -205,8 +205,8 @@ class SignupController extends GetxController {
                         ),
                       ),
                       onPressed: () {
-                        Get.back(); // ปิด Dialog
-                        // ไปหน้ายืนยัน OTP พร้อมส่ง Arguments
+                        Get.back(); 
+                       
                         Get.to(
                           () => const VerifyRegistrationPage(),
                           arguments: {"email": email, "username": name},

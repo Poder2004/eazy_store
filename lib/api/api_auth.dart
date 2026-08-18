@@ -176,9 +176,9 @@ class ApiAuth {
     }
   }
 
-  // เพิ่มในคลาส ApiService
 
-  // เพิ่มในคลาส ApiService
+
+
   static Future<RegisterResponse> verifyRegistration(
     VerifyRegistrationRequest request,
   ) async {
