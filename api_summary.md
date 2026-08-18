@@ -1,5 +1,7 @@
 # 📡 สรุป API Layer — EazyStore Flutter App
 
+> 📎 ดูสรุป **Request / Response Models** ได้ด้านล่างสุดของไฟล์นี้
+
 > ทุก Future ที่ต้องการยืนยันตัวตนจะแนบ **JWT Bearer Token** ใน Header เสมอ  
 > และผ่าน **`AuthGuard.checkAndRefreshIfNeeded()`** ก่อนยิง request ทุกครั้ง เพื่อ auto-refresh token อัตโนมัติ
 
@@ -157,3 +159,250 @@ Flutter App (lib/api/)
 
 > [!TIP]
 > **ประโยคสรุปพรีเซน:** *"ระบบ API ของ EazyStore แบ่งออกเป็น 10 กลุ่ม รวมทั้งสิ้น 37 Future ครับ ทุกกลุ่มใช้ HTTP package ในการสื่อสารกับ Backend ที่เขียนด้วย Go (Gin Framework) โดยมีระบบ Auto-refresh JWT Token ผ่าน AuthGuard ที่ทำงานเบื้องหลังทุก request เพื่อไม่ให้ผู้ใช้ถูก logout กลางคัน"*
+
+---
+
+# 📦 สรุป Request / Response Models — EazyStore
+
+> **Pattern หลัก:** Request ใช้ `toJson()` แปลงเป็น JSON ก่อนส่ง — Response ใช้ `fromJson()` แปลง JSON กลับมาเป็น Object
+
+---
+
+## 🔷 REQUEST Models (lib/model/request/)
+
+### 1. LoginRequest
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `username` | String | `username` | รับทั้ง email/phone ขึ้นอยู่กับ Backend |
+| `password` | String | `password` | |
+| `deviceId` | String? | `device_id` | optional — ใช้จัดการ session หลายอุปกรณ์ |
+| `deviceName` | String? | `device_name` | optional |
+
+### 2. RegisterRequest
+| Field | Type | JSON Key |
+|---|---|---|
+| `username` | String | `username` |
+| `password` | String | `password` |
+| `email` | String | `email` |
+| `phone` | String | `phone` |
+
+### 3. ResetRequest
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `email` | String | `email` | ขอ OTP reset password ไปที่อีเมลนี้ |
+
+### 4. VerifyOtpRequest
+| Field | Type | JSON Key |
+|---|---|---|
+| `email` | String | `email` |
+| `otpCode` | String | `otp_code` |
+
+### 5. UpdatePasswordRequest
+| Field | Type | JSON Key |
+|---|---|---|
+| `email` | String | `email` |
+| `otpCode` | String | `otp_code` |
+| `newPassword` | String | `new_password` |
+
+### 6. ProductRequest
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `shopId` | int | `shop_id` | |
+| `categoryId` | int | `category_id` | |
+| `name` | String | `name` | |
+| `barcode` | String? | `barcode` | optional |
+| `imgProduct` | String | `img_product` | URL จาก Cloudinary |
+| `sellPrice` | double | `sell_price` | ราคาขาย |
+| `costPrice` | double | `cost_price` | ต้นทุน |
+| `stock` | int | `stock` | จำนวนสต็อก |
+| `unit` | String | `unit` | หน่วยนับ เช่น "ชิ้น", "กก." |
+| `status` | bool | `status` | default = true |
+
+### 7. DebtorRequest
+| Field | Type | JSON Key |
+|---|---|---|
+| `shopId` | int | `shop_id` |
+| `name` | String | `name` |
+| `phone` | String | `phone` |
+| `address` | String | `address` |
+| `imgDebtor` | String | `img_debtor` |
+| `creditLimit` | double | `credit_limit` |
+| `currentDebt` | double | `current_debt` |
+
+### 8. PayDebtRequest
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `shopId` | int | `shop_id` | |
+| `debtorId` | int | `debtor_id` | |
+| `amountPaid` | double | `amount_paid` | จำนวนเงินที่รับชำระ |
+| `paymentMethod` | String | `payment_method` | เช่น "เงินสด", "โอน" |
+| `payWith` | String | `pay_with` | ช่องทางที่ใช้จ่าย |
+| `pinCode` | String | `pin_code` | PIN ยืนยันการรับเงิน |
+
+### 9. SaleRequest (api_sale)
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `shopId` | int | `shop_id` | |
+| `debtorId` | int? | `debtor_id` | null = ขายปกติ, มีค่า = ขายเชื่อ |
+| `netPrice` | double | `net_price` | ยอดรวมสุทธิ |
+| `pay` | double | `pay` | เงินที่รับมา (โอน = เท่ากับ netPrice) |
+| `paymentMethod` | String | `payment_method` | |
+| `note` | String? | `note` | optional |
+| `createdBuy` | String | `created_buy` | username ของคนขาย |
+| `saleItems` | List\<SaleItemRequest\> | `sale_items` | รายการสินค้าในบิล |
+
+**SaleItemRequest (sub-model)**
+
+| Field | Type | JSON Key |
+|---|---|---|
+| `productId` | int | `product_id` |
+| `amount` | int | `amount` |
+| `pricePerUnit` | double | `price_per_unit` |
+| `totalPrice` | double | `total_price` |
+
+### 10. ProductItem (Basket/Cart Model)
+| Field | Type | หมายเหตุ |
+|---|---|---|
+| `id` | String | productId เป็น String |
+| `name` | String | |
+| `price` | double | ราคาต่อชิ้น |
+| `category` | String | ชื่อหมวดหมู่ |
+| `imagePath` | String | |
+| `maxStock` | int | สต็อกสูงสุด (snapshot ตอนหยิบ) |
+| `unit` | String | |
+| `showDelete` | RxBool | คุม UI ปุ่มลบ (GetX reactive) |
+
+### 11. ParkedOrder / ParkedItem (พักออเดอร์)
+**ParkedOrder**
+| Field | Type | หมายเหตุ |
+|---|---|---|
+| `id` | String | `park_<timestamp>` |
+| `label` | String | "ออเดอร์ 1", "ออเดอร์ 2" |
+| `items` | List\<ParkedItem\> | รายการ (grouped) |
+| `totalPrice` | double | |
+| `parkedAt` | DateTime | เวลาที่พัก |
+| `shopId` | int | แยก scope ตามร้าน |
+
+---
+
+## 🔶 RESPONSE Models (lib/model/response/)
+
+### 1. LoginResponse
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `message` | String | `message` | |
+| `token` | String? | `token` | format เก่า |
+| `accessToken` | String? | `access_token` | format ใหม่ |
+| `refreshToken` | String? | `refresh_token` | |
+| `expiresIn` | int? | `expires_in` | หน่วยวินาที |
+| `user` | UserData? | `user` | object ข้อมูลผู้ใช้ |
+| `error` | String? | `error` | |
+
+**UserData (sub-model)**
+```
+id, username, email, phone
+```
+
+### 2. ShopResponse
+| Field | Type | JSON Key |
+|---|---|---|
+| `shopId` | int | `shop_id` |
+| `userId` | int | `user_id` |
+| `name` | String | `name` |
+| `phone` | String | `phone` |
+| `address` | String | `address` |
+| `imgQrcode` | String | `img_qrcode` |
+| `imgShop` | String | `img_shop` |
+| `pinCode` | String | `pin_code` |
+
+### 3. ProductResponse
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `productId` | int? | `product_id` | |
+| `shopId` | int | `shop_id` | |
+| `categoryId` | int | `category_id` | |
+| `productCode` | String? | `product_code` | |
+| `name` | String | `name` | |
+| `barcode` | String? | `barcode` | |
+| `imgProduct` | String | `img_product` | |
+| `sellPrice` | double | `sell_price` | |
+| `costPrice` | double | `cost_price` | |
+| `stock` | int | `stock` | mutable (อัปเดตสต็อกได้) |
+| `unit` | String | `unit` | |
+| `status` | bool | `status` | false = soft-deleted |
+| `category` | CategoryModel? | `category` | object หมวดหมู่ |
+| `categoryName` | String? | — | ดึงจาก category.name |
+
+**ProductPagedResponse (Pagination wrapper)**
+```
+items, totalItems, totalPages, currentPage
+```
+
+### 4. DebtorResponse
+| Field | Type | JSON Key |
+|---|---|---|
+| `debtorId` | int | `debtor_id` |
+| `name` | String | `name` |
+| `phone` | String | `phone` |
+| `address` | String | `address` |
+| `imgDebtor` | String | `img_debtor` |
+| `creditLimit` | double | `credit_limit` |
+| `currentDebt` | double | `current_debt` |
+
+**DebtorPagedResponse** = `items, totalItems, totalPages, currentPage`
+
+### 5. SalesSummaryModel (Dashboard Summary)
+| Field | Type | JSON Key | หมายเหตุ |
+|---|---|---|---|
+| `totalRevenue` | double | `total_revenue` | ยอดขายรวมตามบิล |
+| `actualPaid` | double | `actual_paid` | เงินที่รับจริงเข้ากระเป๋า |
+| `debtAmount` | double | `debt_amount` | ยอดค้างชำระใหม่ |
+| `cost` | double | `cost` | ต้นทุนรวม |
+| `profit` | double | `profit` | กำไรตามบัญชี |
+| `transactions` | int | `transactions` | จำนวนบิล |
+| `paidCash` | double | `paid_cash` | ยอดจ่ายเงินสด |
+| `paidTransfer` | double | `paid_transfer` | ยอดจ่ายโอน |
+
+### 6. AdvancedReportResponse (รายงานขั้นสูง)
+รวม 8 sub-model:
+
+| Sub-Model | Field หลัก |
+|---|---|
+| `SalesChartItem` | date, totalSales (กราฟยอดขายรายวัน) |
+| `SummaryStats` | totalTransactions, totalSales, averageSales |
+| `PaymentMethods` | paidCash, paidTransfer, debtAmount |
+| `TopProductItem` | productName, totalQty, totalSales (ขายดีสุด) |
+| `DebtSummary` | totalOutstanding, collectedThisMonth, debtorCount |
+| `AgingReport` | safe, warning, danger (ยอดหนี้แยกระดับความเสี่ยง) |
+| `TopDebtorItem` | debtorId, name, currentDebt (ลูกหนี้มากสุด) |
+| `DebtCollection` | newDebt, collectedDebt |
+
+### 7. TransactionDetailModel (ประวัติบิล)
+| Field | Type | JSON Key |
+|---|---|---|
+| `saleId` | int | `sale_id` |
+| `netPrice` | double | `net_price` |
+| `pay` | double | `pay` |
+| `paymentMethod` | String | `payment_method` |
+| `createdAt` | String | `created_at` |
+
+### 8. SaleDetailModel (รายการสินค้าในบิล)
+```
+saleId, createdAt, paymentMethod, netPrice, pay, change
+→ items: List<SaleItemModel>
+   → productId, productName, imgProduct, qty, unitPrice, costPrice, subtotal
+```
+
+### 9. CategoryModel (ใช้ทั้ง Request/Response)
+| Field | Type | JSON Key |
+|---|---|---|
+| `categoryId` | int | `category_id` |
+| `shopId` | int | `shop_id` |
+| `name` | String | `name` |
+| `status` | bool | `status` |
+
+---
+
+> [!NOTE]
+> **Pattern ที่ควรพูดถึง:** ทุก Response Model ที่รองรับ Pagination จะมี wrapper class เป็น `XxxPagedResponse` เสมอ โดยมี fields: `items`, `totalItems`, `totalPages`, `currentPage`
+
