@@ -11,22 +11,16 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginController extends GetxController {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
   var isLoading = false.obs;
   var isSendingOtp = false.obs;
 
   final Color primaryColor = const Color(0xFF00A3FF);
 
-  @override
-  void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.onClose();
-  }
-
-  Future<void> login() async {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+  Future<void> login({
+    required String email,
+    required String password,
+  }) async {
+    if (email.isEmpty || password.isEmpty) {
       _showSnackbar("แจ้งเตือน", "กรุณากรอกข้อมูลให้ครบ", Colors.orange);
       return;
     }
@@ -36,18 +30,20 @@ class LoginController extends GetxController {
     final deviceId = await DeviceIdHelper.getDeviceId();
     final deviceName = await DeviceIdHelper.getDeviceName();
     LoginRequest request = LoginRequest(
-      username: emailController.text.trim(),
-      password: passwordController.text,
+      username: email.trim(),
+      password: password,
       deviceId: deviceId,
       deviceName: deviceName,
     );
 
     var res = await ApiAuth.login(request);
+    if (isClosed) return;
     isLoading.value = false;
 
     if (res.effectiveToken != null) {
       // ✅ เคสที่ 1: Login สำเร็จ
       await _saveSession(res);
+      if (isClosed) return;
       _showSnackbar(
         "สำเร็จ",
         "ยินดีต้อนรับคุณ ${res.user?.username}",
@@ -57,7 +53,7 @@ class LoginController extends GetxController {
     }
     // 🔥 เคสที่ 2: บัญชียังไม่ได้ยืนยันตัวตน
     else if (res.error != null && res.error!.contains("ยืนยันตัวตน")) {
-      String actualEmail = res.email ?? emailController.text.trim();
+      String actualEmail = res.email ?? email.trim();
       String actualUsername = res.username ?? "User";
 
       _showUnverifiedDialog(actualEmail, actualUsername);
@@ -196,6 +192,7 @@ class LoginController extends GetxController {
     final res = await ApiAuth.changeEmailVerify(
       ChangeEmailVerifyRequest(username: username, newEmail: email),
     );
+    if (isClosed) return;
     isSendingOtp.value = false;
 
     if (res.error == null) {
@@ -236,18 +233,25 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  late final String _controllerTag;
   late final LoginController controller;
 
   @override
   void initState() {
     super.initState();
-    controller = Get.put(LoginController());
+    // tag แยกต่อหน้า กัน Get.offAll สร้าง LoginPage ใหม่แล้วไปใช้ controller เก่าที่ dispose แล้ว
+    _controllerTag = 'login_$hashCode';
+    controller = Get.put(LoginController(), tag: _controllerTag);
   }
 
   @override
   void dispose() {
-    Get.delete<LoginController>();
+    Get.delete<LoginController>(tag: _controllerTag);
     super.dispose();
+    emailController.dispose();
+    passwordController.dispose();
   }
 
   @override
@@ -320,13 +324,13 @@ class _LoginPageState extends State<LoginPage> {
 
                         // --- ฟอร์มกรอกข้อมูล ---
                         _buildCustomTextField(
-                          controller: controller.emailController,
+                          controller: emailController,
                           hintText: "กรอกอีเมลหรือเบอร์โทร",
                           icon: Icons.person_outline,
                         ),
                         const SizedBox(height: 16),
                         _buildCustomTextField(
-                          controller: controller.passwordController,
+                          controller: passwordController,
                           hintText: "กรอกรหัสผ่าน",
                           isPassword: true,
                           obscureText: _obscurePassword,
@@ -366,7 +370,10 @@ class _LoginPageState extends State<LoginPage> {
                             () => ElevatedButton(
                               onPressed: controller.isLoading.value
                                   ? null
-                                  : controller.login,
+                                  : () => controller.login(
+                                        email: emailController.text,
+                                        password: passwordController.text,
+                                      ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,
                                 foregroundColor: Colors.white,

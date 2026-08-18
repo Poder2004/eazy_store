@@ -1576,9 +1576,9 @@ class _DebtCompactCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            const Text(
-              'หนี้ใหม่ช่วงนี้',
-              style: TextStyle(
+            Text(
+              'หนี้ใหม่$periodLabel',
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: _kInk,

@@ -5,8 +5,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-// Imports ของโปรเจกต์ (เช็ค path ให้ตรงกับของคุณนะครับ)
 import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/page/homepage/home_controller.dart';
 import '../../../model/response/shop_response.dart';
@@ -47,7 +45,7 @@ class CreateShopController extends GetxController {
     } catch (e) {
       print(
         "Error picking image: $e",
-      ); // ปริ้นออกมาดูใน Console ว่า Error จริงๆ คืออะไร
+      );
       Get.snackbar("เกิดข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้ กรุณาลองใหม่อีกครั้ง");
     }
   }
@@ -150,9 +148,7 @@ class CreateShopController extends GetxController {
     selectedSubDistrict.value = newValue;
   }
 
-  // =========================================================
-  // 🔥 ส่วนที่เพิ่มใหม่: Logic การจัดการ PIN และ Validate
-  // =========================================================
+  // Logic การจัดการ PIN และ Validate
 
   var currentPin = "".obs; // PIN ที่กำลังพิมพ์
   var isConfirmPinStep = false.obs; // อยู่หน้ายืนยันไหม?
