@@ -13,7 +13,7 @@ class ParkOrderController extends GetxController {
   var currentShopId = 0.obs;
 
   List<ParkedOrder> get visibleOrders =>
-      parkedOrders.where((o) => o.shopId == currentShopId.value).toList();
+      parkedOrders.where((o) => o.shopId == currentShopId.value).toList(); //รายการออเดอร์ที่พักไว้ของ ทุกร้าน
 
   int get count => visibleOrders.length;
 
@@ -47,6 +47,10 @@ class ParkOrderController extends GetxController {
     }
 
     final totalPrice = cartItems.fold<double>(0, (sum, item) => sum + item.price);
+
+    // ถ้าร้านนี้ยังไม่มีออเดอร์พักเลย ให้ reset counter กลับเป็น 1
+    // กันกรณีที่พักแล้วกู้คืน/ลบหมดแล้ว แต่ counter ยังนับต่อจากเดิม
+    if (visibleOrders.isEmpty) _labelCounter = 1;
 
     final order = ParkedOrder(
       id: 'park_${DateTime.now().millisecondsSinceEpoch}',
