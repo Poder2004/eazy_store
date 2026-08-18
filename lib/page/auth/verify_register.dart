@@ -25,7 +25,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
   bool _isLoading = false;
   late String email, username;
 
-  // โทนสีฟ้าพรีเมียม
+
   final Color primaryColor = const Color(0xFF0288D1);
   final Color bgColor = const Color(0xFFF8FBFF);
 
@@ -34,12 +34,10 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     super.initState();
     email = Get.arguments['email'];
     username = Get.arguments['username'];
-    // ผูก onKeyEvent เข้ากับ FocusNode ของแต่ละช่องโดยตรง
-    // เพื่อดักปุ่ม backspace ตอนช่องว่างอยู่แล้ว (onChanged จะไม่ยิงเพราะค่าไม่เปลี่ยน)
+    
     for (int i = 0; i < 6; i++) {
       final node = FocusNode(onKeyEvent: (node, event) => _handleBackspaceKey(i, event));
-      // เลือกเลขทั้งตัวทันทีที่ช่องนี้ได้โฟกัส ไม่ว่าจะมาจากการแตะเองหรือ auto-advance ไปช่องถัดไป
-      // เพื่อให้พิมพ์เลขใหม่ทับได้ทันทีโดยไม่ต้องลบตัวเก่าก่อน
+    
       node.addListener(() {
         if (node.hasFocus) {
           _controllers[i].selection = TextSelection(
@@ -50,16 +48,14 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
       });
       _nodes.add(node);
     }
-    // เริ่มตัวนับเวลาทันทีเมื่อเปิดหน้า (เพราะรหัสถูกส่งมาจากหน้า Signup/Login แล้ว)
+   
     _startTimer();
   }
 
   KeyEventResult _handleBackspaceKey(int index, KeyEvent event) {
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.backspace &&
-        _controllers[index].text.isEmpty &&
-        index > 0) {
-      // ช่องนี้ว่างแล้ว ให้ย้อนไปลบช่องก่อนหน้าและโฟกัสไปที่ช่องนั้นแทน
+    if (event is KeyDownEvent &&  event.logicalKey == LogicalKeyboardKey.backspace &&
+        _controllers[index].text.isEmpty &&  index > 0) {
+     
       _controllers[index - 1].clear();
       _nodes[index - 1].requestFocus();
       return KeyEventResult.handled;
@@ -91,16 +87,16 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     });
   }
 
-  // ฟังก์ชันส่งรหัสใหม่ (จะทำงานเมื่อกดปุ่ม Resend และ Timer เป็น 0)
   void _resendCode() async {
     setState(() => _isLoading = true);
+
     final res = await ApiAuth.changeEmailVerify(
       ChangeEmailVerifyRequest(username: username, newEmail: email),
     );
     setState(() => _isLoading = false);
 
     if (res.error == null) {
-      _startTimer(); // เริ่มนับถอยหลังใหม่หลังจากส่งรหัสสำเร็จ
+      _startTimer(); 
       Get.snackbar(
         "สำเร็จ",
         "เราได้ส่งรหัสใหม่ไปยัง $email แล้ว",
@@ -268,13 +264,15 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                         }
                         setState(() => email = newEmail);
                         Get.back();
-                        // ✨ ไม่สั่ง _startTimer ตรงนี้แล้ว ผู้ใช้ต้องกด "ส่งรหัสอีกครั้ง" เอง
-                        Get.snackbar(
-                          "อัปเดตแล้ว",
-                          "เปลี่ยนอีเมลเป็น $email เรียบร้อย\nกรุณากด 'ส่งรหัสอีกครั้ง'",
-                          backgroundColor: Colors.white,
-                          colorText: Colors.black87,
-                        );
+                     
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          Get.snackbar(
+                            "อัปเดตแล้ว",
+                            "เปลี่ยนอีเมลเป็น $newEmail เรียบร้อย\nกรุณากด 'ส่งรหัสอีกครั้ง'",
+                            backgroundColor: Colors.white,
+                            colorText: Colors.black87,
+                          );
+                        });
                       },
                       child: const Text(
                         "บันทึก",
@@ -288,7 +286,11 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
           ),
         ),
       ),
-    ).whenComplete(() => newEmailController.dispose());
+    ).whenComplete(() {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        newEmailController.dispose();
+      });
+    });
   }
 
   @override
@@ -410,6 +412,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        
         border: Border.all(
           color: _nodes[i].hasFocus ? primaryColor : Colors.grey[300]!,
           width: 2,
@@ -427,8 +430,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
         focusNode: _nodes[i],
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        // อนุญาตให้ยาวถึง 2 ตัวชั่วคราว (ไม่ตัดที่ maxLength) เพื่อให้ onChanged เห็นค่าที่พิมพ์ทับ
-        // แล้วค่อยตัดเหลือตัวล่าสุดเองด้านล่าง จะได้ไม่พึ่งตำแหน่งเคอร์เซอร์ซึ่งเชื่อถือไม่ได้บนคีย์บอร์ดจริง
+       
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(2),
@@ -439,15 +441,14 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
           border: InputBorder.none,
         ),
         onTap: () {
-          // เลือกเลขทั้งตัวในช่องเสมอเมื่อแตะ ไม่ว่าจะแตะตรงไหนของช่อง (ช่วยให้ backspace ลบได้ทันที)
+        
           _controllers[i].selection = TextSelection(
             baseOffset: 0,
             extentOffset: _controllers[i].text.length,
           );
         },
         onChanged: (v) {
-          // ถ้ามีเลขเดิมอยู่แล้วพิมพ์ทับเข้ามาอีกตัว ให้เก็บเฉพาะตัวล่าสุดที่เพิ่งพิมพ์เสมอ
-          // ไม่สนตำแหน่งเคอร์เซอร์ เพราะฉะนั้นพิมพ์ทับได้แน่นอนไม่ว่าจะอยู่ตรงไหนของช่อง
+        
           if (v.length > 1) {
             v = v.substring(v.length - 1);
             _controllers[i].value = TextEditingValue(
@@ -455,8 +456,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
               selection: TextSelection.collapsed(offset: v.length),
             );
           }
-          // ไม่ auto-jump ย้อนกลับตอนช่องนี้ว่างจากการลบเอง เพื่อให้พิมพ์เลขใหม่ทับที่ช่องเดิมได้ทันที
-          // การย้อนกลับไปช่องก่อนหน้าจะเกิดเฉพาะตอนกด backspace ซ้ำตอนช่องว่างอยู่แล้ว (ดู _handleBackspaceKey)
+         
           if (v.isNotEmpty && i < 5) _nodes[i + 1].requestFocus();
           if (i == 5 && v.isNotEmpty) _verify();
         },

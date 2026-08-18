@@ -15,10 +15,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
 
-  // สีธีมหลักของแอป
+ 
   final Color _primaryColor = const Color(0xFF6200EE);
 
-  // --- ฟังก์ชันแสดง Popup แทน Snackbar ---
+
   void _showPopup({
     required String title,
     required String message,
@@ -27,7 +27,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     VoidCallback? onConfirm,
   }) {
     Get.defaultDialog(
-      title: "", // ซ่อนหัวข้อมาตรฐานเพื่อออกแบบเองใน content
+      title: "", 
       titleStyle: const TextStyle(fontSize: 0),
       radius: 15,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -73,7 +73,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   }
 
   void _handleRequestOTP() async {
-    // 1. ตรวจสอบการกรอกอีเมล
+
     if (_emailController.text.isEmpty) {
       _showPopup(
         title: "แจ้งเตือน",
@@ -99,7 +99,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // 2. กรณีส่งสำเร็จ
+   
     if (response.error == null) {
       _showPopup(
         title: "ส่งรหัสสำเร็จ",
@@ -109,7 +109,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         color: Colors.green,
         onConfirm: () {
           Get.back(); // ปิด Popup
-          // ✨ แก้บรรทัดนี้เพื่อไปหน้า Verify OTP
+      
           Get.to(
             () => const VerifyOtpPage(),
             arguments: _emailController.text.trim(),

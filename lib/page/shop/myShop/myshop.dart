@@ -19,7 +19,7 @@ class MyShopPage extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
-            // --- Top Left (Logout) ---
+        
             Positioned(
               top: 20,
               left: 20,
@@ -105,8 +105,7 @@ class MyShopPage extends StatelessWidget {
                             return Slidable(
                               key: ValueKey(shop.shopId),
 
-                              // Action Pane ด้านขวา (ปัดซ้าย)
-                              // ✨ ลด extentRatio ลง (ค่าเริ่มต้น 0.5) ให้ปุ่มแคบลง ไม่ใหญ่เกินไป
+                            
                               endActionPane: ActionPane(
                                 motion: const ScrollMotion(),
                                 extentRatio: 0.34,

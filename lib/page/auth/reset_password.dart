@@ -24,7 +24,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   void initState() {
     super.initState();
-    // รับค่า email และ otp จากหน้า Verify OTP
+   
     final Map<String, dynamic> args = Get.arguments;
     _email = args['email'];
     _otp = args['otp'];

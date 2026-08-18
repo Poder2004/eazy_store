@@ -65,13 +65,14 @@ class MyShopController extends GetxController {
   Future<void> confirmAndDeleteShop(ShopResponse shop) async {
     ConfirmDialog.show(
       title: "ยืนยันการลบ",
-      message: "คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่? ข้อมูลนี้ไม่สามารถกู้คืนได้",
+      message:
+          "คุณต้องการลบร้าน '${shop.name}' ใช่หรือไม่? ข้อมูลนี้ไม่สามารถกู้คืนได้",
       icon: Icons.delete_forever,
       confirmLabel: "ลบเลย",
       onConfirm: () => _processDelete(shop.shopId),
     );
   }
-  
+
   Future<void> _processDelete(int shopId) async {
     // ✅ ใช้ loading dialog แยกต่างหาก ไม่ใช้ isLoading ตัวเดียวกับตอนโหลดทั้งลิสต์
     // (เดิมลบร้านเดียวแต่จอทั้งหน้าเด้งเป็น spinner เต็มจอ)
@@ -84,9 +85,19 @@ class MyShopController extends GetxController {
 
     if (success) {
       shops.removeWhere((item) => item.shopId == shopId);
-      _showCustomDialog(title: "สำเร็จ", message: "ลบร้านค้าเรียบร้อยแล้ว", color: Colors.green, icon: Icons.check_circle);
+      _showCustomDialog(
+        title: "สำเร็จ",
+        message: "ลบร้านค้าเรียบร้อยแล้ว",
+        color: Colors.green,
+        icon: Icons.check_circle,
+      );
     } else {
-      _showCustomDialog(title: "ผิดพลาด", message: "ไม่สามารถลบร้านค้าได้", color: Colors.orange, icon: Icons.warning);
+      _showCustomDialog(
+        title: "ผิดพลาด",
+        message: "ไม่สามารถลบร้านค้าได้",
+        color: Colors.orange,
+        icon: Icons.warning,
+      );
     }
   }
 
@@ -112,11 +123,10 @@ class MyShopController extends GetxController {
     }
   }
 
-  // ✨ ฟังก์ชันสำคัญ: บันทึกร้านค้าที่เลือกและนำทางไปหน้าหลัก
   void selectShop(ShopResponse shop) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    // 1. บันทึกข้อมูลร้านค้าลงเครื่อง
+    //  บันทึกข้อมูลร้านค้าลงเครื่อง
     await prefs.setInt('shopId', shop.shopId);
     await prefs.setString('shopName', shop.name);
     await prefs.setString('pinCode', shop.pinCode ?? '');
@@ -124,7 +134,6 @@ class MyShopController extends GetxController {
     await prefs.setString('shop_image', shop.imgShop);
     await prefs.setString('shopAddress', shop.address);
 
-    // 2. แสดงแจ้งเตือนเล็กน้อย
     Get.snackbar(
       "ยินดีต้อนรับ",
       "กำลังเข้าสู่ร้าน ${shop.name}",
@@ -134,7 +143,6 @@ class MyShopController extends GetxController {
       duration: const Duration(seconds: 1),
     );
 
-    // 3. นำทางไปหน้าถัดไป (เช่น หน้าที่มี Bottom Navigation Bar)
     Get.offAll(() => const HomePage());
     print("เลือกใช้งานร้าน: ${shop.name} (ID: ${shop.shopId})");
   }
@@ -244,7 +252,12 @@ class MyShopController extends GetxController {
     );
   }
 
-  void _showCustomDialog({required String title, required String message, required Color color, required IconData icon}) {
+  void _showCustomDialog({
+    required String title,
+    required String message,
+    required Color color,
+    required IconData icon,
+  }) {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -255,17 +268,38 @@ class MyShopController extends GetxController {
             children: [
               Icon(icon, color: color, size: 60),
               const SizedBox(height: 16),
-              Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 12),
-              Text(message, style: const TextStyle(fontSize: 16, color: Colors.black54), textAlign: TextAlign.center),
+              Text(
+                message,
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   onPressed: () => Get.back(),
-                  child: const Text("ตกลง", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "ตกลง",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -274,5 +308,4 @@ class MyShopController extends GetxController {
       ),
     );
   }
-
 }
