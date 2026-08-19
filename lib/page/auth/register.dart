@@ -411,6 +411,30 @@ class _SignupPageState extends State<SignupPage> {
     return text == password;
   }
 
+  String? _getPhoneError(String text) {
+    if (text.isEmpty) return null;
+    if (text.length != 10) return "เบอร์โทรศัพท์ต้องมี 10 หลัก (ขณะนี้ ${text.length} หลัก)";
+    return null;
+  }
+
+  String? _getEmailError(String text) {
+    if (text.isEmpty) return null;
+    if (!GetUtils.isEmail(text)) return "รูปแบบอีเมลไม่ถูกต้อง";
+    return null;
+  }
+
+  String? _getPasswordError(String text) {
+    if (text.isEmpty) return null;
+    if (text.length < 6) return "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
+    return null;
+  }
+
+  String? _getConfirmPasswordError(String text, String password) {
+    if (text.isEmpty) return null;
+    if (text != password) return "รหัสผ่านไม่ตรงกัน";
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color primaryGreen = Color(0xFF00C853);
@@ -461,6 +485,7 @@ class _SignupPageState extends State<SignupPage> {
                 inputType: TextInputType.number,
                 isPhone: true,
                 isValid: _isPhoneValid(controller.phoneController.text),
+                errorText: _getPhoneError(controller.phoneController.text),
               ),
 
               _buildLineInput(
@@ -469,6 +494,7 @@ class _SignupPageState extends State<SignupPage> {
                 controller: controller.emailController,
                 inputType: TextInputType.emailAddress,
                 isValid: _isEmailValid(controller.emailController.text),
+                errorText: _getEmailError(controller.emailController.text),
               ),
 
               _buildLineInput(
@@ -488,6 +514,7 @@ class _SignupPageState extends State<SignupPage> {
                   });
                 },
                 isValid: _isPasswordValid(controller.passwordController.text),
+                errorText: _getPasswordError(controller.passwordController.text),
                 onChanged: (val) {
                   if (controller.confirmPasswordController.text.isNotEmpty) {
                     controller.validateConfirmPassword(
@@ -519,7 +546,10 @@ class _SignupPageState extends State<SignupPage> {
                     controller.passwordController.text,
                   ),
                   isLast: true,
-                  errorText: controller.confirmPasswordError.value,
+                  errorText: _getConfirmPasswordError(
+                    controller.confirmPasswordController.text,
+                    controller.passwordController.text,
+                  ) ?? controller.confirmPasswordError.value,
                   onChanged: (val) => controller.validateConfirmPassword(val),
                 ),
               ),
@@ -595,12 +625,23 @@ class _SignupPageState extends State<SignupPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
+        Text.rich(
+          TextSpan(
+            text: label,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
+            children: const [
+              TextSpan(
+                text: ' *',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ),
         TextField(

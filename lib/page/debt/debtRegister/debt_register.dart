@@ -216,12 +216,23 @@ class DebtRegisterScreen extends StatelessWidget {
                 child: Icon(icon, color: _kPrimaryColor, size: 18),
               ),
               const SizedBox(width: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: _kLabelColor,
+              Text.rich(
+                TextSpan(
+                  text: title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _kLabelColor,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -248,12 +259,23 @@ class DebtRegisterScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: _kLabelColor,
+        Text.rich(
+          TextSpan(
+            text: label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: _kLabelColor,
+            ),
+            children: const [
+              TextSpan(
+                text: ' *',
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 6),
@@ -433,9 +455,20 @@ class DebtRegisterScreen extends StatelessWidget {
               );
             }),
             const SizedBox(height: 10),
-            Text(
-              'แตะเพื่อเพิ่มรูปภาพลูกหนี้',
-              style: TextStyle(fontSize: 12.5, color: Colors.grey.shade500),
+            Text.rich(
+              TextSpan(
+                text: 'แตะเพื่อเพิ่มรูปภาพลูกหนี้',
+                style: TextStyle(fontSize: 12.5, color: Colors.grey.shade500),
+                children: const [
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

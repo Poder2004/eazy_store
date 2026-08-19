@@ -272,7 +272,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
         borderRadius: BorderRadius.circular(11),
       ),
       child: Row(
-        children: ['เดือนนี้', 'ปีนี้'].map((v) {
+        children: ['วันนี้', 'เดือนนี้', 'ปีนี้'].map((v) {
           final on = c.selectedView.value == v;
           return Expanded(
             child: GestureDetector(
@@ -298,7 +298,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   v,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: on ? _kBlue : _kInk3,
                   ),
@@ -509,15 +509,37 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
     );
   }
 
+  int? _extractHour(String label) {
+    if (label.isEmpty) return null;
+    final d = DateTime.tryParse(label) ?? DateTime.tryParse(label.replaceAll(' ', 'T'));
+    if (d != null && (d.hour != 0 || d.minute != 0 || d.second != 0)) return d.hour;
+    if (label.contains('T')) {
+      final timePart = label.split('T').last;
+      final hourStr = timePart.split(':').first;
+      return int.tryParse(hourStr);
+    }
+    if (label.contains(' ')) {
+      final timePart = label.split(' ').last;
+      final hourStr = timePart.split(':').first;
+      return int.tryParse(hourStr);
+    }
+    return null;
+  }
+
   // ─── Sales Chart ─────────────────────────────────────────────────────────────
   Widget _buildSalesCard(List<SalesChartItem> chartData) {
+    final isToday = c.selectedView.value == 'วันนี้';
     final isMonthly = c.selectedView.value == 'เดือนนี้';
 
     // ── Section header (always shown) ────────────────────────────────────────
     final header = _sectionHeader(
       icon: _iconBox(Icons.trending_up_rounded, _kBlueBg, _kBlue),
       title: 'แนวโน้มยอดขาย',
-      sub: isMonthly ? 'ยอดขายรายวันตลอดเดือน' : 'ยอดขายรวมแต่ละเดือนตลอดปี',
+      sub: isToday
+          ? 'ยอดขายรายชั่วโมงตลอดวัน'
+          : isMonthly
+              ? 'ยอดขายรายวันตลอดเดือน'
+              : 'ยอดขายรวมแต่ละเดือนตลอดปี',
       trailing: Obx(
         () => Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
@@ -539,7 +561,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
 
     // ── Aggregate Data for Yearly View ────────────────────────────────────────
     List<SalesChartItem> displayData = chartData;
-    if (!isMonthly && chartData.isNotEmpty) {
+    if (!isToday && !isMonthly && chartData.isNotEmpty) {
       Map<int, double> monthlySales = {for (var i = 1; i <= 12; i++) i: 0.0};
 
       for (var item in chartData) {
@@ -619,9 +641,10 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   .reduce((a, b) => a > b ? a : b)) *
               1.45;
 
+    // Today: 18px/hour (~430px for 24 hours)
     // Monthly: 10px/day (dense, ~310px for 31 days)
     // Yearly: 40px/point to prevent cramped labels
-    final double pxPerPoint = isMonthly ? 10.0 : 40.0;
+    final double pxPerPoint = isToday ? 18.0 : (isMonthly ? 10.0 : 40.0);
     final double chartWidth = displayData.length * pxPerPoint;
 
     const months = [
@@ -679,14 +702,33 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                           reservedSize: 22,
                           interval: 1,
                           getTitlesWidget: (v, meta) {
+                            if (v != v.roundToDouble()) return const SizedBox();
                             final idx = v.toInt();
                             if (idx < 0 || idx >= displayData.length)
                               return const SizedBox();
                             final label = displayData[idx].date;
                             try {
-                              final d = DateTime.parse(label);
-                              if (isMonthly) {
-                                // Monthly: show day numbers at key intervals
+                              if (isToday) {
+                                final hour = _extractHour(label) ?? idx;
+                                if (hour == 0 ||
+                                    hour == 6 ||
+                                    hour == 12 ||
+                                    hour == 18 ||
+                                    hour == 23) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      '${hour.toString().padLeft(2, '0')}:00',
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        color: _kInk3,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } else if (isMonthly) {
+                                final d = DateTime.parse(label);
                                 final isLast = idx == chartData.length - 1;
                                 if (d.day == 1 ||
                                     d.day == 7 ||
@@ -707,8 +749,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                                   );
                                 }
                               } else {
-                                // Yearly: detect month CHANGE (not d.day==1)
-                                // because API only returns days with actual sales
+                                final d = DateTime.parse(label);
                                 final isFirst = idx == 0;
                                 final prevMonth = idx > 0
                                     ? DateTime.tryParse(
@@ -757,16 +798,69 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                         fitInsideHorizontally: true,
                         fitInsideVertically: true,
                         getTooltipItems: (touchSpots) => touchSpots
-                            .map(
-                              (s) => LineTooltipItem(
+                            .map((s) {
+                              final idx = s.x.toInt();
+                              if (idx >= 0 && idx < displayData.length) {
+                                final itemDate = displayData[idx].date;
+                                String headerText = '';
+
+                                if (isToday) {
+                                  final hour =
+                                      _extractHour(itemDate) ?? idx;
+                                  final startH =
+                                      hour.toString().padLeft(2, '0');
+                                  final endH =
+                                      ((hour + 1) % 24).toString().padLeft(2, '0');
+                                  headerText = '$startH:00 - $endH:00 น.';
+                                } else if (isMonthly) {
+                                  try {
+                                    final d = DateTime.parse(itemDate);
+                                    headerText = ' ${d.day} ${months[d.month - 1]}';
+                                  } catch (_) {
+                                    headerText = itemDate;
+                                  }
+                                } else {
+                                  try {
+                                    final d = DateTime.parse(itemDate);
+                                    const fullMonths = [
+                                      'มกราคม',
+                                      'กุมภาพันธ์',
+                                      'มีนาคม',
+                                      'เมษายน',
+                                      'พฤษภาคม',
+                                      'มิถุนายน',
+                                      'กรกฎาคม',
+                                      'สิงหาคม',
+                                      'กันยายน',
+                                      'ตุลาคม',
+                                      'พฤศจิกายน',
+                                      'ธันวาคม'
+                                    ];
+                                    headerText =
+                                        '${fullMonths[d.month - 1]} ${d.year + 543}';
+                                  } catch (_) {
+                                    headerText = itemDate;
+                                  }
+                                }
+
+                                return LineTooltipItem(
+                                  '$headerText\n฿${c.formatNumber(s.y)}',
+                                  const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                );
+                              }
+                              return LineTooltipItem(
                                 '฿${c.formatNumber(s.y)}',
                                 const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13,
                                 ),
-                              ),
-                            )
+                              );
+                            })
                             .toList(),
                       ),
                     ),
@@ -842,6 +936,63 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               );
             },
           ),
+          // ── Peak Hour Indicator for Today ───────────────────────
+          if (isToday && !allZero) ...[
+            () {
+              int peakHour = -1;
+              double maxSales = 0;
+              for (int i = 0; i < displayData.length; i++) {
+                if (displayData[i].totalSales > maxSales) {
+                  maxSales = displayData[i].totalSales;
+                  peakHour = _extractHour(displayData[i].date) ?? i;
+                }
+              }
+              if (peakHour >= 0 && maxSales > 0) {
+                final startH = peakHour.toString().padLeft(2, '0');
+                final endH = ((peakHour + 1) % 24).toString().padLeft(2, '0');
+                return Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8EC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFFE0B2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: Color(0xFFFF9800),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'ช่วงเวลาขายดีที่สุด: ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      Text(
+                        '$startH:00 - $endH:00 น. (฿${c.formatNumber(maxSales)})',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFE65100),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }(),
+          ],
         ],
       ),
     );
@@ -1215,7 +1366,6 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.bolt_rounded, size: 12, color: _kInk2),
                   SizedBox(width: 3),
                   Text(
                     'ณ วันนี้',
