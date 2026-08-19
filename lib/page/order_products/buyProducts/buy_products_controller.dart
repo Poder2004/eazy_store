@@ -6,6 +6,7 @@ import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
+import 'package:eazy_store/page/order_products/order_List/order_list_controller.dart';
 
 class BuyProductsController extends GetxController {
   var isLoading = true.obs;
@@ -204,6 +205,9 @@ class BuyProductsController extends GetxController {
   @override
   void onClose() {
     searchCtrl.dispose();
+    // ทำลาย OrderListController อย่างถาวรเมื่อปิดหน้าสั่งซื้อสินค้า (กลับหน้าโฮม)
+    // เพื่อให้รอบถัดไปที่เข้ามาสั่งของใหม่ เริ่มต้นด้วยรายการที่ว่างเปล่าเสมอ
+    Get.delete<OrderListController>(force: true);
     super.onClose();
   }
 }

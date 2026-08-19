@@ -26,7 +26,7 @@ class OrderListScreen extends StatelessWidget {
     // Flutter กำลัง build หน้าใหม่อยู่พอดี ทำให้เกิด "setState()/markNeedsBuild()
     // called during build" หน้าจอเลยค้าง/สลับไปมา ต้องเลื่อนไปเรียกหลัง frame
     // ปัจจุบัน build เสร็จแล้วแทน
-    final controller = Get.put(OrderListController());
+    final controller = Get.put(OrderListController(), permanent: true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.loadItemsFromBuyPage();
     });
@@ -135,6 +135,7 @@ class OrderListScreen extends StatelessWidget {
       final isNoteOpen = controller.notesExpanded.contains(item.id);
       final hasNote = item.noteController.text.isNotEmpty;
       final isUnitEditing = controller.unitsEditing.contains(item.id);
+      final isNameEditing = item.isCustom && controller.namesEditing.contains(item.id);
 
       return Container(
         margin: const EdgeInsets.only(bottom: 10.0),
@@ -142,6 +143,12 @@ class OrderListScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.0),
+          // สินค้า custom มีขอบซ้ายสีเขียวอ่อนเพื่อแยกแยะจากสินค้าปกติ
+          border: item.isCustom
+              ? Border(
+                  left: BorderSide(color: const Color(0xFF43A047), width: 3),
+                )
+              : null,
           boxShadow: [
             BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 1)),
           ],
@@ -152,34 +159,68 @@ class OrderListScreen extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: Image.network(
-                    item.imageUrl,
-                    width: 34,
-                    height: 34,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 34,
-                      height: 34,
-                      color: Colors.grey.shade100,
-                      child: const Icon(Icons.image_not_supported, size: 16, color: Colors.grey),
-                    ),
-                  ),
-                ),
+                // รูปภาพ: สินค้า custom ใช้ไอคอนกล่อง / สินค้าปกติใช้รูปจาก network
+                item.isCustom
+                    ? Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Icon(Icons.add_box_outlined, size: 18, color: Color(0xFF43A047)),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(7),
+                        child: Image.network(
+                          item.imageUrl,
+                          width: 34,
+                          height: 34,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 34,
+                            height: 34,
+                            color: Colors.grey.shade100,
+                            child: const Icon(Icons.image_not_supported, size: 16, color: Colors.grey),
+                          ),
+                        ),
+                      ),
                 const SizedBox(width: 8),
+                // ชื่อสินค้า: custom สามารถแก้ไขได้
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: item.isCustom && isNameEditing
+                        ? TextField(
+                            controller: item.nameController,
+                            autofocus: true,
+                            maxLines: 1,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                            onSubmitted: (_) => controller.toggleNameEdit(item.id),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 4),
+                              border: UnderlineInputBorder(),
+                            ),
+                          )
+                        : Text(
+                            item.displayName,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 3),
+                // ปุ่มแก้ชื่อ (เฉพาะสินค้า custom)
+                if (item.isCustom)
+                  _buildIconToggle(
+                    icon: Icons.edit_outlined,
+                    active: isNameEditing,
+                    onTap: () => controller.toggleNameEdit(item.id),
+                    color: const Color(0xFF43A047),
+                    bgColor: const Color(0xFFE8F5E9),
+                  ),
                 _buildIconToggle(
                   icon: Icons.note_alt_outlined,
                   active: isNoteOpen || hasNote,
@@ -351,22 +392,39 @@ class OrderListScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, -3))]),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () {
-                // หน้านี้ (order_list) ถูกเปิดมาจากหน้า buy_products เสมอ
-                // (Get.to จาก buy_products.dart) ดังนั้นหน้า buy_products
-                // เดิมยังค้างอยู่ใต้ stack พอดี แค่ Get.back() กลับไปหาของเดิม
-                // ก็พอ ไม่ต้อง Get.to() push หน้าใหม่ซ้อนขึ้นไปอีก เพราะจะทำให้
-                // stack โตขึ้นเรื่อยๆ ทุกครั้งที่สลับไปมาระหว่างสองหน้านี้ และ
-                // กดปุ่มย้อนกลับกี่ทีก็ไม่ถึงหน้า homepage สักที
-                Get.back();
-              }),
+            // แถวบน: ปุ่มเพิ่มสินค้ากำหนดเอง
+            SizedBox(
+              width: double.infinity,
+              child: _buildBigButton(
+                'เพิ่มสินค้ากำหนดเอง',
+                Icons.playlist_add,
+                const Color(0xFF43A047),
+                () => _showAddCustomItemDialog(controller),
+              ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
+            const SizedBox(height: 8),
+            // แถวล่าง: ปุ่มเดิม
+            Row(
+              children: [
+                Expanded(
+                  child: _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () {
+                    // หน้านี้ (order_list) ถูกเปิดมาจากหน้า buy_products เสมอ
+                    // (Get.to จาก buy_products.dart) ดังนั้นหน้า buy_products
+                    // เดิมยังค้างอยู่ใต้ stack พอดี แค่ Get.back() กลับไปหาของเดิม
+                    // ก็พอ ไม่ต้อง Get.to() push หน้าใหม่ซ้อนขึ้นไปอีก เพราะจะทำให้
+                    // stack โตขึ้นเรื่อยๆ ทุกครั้งที่สลับไปมาระหว่างสองหน้านี้ และ
+                    // กดปุ่มย้อนกลับกี่ทีก็ไม่ถึงหน้า homepage สักที
+                    Get.back();
+                  }),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
+                ),
+              ],
             ),
           ],
         ),
@@ -392,5 +450,154 @@ class OrderListScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // --- Dialog เพิ่มสินค้ากำหนดเอง ---
+  void _showAddCustomItemDialog(OrderListController controller) {
+    final nameCtrl = TextEditingController();
+    final unitCtrl = TextEditingController(text: 'ชิ้น');
+
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF43A047).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.playlist_add,
+                  color: Color(0xFF43A047),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'เพิ่มสินค้ากำหนดเอง',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'สินค้าที่ไม่มีในคลังร้าน',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              // ช่องกรอกชื่อสินค้า
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'ชื่อสินค้า *',
+                  hintText: 'เช่น ถุงขยะดำ',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 14),
+              // ช่องกรอกหน่วยนับ
+              TextField(
+                controller: unitCtrl,
+                decoration: InputDecoration(
+                  labelText: 'หน่วยนับ',
+                  hintText: 'เช่น แพ็ค, ถุง, กล่อง',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'ยกเลิก',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final name = nameCtrl.text.trim();
+                        if (name.isEmpty) {
+                          Get.snackbar(
+                            'แจ้งเตือน',
+                            'กรุณากรอกชื่อสินค้า',
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                            snackPosition: SnackPosition.TOP,
+                          );
+                          return;
+                        }
+                        controller.addCustomItem(name, unitCtrl.text.trim());
+                        Get.back();
+                        Get.snackbar(
+                          'เพิ่มสำเร็จ',
+                          'เพิ่ม "$name" เข้ารายการแล้ว',
+                          backgroundColor: const Color(0xFF43A047),
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.TOP,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF43A047),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'เพิ่ม',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(() {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        nameCtrl.dispose();
+        unitCtrl.dispose();
+      });
+    });
   }
 }

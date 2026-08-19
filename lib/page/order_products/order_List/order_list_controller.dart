@@ -25,6 +25,12 @@ class OrderItem {
   // ที่ onChanged จะทำงาน ทำให้อ่าน .text ตอนนั้นไม่ได้ค่าเดิมที่แท้จริงอีกต่อไป
   String lastValidQuantity;
 
+  // true = สินค้ากำหนดเอง (ไม่มีในคลังร้าน) / false = สินค้าจากคลังร้าน
+  final bool isCustom;
+
+  // Controller สำหรับแก้ไขชื่อสินค้า custom (สินค้าจากคลังไม่ต้องแก้ชื่อ)
+  final TextEditingController? nameController;
+
   OrderItem({
     required this.id,
     required this.name,
@@ -32,18 +38,24 @@ class OrderItem {
     required this.imageUrl,
     required int initialQuantity,
     String initialNote = '',
+    this.isCustom = false,
   }) : quantityController = TextEditingController(
          text: initialQuantity.toString(),
        ),
        noteController = TextEditingController(text: initialNote),
        unitController = TextEditingController(text: unit),
-       lastValidQuantity = initialQuantity.toString();
+       lastValidQuantity = initialQuantity.toString(),
+       nameController = isCustom ? TextEditingController(text: name) : null;
+
+  /// ชื่อที่ใช้แสดงผลจริง — ถ้าเป็น custom จะอ่านจาก nameController (แก้ไขได้)
+  String get displayName => nameController?.text ?? name;
 
   // สั่งปิดการทำงานของ Controller เมื่อไม่ได้ใช้
   void dispose() {
     quantityController.dispose();
     noteController.dispose();
     unitController.dispose();
+    nameController?.dispose();
   }
 }
 
@@ -110,13 +122,14 @@ class OrderListController extends GetxController {
           .map((p) => p.productId.toString())
           .toSet();
 
+      // ⚠️ ข้ามสินค้า custom ตอน sync — เพราะสินค้า custom ไม่มีใน buyPage
       final noLongerSelected = orderItems
-          .where((item) => !selectedIds.contains(item.id))
+          .where((item) => !item.isCustom && !selectedIds.contains(item.id))
           .toList();
       for (final item in noLongerSelected) {
         item.dispose();
       }
-      orderItems.removeWhere((item) => !selectedIds.contains(item.id));
+      orderItems.removeWhere((item) => !item.isCustom && !selectedIds.contains(item.id));
 
       final existingIds = orderItems.map((item) => item.id).toSet();
       final newItems = selectedFromBuyPage
@@ -215,7 +228,7 @@ class OrderListController extends GetxController {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  item.name,
+                                  item.displayName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -314,13 +327,13 @@ class OrderListController extends GetxController {
         return;
       }
 
-      // 2. เตรียมข้อมูลส่งไป Backend
+      // 2. เตรียมข้อมูลส่งไป Backend — ใช้ displayName เพื่อรองรับสินค้า custom ที่แก้ชื่อได้
       final Map<String, dynamic> requestData = {
         "shop_id": shopId, // ส่งแค่ ID ไปตัวเดียว
         "items": orderItems
             .map(
               (item) => {
-                "name": item.name,
+                "name": item.displayName,
                 "quantity": int.tryParse(item.quantityController.text) ?? 0,
                 "unit": item.unitController.text,
                 "note": item.noteController.text,
@@ -404,8 +417,12 @@ class OrderListController extends GetxController {
   void removeItem(String id) {
     // อย่าลืม dispose controller ของไอเทมที่ถูกลบด้วย
     final item = orderItems.firstWhere((element) => element.id == id);
+    final wasCustom = item.isCustom;
     item.dispose();
     orderItems.removeWhere((element) => element.id == id);
+
+    // ⚠️ สินค้า custom ไม่มีใน buyPage ไม่ต้อง unselect
+    if (wasCustom) return;
 
     // ยกเลิกติ๊กเลือกสินค้าตัวนี้ในหน้า buy_products ด้วย ไม่งั้นพอกลับไปหน้า
     // เลือกสินค้าหรือกดเพิ่มรายการ จะยังเห็นสินค้าที่ลบไปแล้วติ๊กเลือกค้างอยู่
@@ -426,7 +443,7 @@ class OrderListController extends GetxController {
   void showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {
     ConfirmDialog.show(
       title: 'ลบรายการสินค้า',
-      message: 'คุณต้องการลบ "${item.name}" ออกหรือไม่?',
+      message: 'คุณต้องการลบ "${item.displayName}" ออกหรือไม่?',
       confirmLabel: 'ลบ',
       onCancel: () {
         if (isFromButton ||
@@ -438,5 +455,32 @@ class OrderListController extends GetxController {
       },
       onConfirm: () => removeItem(item.id),
     );
+  }
+
+  // --- สินค้ากำหนดเอง (Custom Item) ---
+
+  /// เพิ่มสินค้ากำหนดเองเข้ารายการสั่งของ
+  void addCustomItem(String name, String unit) {
+    final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+    final item = OrderItem(
+      id: id,
+      name: name,
+      unit: unit.isEmpty ? 'ชิ้น' : unit,
+      imageUrl: '',
+      initialQuantity: 1,
+      isCustom: true,
+    );
+    orderItems.add(item);
+  }
+
+  // รายการที่กำลังแก้ไข "ชื่อ" ของสินค้า custom อยู่
+  var namesEditing = <String>{}.obs;
+
+  void toggleNameEdit(String id) {
+    if (namesEditing.contains(id)) {
+      namesEditing.remove(id);
+    } else {
+      namesEditing.add(id);
+    }
   }
 }
