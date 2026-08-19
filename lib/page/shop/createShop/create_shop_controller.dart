@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/page/homepage/home_controller.dart';
+import 'package:eazy_store/page/shop/myShop/myshop.dart';
+import 'package:eazy_store/page/shop/myShop/myshop_controller.dart';
 import '../../../model/response/shop_response.dart';
 import '../../../api/api_shop.dart';
 import '../set_shop_pin_page.dart';
@@ -473,8 +475,8 @@ class CreateShopController extends GetxController {
                 child: ElevatedButton(
                   onPressed: () {
                     Get.back();
-                    Get.delete<HomeController>();
-                    Get.offAll(() => const HomePage()); // วาร์ปเข้าร้าน!
+                    Get.delete<MyShopController>(force: true); // เคลียร์ MyShopController เพื่อให้ดึงข้อมูลใหม่
+                    Get.offAll(() => const MyShopPage()); // กลับไปหน้าเลือกร้านค้า
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
