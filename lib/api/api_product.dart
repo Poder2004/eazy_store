@@ -214,7 +214,7 @@ class ApiProduct {
     } catch (e) {
       return {'success': false, 'error': 'การเชื่อมต่อขัดข้อง: $e'};
     }
-  }
+  }          
 
   static Future<Map<String, dynamic>> moveCategoryProducts({
     required int fromCategoryId,
@@ -553,7 +553,7 @@ class ApiProduct {
       String? token = prefs.getString('token');
 
       final response = await http.delete(
-        url,
+        url,         
         headers: {"Authorization": "Bearer $token"},
       );
 

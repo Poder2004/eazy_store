@@ -12,6 +12,7 @@ import '../../../model/request/debtor_request.dart';
 import '../../../model/response/debtor_response.dart';
 import '../../../widgets/confirm_dialog.dart';
 import '../../../widgets/image_picker_sheet.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 
 class DebtRegisterController extends GetxController {
   // --- Controllers สำหรับ TextFields ---
@@ -63,6 +64,12 @@ class DebtRegisterController extends GetxController {
       final String response = await rootBundle.loadString(assetPath);
       final List<dynamic> rawData = jsonDecode(response);
 
+      rawData.sort((a, b) {
+        final nameA = a['name_th'] as String? ?? '';
+        final nameB = b['name_th'] as String? ?? '';
+        return thaiSortKey(nameA).compareTo(thaiSortKey(nameB));
+      });
+
       final Map<String, dynamic> structuredData = {};
       for (var province in rawData) {
         String provinceName = province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
@@ -85,7 +92,9 @@ class DebtRegisterController extends GetxController {
 
     final provinceData = fullAddressData.value![newValue];
     final List<dynamic>? rawDistricts = provinceData?['districts'] as List<dynamic>?;
-    districts.value = rawDistricts?.map((d) => d['name_th'] as String).toList() ?? [];
+    final districtList = rawDistricts?.map((d) => d['name_th'] as String).toList() ?? [];
+    districtList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+    districts.value = districtList;
   }
 
   void onDistrictChanged(String? newValue) {
@@ -102,7 +111,9 @@ class DebtRegisterController extends GetxController {
     );
     if (selectedDistrictData == null) return;
     final List<dynamic>? rawSubs = selectedDistrictData['sub_districts'] as List<dynamic>?;
-    subdistricts.value = rawSubs?.map((s) => s['name_th'] as String).toList() ?? [];
+    final subList = rawSubs?.map((s) => s['name_th'] as String).toList() ?? [];
+    subList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+    subdistricts.value = subList;
   }
 
   // ตรวจเบอร์โทร: ต้องขึ้นต้นด้วย 0 และมีครบ 10 หลักเท่านั้น
