@@ -13,6 +13,7 @@ import '../../../api/api_shop.dart';
 import '../set_shop_pin_page.dart';
 import '../../../api/api_service_image.dart';
 import 'package:eazy_store/utils/error_message.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 
 class CreateShopController extends GetxController {
   // ==========================================
@@ -81,6 +82,11 @@ class CreateShopController extends GetxController {
           'assets/data_address/province_with_district_and_sub_district.json';
       final String response = await rootBundle.loadString(assetPath);
       final List<dynamic> rawData = jsonDecode(response);
+      rawData.sort((a, b) {
+        final nameA = a['name_th'] as String? ?? '';
+        final nameB = b['name_th'] as String? ?? '';
+        return thaiSortKey(nameA).compareTo(thaiSortKey(nameB));
+      });
       final Map<String, dynamic> structuredData = {};
       for (var province in rawData) {
         String provinceName =
@@ -88,7 +94,9 @@ class CreateShopController extends GetxController {
         structuredData[provinceName] = province;
       }
       _fullAddressData = structuredData;
-      provinces.value = _fullAddressData!.keys.toList();
+      final provinceList = _fullAddressData!.keys.toList();
+      provinceList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+      provinces.value = provinceList;
     } catch (e) {
       print("Error load address: $e");
     }
@@ -106,10 +114,13 @@ class CreateShopController extends GetxController {
         provinceData?['districts'] as List<dynamic>?; //เเสดง  อ ออกมา
 
     if (rawDistricts != null) {
-      districts.value = rawDistricts
+      final districtList = rawDistricts
           .map((district) => district['name_th'] as String? ?? '')
           .whereType<String>()
-          .toList(); //เอาเข้าช่องที่ 2 เพื่อเอาไปเเสดง
+          .where((name) => name.isNotEmpty)
+          .toList();
+      districtList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+      districts.value = districtList; //เอาเข้าช่องที่ 2 เพื่อเอาไปเเสดง
     }
   }
 
@@ -134,10 +145,13 @@ class CreateShopController extends GetxController {
         final List<dynamic>? rawSubdistricts =
             selectedDistrictData['sub_districts'] as List<dynamic>?;
         if (rawSubdistricts != null) {
-          subdistricts.value = rawSubdistricts
+          final subList = rawSubdistricts
               .map((sub) => sub['name_th'] as String? ?? '')
               .whereType<String>()
+              .where((name) => name.isNotEmpty)
               .toList();
+          subList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+          subdistricts.value = subList;
         }
       }
     }
