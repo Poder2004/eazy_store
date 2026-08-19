@@ -145,24 +145,32 @@ class CheckoutController extends GetxController {
       final nullBarcodeData = await ApiProduct.getNullBarcodeProducts(shopId);
       final List<ProductResponse> nullBarcodeList = nullBarcodeData.map((item) {
         return ProductResponse(
-          productId: int.tryParse(item['product_id']?.toString() ?? item['id']?.toString() ?? ""),
+          productId: int.tryParse(
+            item['product_id']?.toString() ?? item['id']?.toString() ?? "",
+          ),
           shopId: shopId,
           categoryId: int.tryParse(item['category_id']?.toString() ?? "") ?? 0,
           productCode: item['product_code']?.toString(),
           name: item['name'] ?? '',
           barcode: item['barcode']?.toString(),
           imgProduct: item['img_product'] ?? item['image'] ?? '',
-          sellPrice: double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
-          costPrice: double.tryParse(item['cost_price']?.toString() ?? "0") ?? 0.0,
+          sellPrice:
+              double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
+          costPrice:
+              double.tryParse(item['cost_price']?.toString() ?? "0") ?? 0.0,
           stock: int.tryParse(item['stock']?.toString() ?? "") ?? 999,
           unit: item['unit'] ?? '',
-          status: item['status'] == true || item['status'] == 1 || item['status']?.toString().toLowerCase() == 'true',
+          status:
+              item['status'] == true ||
+              item['status'] == 1 ||
+              item['status']?.toString().toLowerCase() == 'true',
           categoryName: item['category_name']?.toString().trim(),
         );
       }).toList();
 
       for (var p in nullBarcodeList) {
-        if (p.status == true && !allFetched.any((existing) => existing.productId == p.productId)) {
+        if (p.status == true &&
+            !allFetched.any((existing) => existing.productId == p.productId)) {
           allFetched.add(p);
         }
       }
@@ -194,7 +202,9 @@ class CheckoutController extends GetxController {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
         allProducts = await _fetchProductsFromApi(loadedShopId!);
-        print("✅ โหลดสินค้าสำเร็จทั้งหมด: ${allProducts.length} รายการ (รวมไม่มีบาร์โค้ด)");
+        print(
+          "✅ โหลดสินค้าสำเร็จทั้งหมด: ${allProducts.length} รายการ (รวมไม่มีบาร์โค้ด)",
+        );
       }
     } catch (e) {
       print("❌ Error loading products: $e");
@@ -208,7 +218,8 @@ class CheckoutController extends GetxController {
         // ✅ แนบ timestamp เพื่อล้างแคชรูปภาพเก่า (Prevent caching)
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final url = shop.imgQrcode;
-        shopQrCodeUrl.value = url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
+        shopQrCodeUrl.value =
+            url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
       }
     } catch (e) {
       print("Error loading shop data: $e");
@@ -248,7 +259,8 @@ class CheckoutController extends GetxController {
       }).toList();
 
       if (localMatches.isNotEmpty) {
-        if (requestId != _searchRequestId) return; // มี request ใหม่กว่าแซงไปแล้ว
+        if (requestId != _searchRequestId)
+          return; // มี request ใหม่กว่าแซงไปแล้ว
         searchResults.assignAll(localMatches);
         return;
       }
@@ -287,7 +299,9 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> openInternalScanner() async {
-    var result = await Get.to(() => const ScanBarcodePage(showBookButton: true));
+    var result = await Get.to(
+      () => const ScanBarcodePage(showBookButton: true),
+    );
     if (result != null && result is String) {
       await addProductByBarcode(result);
     }
@@ -314,18 +328,21 @@ class CheckoutController extends GetxController {
           currentShopId,
         );
         Get.back();
-        if (product != null) {
+        if (product != null && product.status == true) {
           _addToCart(product);
           allProducts.add(product);
         } else {
           _showWarningDialog(
             "ไม่พบสินค้า",
-            "รหัสบาร์โค้ดนี้ไม่มีในระบบของร้านค้า",
+            "รหัสบาร์โค้ดนี้ไม่มีในระบบของร้านค้า หรือถูกปิดการขายแล้ว",
           );
         }
       } catch (e) {
         Get.back();
-        _showWarningDialog("เกิดข้อผิดพลาด", "ไม่สามารถค้นหาสินค้าได้ กรุณาลองใหม่");
+        _showWarningDialog(
+          "เกิดข้อผิดพลาด",
+          "ไม่สามารถค้นหาสินค้าได้ กรุณาลองใหม่",
+        );
       }
     }
   }
@@ -518,15 +535,17 @@ class CheckoutController extends GetxController {
       final qty = pi.quantity.clamp(0, effectiveMaxStock);
       if (qty < pi.quantity) stockReduced = true;
       for (int i = 0; i < qty; i++) {
-        cartItems.add(ProductItem(
-          id: pi.id,
-          name: pi.name,
-          price: pi.price,
-          category: pi.category,
-          imagePath: pi.imagePath,
-          maxStock: effectiveMaxStock,
-          unit: pi.unit,
-        ));
+        cartItems.add(
+          ProductItem(
+            id: pi.id,
+            name: pi.name,
+            price: pi.price,
+            category: pi.category,
+            imagePath: pi.imagePath,
+            maxStock: effectiveMaxStock,
+            unit: pi.unit,
+          ),
+        );
       }
     }
 
@@ -868,7 +887,8 @@ class CheckoutController extends GetxController {
         receivedAmountController.clear();
         await _loadAllProducts();
       } else {
-        final errorMsg = result?['error'] ?? "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้";
+        final errorMsg =
+            result?['error'] ?? "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้";
         _showErrorDialog("เกิดข้อผิดพลาด", errorMsg);
       }
     } catch (e) {
