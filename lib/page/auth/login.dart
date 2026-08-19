@@ -11,18 +11,31 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginController extends GetxController {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  var emailController = TextEditingController();
+  var passwordController = TextEditingController();
   var isLoading = false.obs;
   var isSendingOtp = false.obs;
+  bool _disposed = false;
 
   final Color primaryColor = const Color(0xFF00A3FF);
 
   @override
   void onClose() {
-    emailController.dispose();
-    passwordController.dispose();
+    if (!_disposed) {
+      _disposed = true;
+      emailController.dispose();
+      passwordController.dispose();
+    }
     super.onClose();
+  }
+
+  /// สร้าง TextEditingController ใหม่ (ใช้ตอนกลับมาหน้า login หลัง verify สำเร็จ)
+  void _ensureControllersAlive() {
+    if (_disposed) {
+      emailController = TextEditingController();
+      passwordController = TextEditingController();
+      _disposed = false;
+    }
   }
 
   Future<void> login() async {
@@ -241,12 +254,20 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    controller = Get.put(LoginController());
+    // ถ้ามี instance เก่าค้างอยู่ ใช้ต่อได้เลย แต่ต้องเช็คว่า controllers ยังใช้ได้
+    // ถ้า controllers ถูก dispose ไปแล้ว (เช่นจาก Get.offAll) ก็สร้างใหม่
+    if (Get.isRegistered<LoginController>()) {
+      controller = Get.find<LoginController>();
+      controller._ensureControllersAlive();
+    } else {
+      controller = Get.put(LoginController());
+    }
   }
 
   @override
   void dispose() {
-    Get.delete<LoginController>();
+    // ไม่ต้อง Get.delete ตรงนี้ เพราะ Get.offAll จะจัดการให้
+    // การ delete ตรงนี้ทำให้เกิด race condition กับ LoginPage ใหม่ที่ถูกสร้างพร้อมกัน
     super.dispose();
   }
 

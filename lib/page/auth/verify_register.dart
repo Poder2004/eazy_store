@@ -139,57 +139,69 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
   }
 
   void _showSuccessDialog() {
+    // หยุด timer ก่อน เพื่อป้องกัน setState ถูกเรียกหลัง dispose
+    _timer?.cancel();
+
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        child: Padding(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.check_circle_outline_rounded,
-                size: 70,
-                color: Colors.green,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "ยืนยันสำเร็จ",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "บัญชีของคุณพร้อมใช้งานแล้ว\nกรุณาเข้าสู่ระบบเพื่อเริ่มใช้งาน",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+      WillPopScope(
+        onWillPop: () async => false, // ป้องกันกดปุ่ม back ปิด dialog
+        child: Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          child: Padding(
+            padding: const EdgeInsets.all(30),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 70,
+                  color: Colors.green,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "ยืนยันสำเร็จ",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "บัญชีของคุณพร้อมใช้งานแล้ว\nกรุณาเข้าสู่ระบบเพื่อเริ่มใช้งาน",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () => Get.offAll(() => const LoginPage()),
-                  child: const Text(
-                    "ไปหน้าล็อกอิน",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                    onPressed: () {
+                      // ปิด dialog ก่อน แล้วค่อย navigate
+                      Get.back();
+                      Future.microtask(() => Get.offAll(() => const LoginPage()));
+                    },
+                    child: const Text(
+                      "ไปหน้าล็อกอิน",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+      barrierDismissible: false,
     );
   }
+
 
   void _changeEmailDialog() {
     final newEmailController = TextEditingController(text: email);
