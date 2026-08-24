@@ -7,7 +7,7 @@ export const metadata = {
 
 const faqs = [
   {
-    category: "การเริ่มต้นใช้งาน",
+    category: "การเริ่มต้นใช้งาน.",
     icon: "🚀",
     color: "bg-indigo-50 text-indigo-600",
     items: [
