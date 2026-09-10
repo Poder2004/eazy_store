@@ -14,18 +14,6 @@ class OrderListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // เรียกใช้งาน Controller
-    // ⚠️ OrderListController เป็น singleton (Get.put คืนตัวเดิมถ้ามีอยู่แล้ว)
-    // onInit() จะรันแค่ครั้งแรกครั้งเดียว ถ้าไปหน้า buy_products แล้วกลับมา
-    // หน้านี้อีกครั้ง (ผ่านการ push ใหม่) ต้อง sync รายการใหม่ทุกครั้งที่ build
-    // ไม่งั้นรายการที่เพิ่งเลือกเพิ่ม/ลบไปจะไม่อัปเดต
-    //
-    // ⚠️ ห้ามเรียก loadItemsFromBuyPage() ตรงๆ ใน build() เพราะมันแก้ orderItems
-    // (Obx ตัวแปร) ทันที ซึ่งจะไปสั่ง rebuild หน้า OrderListScreen ตัวเก่าที่ยัง
-    // ค้างอยู่ใต้ Navigator (ยังไม่ถูก dispose เพราะ Get.to แค่ push ซ้อน) ระหว่างที่
-    // Flutter กำลัง build หน้าใหม่อยู่พอดี ทำให้เกิด "setState()/markNeedsBuild()
-    // called during build" หน้าจอเลยค้าง/สลับไปมา ต้องเลื่อนไปเรียกหลัง frame
-    // ปัจจุบัน build เสร็จแล้วแทน
     final controller = Get.put(OrderListController(), permanent: true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.loadItemsFromBuyPage();
@@ -33,7 +21,9 @@ class OrderListScreen extends StatelessWidget {
 
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
-        textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        textScaler: MediaQuery.textScalerOf(
+          context,
+        ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
       ),
       child: Scaffold(
         backgroundColor: _kBackgroundColor,
@@ -42,8 +32,10 @@ class OrderListScreen extends StatelessWidget {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Get.back(),
           ),
-          title: const Text('รายการสั่งของ',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+          title: const Text(
+            'รายการสั่งของ',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+          ),
           centerTitle: true,
           backgroundColor: _kBackgroundColor,
           elevation: 0,
@@ -54,14 +46,19 @@ class OrderListScreen extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 if (controller.orderItems.isEmpty) {
-                  return const Center(child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'));
+                  return const Center(
+                    child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'),
+                  );
                 }
                 final items = controller.visibleItems;
                 if (items.isEmpty) {
                   return const Center(child: Text('ไม่พบสินค้าที่ค้นหา'));
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 4.0,
+                  ),
                   itemCount: items.length,
                   itemBuilder: (context, index) =>
                       _buildOrderItemCard(items[index], controller),
@@ -108,7 +105,10 @@ class OrderListScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                  ),
                 ],
               ),
               child: TextField(
@@ -116,8 +116,15 @@ class OrderListScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'ค้นหาในรายการที่เลือกไว้...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: Colors.grey,
+                  ),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -135,7 +142,8 @@ class OrderListScreen extends StatelessWidget {
       final isNoteOpen = controller.notesExpanded.contains(item.id);
       final hasNote = item.noteController.text.isNotEmpty;
       final isUnitEditing = controller.unitsEditing.contains(item.id);
-      final isNameEditing = item.isCustom && controller.namesEditing.contains(item.id);
+      final isNameEditing =
+          item.isCustom && controller.namesEditing.contains(item.id);
 
       return Container(
         margin: const EdgeInsets.only(bottom: 10.0),
@@ -143,14 +151,18 @@ class OrderListScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.0),
-          // สินค้า custom มีขอบซ้ายสีเขียวอ่อนเพื่อแยกแยะจากสินค้าปกติ
+
           border: item.isCustom
               ? Border(
                   left: BorderSide(color: const Color(0xFF43A047), width: 3),
                 )
               : null,
           boxShadow: [
-            BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 1)),
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
           ],
         ),
         child: Column(
@@ -168,7 +180,11 @@ class OrderListScreen extends StatelessWidget {
                           color: const Color(0xFFE8F5E9),
                           borderRadius: BorderRadius.circular(7),
                         ),
-                        child: const Icon(Icons.add_box_outlined, size: 18, color: Color(0xFF43A047)),
+                        child: const Icon(
+                          Icons.add_box_outlined,
+                          size: 18,
+                          color: Color(0xFF43A047),
+                        ),
                       )
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(7),
@@ -181,7 +197,11 @@ class OrderListScreen extends StatelessWidget {
                             width: 34,
                             height: 34,
                             color: Colors.grey.shade100,
-                            child: const Icon(Icons.image_not_supported, size: 16, color: Colors.grey),
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
                       ),
@@ -195,8 +215,12 @@ class OrderListScreen extends StatelessWidget {
                             controller: item.nameController,
                             autofocus: true,
                             maxLines: 1,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                            onSubmitted: (_) => controller.toggleNameEdit(item.id),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            onSubmitted: (_) =>
+                                controller.toggleNameEdit(item.id),
                             decoration: const InputDecoration(
                               isDense: true,
                               contentPadding: EdgeInsets.symmetric(vertical: 4),
@@ -205,7 +229,10 @@ class OrderListScreen extends StatelessWidget {
                           )
                         : Text(
                             item.displayName,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -244,15 +271,25 @@ class OrderListScreen extends StatelessWidget {
                 children: [
                   const Text(
                     'จำนวน',
-                    style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
+                  _buildQtyBtn(
+                    Icons.remove,
+                    () => controller.updateQuantity(item, -1),
+                  ),
                   _buildQtyField(
                     item.quantityController,
                     (v) => controller.onQuantityTyped(item, v),
                   ),
-                  _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
+                  _buildQtyBtn(
+                    Icons.add,
+                    () => controller.updateQuantity(item, 1),
+                  ),
                   const SizedBox(width: 10),
                   SizedBox(
                     width: 60,
@@ -261,8 +298,12 @@ class OrderListScreen extends StatelessWidget {
                             controller: item.unitController,
                             autofocus: true,
                             maxLines: 1,
-                            style: const TextStyle(fontSize: 12, color: Color.fromARGB(228, 22, 22, 22)),
-                            onSubmitted: (_) => controller.toggleUnitEdit(item.id),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color.fromARGB(228, 22, 22, 22),
+                            ),
+                            onSubmitted: (_) =>
+                                controller.toggleUnitEdit(item.id),
                             decoration: const InputDecoration(
                               isDense: true,
                               contentPadding: EdgeInsets.symmetric(vertical: 4),
@@ -274,7 +315,10 @@ class OrderListScreen extends StatelessWidget {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               item.unitController.text,
-                              style: const TextStyle(fontSize: 12, color: Color.fromARGB(228, 22, 22, 22)),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color.fromARGB(228, 22, 22, 22),
+                              ),
                               maxLines: 1,
                             ),
                           ),
@@ -302,12 +346,21 @@ class OrderListScreen extends StatelessWidget {
                         style: const TextStyle(fontSize: 12),
                         decoration: InputDecoration(
                           hintText: 'เพิ่มหมายเหตุ (ถ้ามี)',
-                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                          hintStyle: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade400,
+                          ),
                           filled: true,
                           fillColor: Colors.grey.shade100,
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 9,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
                     ),
@@ -323,20 +376,22 @@ class OrderListScreen extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: Container(
-        width: 27, height: 27,
+        width: 27,
+        height: 27,
         margin: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(color: _kPrimaryColor, borderRadius: BorderRadius.circular(7)),
+        decoration: BoxDecoration(
+          color: _kPrimaryColor,
+          borderRadius: BorderRadius.circular(7),
+        ),
         child: Icon(icon, color: Colors.white, size: 14),
       ),
     );
   }
 
   Widget _buildQtyField(TextEditingController ctrl, Function(String) onChange) {
-    // วาดกรอบ/พื้นหลังเองด้วย Container (แบบเดียวกับ _buildQtyBtn) แทนการพึ่ง
-    // border ของ InputDecoration เพราะตอนใช้ isCollapsed:true มันจะไม่วาด
-    // fillColor/border ให้ ทำให้กรอบหายไปเหลือแต่ตัวเลขลอยๆ
     return Container(
-      width: 30, height: 27,
+      width: 30,
+      height: 27,
       margin: const EdgeInsets.symmetric(horizontal: 2),
       decoration: BoxDecoration(
         color: _kInputFillColor,
@@ -376,7 +431,8 @@ class OrderListScreen extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: 28, height: 28,
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(
             color: active ? color.withOpacity(0.22) : bgColor,
             shape: BoxShape.circle,
@@ -390,7 +446,16 @@ class OrderListScreen extends StatelessWidget {
   Widget _buildBottomActionArea(OrderListController controller) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, -3))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -410,19 +475,23 @@ class OrderListScreen extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () {
-                    // หน้านี้ (order_list) ถูกเปิดมาจากหน้า buy_products เสมอ
-                    // (Get.to จาก buy_products.dart) ดังนั้นหน้า buy_products
-                    // เดิมยังค้างอยู่ใต้ stack พอดี แค่ Get.back() กลับไปหาของเดิม
-                    // ก็พอ ไม่ต้อง Get.to() push หน้าใหม่ซ้อนขึ้นไปอีก เพราะจะทำให้
-                    // stack โตขึ้นเรื่อยๆ ทุกครั้งที่สลับไปมาระหว่างสองหน้านี้ และ
-                    // กดปุ่มย้อนกลับกี่ทีก็ไม่ถึงหน้า homepage สักที
-                    Get.back();
-                  }),
+                  child: _buildBigButton(
+                    'เพิ่มรายการสินค้า',
+                    Icons.add,
+                    _kPrimaryColor,
+                    () {
+                      Get.back();
+                    },
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
+                  child: _buildBigButton(
+                    'ส่งออกเป็น PDF',
+                    Icons.picture_as_pdf,
+                    _kSecondaryButtonColor,
+                    () => controller.exportToPdf(),
+                  ),
                 ),
               ],
             ),
@@ -432,7 +501,12 @@ class OrderListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBigButton(String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildBigButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return SizedBox(
       height: 55,
       child: ElevatedButton.icon(
@@ -440,13 +514,19 @@ class OrderListScreen extends StatelessWidget {
         icon: Icon(icon, color: Colors.white, size: 20),
         label: Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
     );
@@ -505,7 +585,10 @@ class OrderListScreen extends StatelessWidget {
                     borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
               ),
               const SizedBox(height: 14),
@@ -523,7 +606,10 @@ class OrderListScreen extends StatelessWidget {
                     borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
