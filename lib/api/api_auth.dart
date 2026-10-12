@@ -15,8 +15,6 @@ import 'package:eazy_store/model/request/login_request.dart';
 import 'package:eazy_store/model/response/login_response.dart';
 
 class ApiAuth {
-  // ฟังก์ชัน Login
-  // ฟังก์ชัน Login ที่ปรับปรุงให้รองรับการดึง Email เมื่อยังไม่ได้ยืนยันตัวตน
   static Future<LoginResponse> login(LoginRequest request) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/auth/login');
 
@@ -27,23 +25,18 @@ class ApiAuth {
         body: jsonEncode(request.toJson()),
       );
 
-      // แสดงข้อมูลเพื่อตรวจสอบใน Console
       print("Status Code: ${response.statusCode}");
       print("Body: ${response.body}");
 
       final Map<String, dynamic> responseData = jsonDecode(response.body);
 
-      // --- ส่วนที่ปรับปรุง ---
-      // เราจะใช้ factory ในการจัดการข้อมูลเป็นหลัก เพราะมันถูกออกแบบมาให้รับได้ทั้งผลสำเร็จและ error
       if (response.statusCode == 200 ||
           response.statusCode == 403 ||
           response.statusCode == 401) {
-        // กรณีสำเร็จ (200) หรือ พลาดแบบมีข้อมูล (401, 403) ให้ factory เป็นตัว Map ข้อมูล
         return LoginResponse.fromJson(responseData);
       } else {
-        // กรณีอื่นๆ เช่น 500 (Server Error)
         return LoginResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error:
               responseData['error'] ??
               "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุจากเซิร์ฟเวอร์",
@@ -52,15 +45,14 @@ class ApiAuth {
     } catch (e) {
       // กรณีเชื่อมต่อไม่ได้ (เน็ตหลุด, Server ปิด)
       return LoginResponse(
-        message: "Error",
-        error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: $e",
+        message: "ผิดพลาด",
+        error:
+            "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
 
-
   static Future<RegisterResponse> register(RegisterRequest request) async {
-   
     final url = Uri.parse('${AppConfig.baseUrl}/api/auth/register');
 
     try {
@@ -76,18 +68,18 @@ class ApiAuth {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-       
         return RegisterResponse.fromJson(responseData);
       } else {
         return RegisterResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์",
         );
       }
     } catch (e) {
       return RegisterResponse(
-        message: "Error",
-        error: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: $e",
+        message: "ผิดพลาด",
+        error:
+            "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
@@ -109,12 +101,15 @@ class ApiAuth {
         return ResetResponse.fromJson(responseData);
       } else {
         return ResetResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "ไม่สามารถส่งคำขอได้",
         );
       }
     } catch (e) {
-      return ResetResponse(message: "Error", error: "การเชื่อมต่อขัดข้อง: $e");
+      return ResetResponse(
+        message: "ผิดพลาด",
+        error: "การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      );
     }
   }
 
@@ -134,14 +129,14 @@ class ApiAuth {
         return VerifyOtpResponse.fromJson(responseData);
       } else {
         return VerifyOtpResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "รหัส OTP ไม่ถูกต้อง",
         );
       }
     } catch (e) {
       return VerifyOtpResponse(
-        message: "Error",
-        error: "การเชื่อมต่อขัดข้อง: $e",
+        message: "ผิดพลาด",
+        error: "การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
@@ -164,21 +159,18 @@ class ApiAuth {
         return UpdatePasswordResponse.fromJson(responseData);
       } else {
         return UpdatePasswordResponse(
-          message: "Error",
+          message: "ผิดพลาด",
           error: responseData['error'] ?? "ไม่สามารถเปลี่ยนรหัสผ่านได้",
         );
       }
     } catch (e) {
       return UpdatePasswordResponse(
-        message: "Error",
-        error: "การเชื่อมต่อขัดข้อง: $e",
+        message: "ผิดพลาด",
+        error: "การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
       );
     }
   }
 
-  // เพิ่มในคลาส ApiService
-
-  // เพิ่มในคลาส ApiService
   static Future<RegisterResponse> verifyRegistration(
     VerifyRegistrationRequest request,
   ) async {
@@ -192,7 +184,9 @@ class ApiAuth {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
       return RegisterResponse.fromJson(responseData);
     } catch (e) {
-      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ: $e");
+      return RegisterResponse(
+        error: "เชื่อมต่อไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      );
     }
   }
 
@@ -209,7 +203,9 @@ class ApiAuth {
       final Map<String, dynamic> responseData = jsonDecode(response.body);
       return RegisterResponse.fromJson(responseData);
     } catch (e) {
-      return RegisterResponse(error: "เชื่อมต่อไม่สำเร็จ: $e");
+      return RegisterResponse(
+        error: "เชื่อมต่อไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      );
     }
   }
 }

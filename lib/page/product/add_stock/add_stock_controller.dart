@@ -6,6 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class AddStockController extends GetxController {
+  // ถ้าเปิดหน้านี้มาจากหน้าอื่นที่รู้อยู่แล้วว่าจะเพิ่มสต็อกสินค้าตัวไหน
+  // (เช่น กด "เพิ่มสต็อก" จากหน้าแก้ไขสินค้า) จะเลือกสินค้าตัวนี้ให้ทันทีที่เปิดหน้า
+  // แทนที่จะให้ผู้ใช้ต้องพิมพ์ค้นหาสินค้าตัวเดิมซ้ำอีกรอบ
+  final ProductResponse? initialProduct;
+  AddStockController({this.initialProduct});
+
   // ---------------- State Variables ----------------
   var selectedIndex = 1.obs; // เมนู Stock ลำดับที่ 1
   var isSearching = false.obs;
@@ -19,6 +25,8 @@ class AddStockController extends GetxController {
   // แทนการเดาให้ ป้องกันเพิ่มสต็อกผิดสินค้า)
   var searchMatches = <ProductResponse>[].obs;
   var showDropdown = false.obs;
+  // ค้นหาแล้วไม่เจอสินค้าเลย (แยกจากสถานะยังไม่ได้พิมพ์ค้นหา)
+  var noResults = false.obs;
 
   // ส่วนแก้ไขราคา พับเก็บไว้ก่อนเพราะไม่ใช่สิ่งที่ทำทุกครั้งที่เพิ่มสต็อก
   var isPriceEditExpanded = false.obs;
@@ -58,6 +66,10 @@ class AddStockController extends GetxController {
         calculatedTotal.value = current + add * conv;
       }
     });
+
+    if (initialProduct != null) {
+      selectProduct(initialProduct!);
+    }
   }
 
   @override
@@ -79,6 +91,12 @@ class AddStockController extends GetxController {
   void onSearchChanged(String query) {
     if (_suppressSearch) {
       _suppressSearch = false;
+      return;
+    }
+    // ✨ ถ้าเลือกสินค้าอยู่แล้วและข้อความยังตรงกับชื่อสินค้านั้น ไม่ต้องค้นหาซ้ำ
+    // (กัน TextEditingController ยิง listener ซ้ำตอน set .text ใน selectProduct
+    // จนเผลอค้นหาด้วยชื่อ ทำให้หาไม่เจอ exact match แล้วเด้งกลับไปเป็นหน้าเลือกสินค้า)
+    if (foundProduct.value != null && query == foundProduct.value!.name) {
       return;
     }
     if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -103,6 +121,7 @@ class AddStockController extends GetxController {
     }
 
     isSearching.value = true;
+    noResults.value = false;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
@@ -148,6 +167,7 @@ class AddStockController extends GetxController {
       } else if (activeList.isEmpty) {
         foundProduct.value = null;
         showDropdown.value = false;
+        noResults.value = true;
       } else {
         // เจอ 1 ตัวหรือหลายตัวจากชื่อ ให้ผู้ใช้กดเลือกเองจาก dropdown เสมอ
         foundProduct.value = null;
@@ -162,8 +182,11 @@ class AddStockController extends GetxController {
 
   // ✅ เลือกสินค้าจาก dropdown (หรือจากการสแกนที่ตรงแบบเป๊ะๆ)
   void selectProduct(ProductResponse match) {
+    // ✨ ยกเลิก timer ค้นหาที่ค้างอยู่ กันไม่ให้ยิงค้นหาซ้ำหลังเลือกสินค้าแล้ว
+    _debounce?.cancel();
     foundProduct.value = match;
     showDropdown.value = false;
+    noResults.value = false;
     isPriceEditExpanded.value = false;
 
     _suppressSearch = true;
@@ -253,6 +276,7 @@ class AddStockController extends GetxController {
     foundProduct.value = null;
     searchMatches.clear();
     showDropdown.value = false;
+    noResults.value = false;
     isPriceEditExpanded.value = false;
     selectedRestockUnit.value = null;
     nameController.clear();
@@ -342,6 +366,7 @@ class AddStockController extends GetxController {
             final idx = foundProduct.value!.units
                 .indexWhere((u) => u.productUnitId == updated.productUnitId);
             if (idx != -1) foundProduct.value!.units[idx] = updated;
+            foundProduct.refresh();
           } else {
             priceOk = false;
           }
@@ -351,9 +376,13 @@ class AddStockController extends GetxController {
             {"sell_price": newSell, "cost_price": newCost},
           );
 
-          if (result != null) {
+          if (result['success'] == true) {
             salePriceController.text = newSell.toStringAsFixed(2);
             costController.text = newCost.toStringAsFixed(2);
+            // การ์ดราคาอ่านค่าจาก TextEditingController ตรงๆ ภายใต้ Obx ที่ผูกกับ
+            // foundProduct เท่านั้น การแก้ .text เฉยๆ ไม่ทำให้ Obx รีบิลด์
+            // ต้องสั่ง refresh() เพื่อบังคับให้จอแสดงราคาใหม่ทันที
+            foundProduct.refresh();
           } else {
             priceOk = false;
           }
@@ -403,43 +432,14 @@ class AddStockController extends GetxController {
         );
       }
     } catch (e) {
-      Get.snackbar("Error", "เกิดข้อผิดพลาด: $e", backgroundColor: Colors.red);
-    } finally {
-      isSavingPrice.value = false;
-    }
-  }
-
-  // 💾 เก็บไว้ใช้ใน Dialog ยืนยัน
-  Future<void> executeSave(int amount) async {
-    Get.dialog(
-      const Center(child: CircularProgressIndicator()),
-      barrierDismissible: false,
-    );
-
-    bool success = await ApiProduct.updateStock(
-      foundProduct.value!.productId!,
-      amount,
-    );
-
-    Get.back(); // Hide Loading
-
-    if (success) {
       Get.snackbar(
-        "สำเร็จ",
-        "เพิ่มสต็อกเรียบร้อยแล้ว",
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-      handleClear();
-
-      searchController.clear();
-    } else {
-      Get.snackbar(
-        "ผิดพลาด",
-        "บันทึกไม่สำเร็จ กรุณาลองใหม่",
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+    } finally {
+      isSavingPrice.value = false;
     }
   }
 }

@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../widgets/image_picker_sheet.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 // แถวฟอร์มของหน่วยขายเพิ่มเติม 1 หน่วย (เช่น "ลัง = 12 ขวด")
 class UnitFormEntry {
@@ -109,12 +110,22 @@ class AddProductController extends GetxController {
   }
 
   Future<void> pickImage(ImageSource source) async {
-    final pickedFile = await _picker.pickImage(
-      source: source,
-      imageQuality: 80,
-    );
-    if (pickedFile != null) {
-      imageFile.value = File(pickedFile.path);
+    try {
+      final pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
+        imageFile.value = File(pickedFile.path);
+      }
+    } catch (e) {
+      print("Error picking image: $e");
+      Get.snackbar(
+        "ผิดพลาด",
+        "ไม่สามารถเลือกรูปภาพได้ กรุณาลองใหม่อีกครั้ง",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -136,6 +147,16 @@ class AddProductController extends GetxController {
       Get.snackbar(
         "แจ้งเตือน",
         "กรุณากรอกข้อมูลให้ครบถ้วน",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+    if ((double.tryParse(costController.text) ?? 0) <= 0 ||
+        (double.tryParse(salePriceController.text) ?? 0) <= 0) {
+      Get.snackbar(
+        "แจ้งเตือน",
+        "กรุณากรอกราคาทุนและราคาขายให้มากกว่า 0",
         backgroundColor: Colors.orange,
         colorText: Colors.white,
       );
@@ -190,7 +211,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "เกิดข้อผิดพลาด: $e",
+        friendlyError(e, fallback: "ไม่สามารถบันทึกสินค้าได้ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
       );
@@ -382,7 +403,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "เพิ่มหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "เพิ่มหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -431,7 +452,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "แก้ไขหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "แก้ไขหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -483,7 +504,7 @@ class AddProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        "ปิดใช้งานหมวดหมู่ไม่สำเร็จ: $e",
+        friendlyError(e, fallback: "ปิดใช้งานหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

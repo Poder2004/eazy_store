@@ -20,6 +20,17 @@ class OrderItem {
   // เริ่มต้นจาก `unit` เดิม แต่ผู้ใช้พิมพ์ทับได้ เช่นเปลี่ยน "คู่" เป็น "1 โหล"
   final TextEditingController unitController;
 
+  // จำนวนล่าสุดที่ยังถูกต้อง (>0) ไว้ใช้คืนค่าตอนกดยกเลิกลบ เพราะพอผู้ใช้พิมพ์
+  // เลขในช่องจนกลายเป็น "0" ไปแล้ว ตัว TextField เองจะอัปเดต .text ไปก่อน
+  // ที่ onChanged จะทำงาน ทำให้อ่าน .text ตอนนั้นไม่ได้ค่าเดิมที่แท้จริงอีกต่อไป
+  String lastValidQuantity;
+
+  // true = สินค้ากำหนดเอง (ไม่มีในคลังร้าน) / false = สินค้าจากคลังร้าน
+  final bool isCustom;
+
+  // Controller สำหรับแก้ไขชื่อสินค้า custom (สินค้าจากคลังไม่ต้องแก้ชื่อ)
+  final TextEditingController? nameController;
+
   OrderItem({
     required this.id,
     required this.name,
@@ -27,17 +38,24 @@ class OrderItem {
     required this.imageUrl,
     required int initialQuantity,
     String initialNote = '',
+    this.isCustom = false,
   }) : quantityController = TextEditingController(
          text: initialQuantity.toString(),
        ),
        noteController = TextEditingController(text: initialNote),
-       unitController = TextEditingController(text: unit);
+       unitController = TextEditingController(text: unit),
+       lastValidQuantity = initialQuantity.toString(),
+       nameController = isCustom ? TextEditingController(text: name) : null;
+
+  /// ชื่อที่ใช้แสดงผลจริง — ถ้าเป็น custom จะอ่านจาก nameController (แก้ไขได้)
+  String get displayName => nameController?.text ?? name;
 
   // สั่งปิดการทำงานของ Controller เมื่อไม่ได้ใช้
   void dispose() {
     quantityController.dispose();
     noteController.dispose();
     unitController.dispose();
+    nameController?.dispose();
   }
 }
 
@@ -91,31 +109,48 @@ class OrderListController extends GetxController {
     super.onClose();
   }
 
+  // เรียกทุกครั้งที่กลับมาที่หน้านี้ (ไม่ใช่แค่ตอนสร้าง controller ครั้งแรก)
+  // เพื่อให้ orderItems ตรงกับสินค้าที่ติ๊กเลือกไว้ในหน้า buy_products เสมอ
+  // - ลบรายการที่ถูกเลือก/ลบออกไปแล้วในหน้า buy_products
+  // - เพิ่มรายการที่เพิ่งถูกเลือกใหม่
+  // - คงจำนวน/หมายเหตุของรายการเดิมที่ยังเลือกอยู่ไว้ ไม่รีเซ็ตทับ
   void loadItemsFromBuyPage() {
     try {
       final buyController = Get.find<BuyProductsController>();
-      var selectedFromBuyPage = buyController.selectedProducts;
+      final selectedFromBuyPage = buyController.selectedProducts;
+      final selectedIds = selectedFromBuyPage
+          .map((p) => p.productId.toString())
+          .toSet();
 
-      if (selectedFromBuyPage.isNotEmpty) {
-        orderItems.value = selectedFromBuyPage.map((item) {
-          return OrderItem(
-            id: item.productId.toString(),
-            name: item.name ?? 'ไม่มีชื่อสินค้า',
-            // สั่งของมักมาเป็นหน่วยใหญ่ (เช่น ลัง) ถ้าสินค้านี้มีหน่วยขายเพิ่มเติม
-            // ให้ใช้เป็นค่าเริ่มต้นแทนหน่วยฐาน (ผู้ใช้ยังพิมพ์ทับเองได้เหมือนเดิม)
-            unit: item.largestUnit?.unitName ?? item.unit ?? 'ชิ้น',
-            imageUrl: item.imgProduct ?? '',
-            initialQuantity: 1,
-          );
-        }).toList();
+      // ⚠️ ข้ามสินค้า custom ตอน sync — เพราะสินค้า custom ไม่มีใน buyPage
+      final noLongerSelected = orderItems
+          .where((item) => !item.isCustom && !selectedIds.contains(item.id))
+          .toList();
+      for (final item in noLongerSelected) {
+        item.dispose();
       }
+      orderItems.removeWhere((item) => !item.isCustom && !selectedIds.contains(item.id));
+
+      final existingIds = orderItems.map((item) => item.id).toSet();
+      final newItems = selectedFromBuyPage
+          .where((p) => !existingIds.contains(p.productId.toString()))
+          .map(
+            (item) => OrderItem(
+              id: item.productId.toString(),
+              name: item.name,
+              unit: item.largestUnit?.unitName ?? item.unit,
+              imageUrl: item.imgProduct,
+              initialQuantity: 1,
+            ),
+          );
+      orderItems.addAll(newItems);
     } catch (e) {
       debugPrint("Error: $e");
     }
   }
 
   // 🔥 ฟังก์ชันสำหรับ Export PDF ที่เพิ่มเข้าไป
-  Future<void> exportToPdf() async {
+  void exportToPdf() {
     if (orderItems.isEmpty) {
       Get.snackbar(
         "แจ้งเตือน",
@@ -126,6 +161,151 @@ class OrderListController extends GetxController {
       return;
     }
 
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF5390F2).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Color(0xFF5390F2),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "ยืนยันส่งออก PDF",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "รายการสินค้า ${orderItems.length} รายการที่จะส่งออก",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Scrollbar(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      itemCount: orderItems.length,
+                      separatorBuilder: (context, index) =>
+                          Divider(height: 1, color: Colors.grey.shade200),
+                      itemBuilder: (context, index) {
+                        final item = orderItems[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: Color(0xFF6B8E23),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  item.displayName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "${item.quantityController.text} ${item.unitController.text}",
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        "ยกเลิก",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        _performExport();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5390F2),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        "ส่งออก PDF",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _performExport() async {
     try {
       // 1. แสดง Loading
       Get.dialog(
@@ -139,7 +319,7 @@ class OrderListController extends GetxController {
       if (shopId == 0) {
         Get.back();
         Get.snackbar(
-          "Error",
+          "เกิดข้อผิดพลาด",
           "ไม่พบข้อมูลร้านค้า กรุณาล็อกอินหรือเลือกใช้งานร้านค้าใหม่อีกครั้ง",
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -147,13 +327,13 @@ class OrderListController extends GetxController {
         return;
       }
 
-      // 2. เตรียมข้อมูลส่งไป Backend
+      // 2. เตรียมข้อมูลส่งไป Backend — ใช้ displayName เพื่อรองรับสินค้า custom ที่แก้ชื่อได้
       final Map<String, dynamic> requestData = {
         "shop_id": shopId, // ส่งแค่ ID ไปตัวเดียว
         "items": orderItems
             .map(
               (item) => {
-                "name": item.name,
+                "name": item.displayName,
                 "quantity": int.tryParse(item.quantityController.text) ?? 0,
                 "unit": item.unitController.text,
                 "note": item.noteController.text,
@@ -171,8 +351,11 @@ class OrderListController extends GetxController {
 
       if (bytes != null && bytes.isNotEmpty) {
         final directory = await getApplicationDocumentsDirectory();
-        final String filePath =
-            '${directory.path}/order_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        final now = DateTime.now();
+        final dateStr = '${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}';
+        final shopName = prefs.getString('shopName') ?? 'shop';
+        final cleanShopName = shopName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final String filePath = '${directory.path}/${dateStr}-$cleanShopName.pdf';
         final file = File(filePath);
 
         // เขียนข้อมูลลงไฟล์และรอให้เสร็จจริงๆ
@@ -180,7 +363,12 @@ class OrderListController extends GetxController {
 
         // ตรวจสอบขนาดไฟล์ ถ้าขนาดไฟล์ < 100 bytes แสดงว่าข้อมูลที่ส่งมาผิดปกติ
         if (await file.length() < 100) {
-          Get.snackbar("Error", "ไฟล์ PDF ไม่สมบูรณ์");
+          Get.snackbar(
+            "เกิดข้อผิดพลาด",
+            "ไฟล์ PDF ไม่สมบูรณ์ กรุณาลองใหม่อีกครั้ง",
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
           return;
         }
 
@@ -188,7 +376,7 @@ class OrderListController extends GetxController {
         await OpenFile.open(filePath);
       } else {
         Get.snackbar(
-          "Error",
+          "เกิดข้อผิดพลาด",
           "เซิร์ฟเวอร์ขัดข้อง ไม่สามารถสร้าง PDF ได้",
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -198,8 +386,8 @@ class OrderListController extends GetxController {
       Get.back();
       debugPrint("Export PDF Error: $e");
       Get.snackbar(
-        "Error",
-        "เกิดข้อผิดพลาด: $e",
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถสร้างไฟล์ PDF ได้ กรุณาลองใหม่อีกครั้ง",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -213,31 +401,86 @@ class OrderListController extends GetxController {
       showDeleteConfirmation(item, isFromButton: true);
     } else {
       item.quantityController.text = newQuantity.toString();
+      item.lastValidQuantity = newQuantity.toString();
+    }
+  }
+
+  // เรียกจากช่องกรอกจำนวนตอนพิมพ์เอง (ต่างจาก updateQuantity ที่มาจากปุ่ม +/-)
+  void onQuantityTyped(OrderItem item, String value) {
+    if (value.isEmpty || value == '0') {
+      showDeleteConfirmation(item);
+    } else if ((int.tryParse(value) ?? 0) > 0) {
+      item.lastValidQuantity = value;
     }
   }
 
   void removeItem(String id) {
     // อย่าลืม dispose controller ของไอเทมที่ถูกลบด้วย
     final item = orderItems.firstWhere((element) => element.id == id);
+    final wasCustom = item.isCustom;
     item.dispose();
     orderItems.removeWhere((element) => element.id == id);
+
+    // ⚠️ สินค้า custom ไม่มีใน buyPage ไม่ต้อง unselect
+    if (wasCustom) return;
+
+    // ยกเลิกติ๊กเลือกสินค้าตัวนี้ในหน้า buy_products ด้วย ไม่งั้นพอกลับไปหน้า
+    // เลือกสินค้าหรือกดเพิ่มรายการ จะยังเห็นสินค้าที่ลบไปแล้วติ๊กเลือกค้างอยู่
+    try {
+      final buyController = Get.find<BuyProductsController>();
+      for (final p in buyController.allProducts) {
+        if (p.productId.toString() == id) {
+          p.isSelected = false;
+        }
+      }
+      buyController.allProducts.refresh();
+      buyController.products.refresh();
+    } catch (e) {
+      debugPrint("Error unselecting product: $e");
+    }
   }
 
   void showDeleteConfirmation(OrderItem item, {bool isFromButton = false}) {
-    String originalQuantity = item.quantityController.text;
     ConfirmDialog.show(
       title: 'ลบรายการสินค้า',
-      message: 'คุณต้องการลบ "${item.name}" ออกหรือไม่?',
+      message: 'คุณต้องการลบ "${item.displayName}" ออกหรือไม่?',
       confirmLabel: 'ลบ',
       onCancel: () {
         if (isFromButton ||
             (int.tryParse(item.quantityController.text) ?? 0) <= 0) {
-          item.quantityController.text = (originalQuantity == '0' || originalQuantity.trim().isEmpty)
-              ? '1'
-              : originalQuantity;
+          // ใช้ lastValidQuantity แทนการอ่าน .text ตอนนี้ตรงๆ เพราะถ้ามาจาก
+          // การพิมพ์ในช่อง .text จะถูกอัปเดตเป็นค่าใหม่ (เช่น "0") ไปแล้วก่อนหน้านี้
+          item.quantityController.text = item.lastValidQuantity;
         }
       },
       onConfirm: () => removeItem(item.id),
     );
+  }
+
+  // --- สินค้ากำหนดเอง (Custom Item) ---
+
+  /// เพิ่มสินค้ากำหนดเองเข้ารายการสั่งของ
+  void addCustomItem(String name, String unit) {
+    final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+    final item = OrderItem(
+      id: id,
+      name: name,
+      unit: unit.isEmpty ? 'ชิ้น' : unit,
+      imageUrl: '',
+      initialQuantity: 1,
+      isCustom: true,
+    );
+    orderItems.add(item);
+  }
+
+  // รายการที่กำลังแก้ไข "ชื่อ" ของสินค้า custom อยู่
+  var namesEditing = <String>{}.obs;
+
+  void toggleNameEdit(String id) {
+    if (namesEditing.contains(id)) {
+      namesEditing.remove(id);
+    } else {
+      namesEditing.add(id);
+    }
   }
 }

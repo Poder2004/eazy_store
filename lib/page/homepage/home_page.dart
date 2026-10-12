@@ -1,30 +1,17 @@
 import 'package:eazy_store/page/homepage/home_controller.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
-import 'package:eazy_store/page/product/add_product/add_product_controller.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
-import 'package:eazy_store/page/product/add_stock/add_stock_controller.dart';
 import 'package:eazy_store/page/product/checkStock/check_stock.dart';
-import 'package:eazy_store/page/product/checkStock/check_stock_controller.dart';
 import 'package:eazy_store/page/product/check_price/check_price.dart';
-import 'package:eazy_store/page/product/check_price/check_price_controller.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart' show SalesAccountScreen;
-import 'package:eazy_store/page/my_blank/sales_account_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
-import 'package:eazy_store/page/order_products/buyProducts/buy_products_controller.dart';
+import 'package:eazy_store/widgets/money_flow.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
-// เปิดหน้าปลายทางแบบ "ข้อมูลสดเสมอ" — ลบ controller เก่าทิ้งก่อน (ถ้ามีค้างจากที่เคย
-// เข้าหน้านี้มาก่อน) เพื่อให้ Get.put ในหน้าปลายทางได้ instance ใหม่จริงๆ และ onInit()
-// (จุดที่ fetch ข้อมูล) ทำงานทุกครั้งที่กดเมนู ไม่ต้องดึงจอลง refresh เอง
-void _freshNav<T>(Widget Function() page) {
-  if (Get.isRegistered<T>()) Get.delete<T>();
-  Get.to(page);
-}
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -74,46 +61,36 @@ class HomePage extends StatelessWidget {
                         icon: Icons.add_circle_outline,
                         iconColor: iconColor,
                         title: "เพิ่มสินค้า",
-                        subtitle: "สร้างรายการสินค้าใหม่สำหรับร้านนี้",
-                        onTap: () => _freshNav<AddProductController>(
-                          () => const AddProductScreen(),
-                        ),
+                        subtitle: "สร้างรายการสินค้าใหม่",
+                        onTap: () => Get.to(() => const AddProductScreen()),
                       ),
                       _buildMenuTile(
                         icon: Icons.inventory_2_outlined,
                         iconColor: Colors.blue.shade600,
                         title: "เพิ่มสต็อกสินค้า",
                         subtitle: "เติมจำนวนสินค้าในคลัง",
-                        onTap: () => _freshNav<AddStockController>(
-                          () => const AddStockScreen(),
-                        ),
+                        onTap: () => Get.to(() => const AddStockScreen()),
                       ),
                       _buildMenuTile(
                         icon: Icons.local_offer_outlined,
                         iconColor: Colors.orange.shade600,
                         title: "เช็คราคาสินค้า",
                         subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
-                        onTap: () => _freshNav<PriceController>(
-                          () => const CheckPriceScreen(),
-                        ),
+                        onTap: () => Get.to(() => const CheckPriceScreen()),
                       ),
                       _buildMenuTile(
                         icon: Icons.fact_check_outlined,
                         iconColor: Colors.purple.shade500,
                         title: "เช็คสต็อกสินค้า",
-                        subtitle: "ตรวจสอบยอดคงเหลือรายชิ้น",
-                        onTap: () => _freshNav<CheckStockController>(
-                          () => const CheckStockScreen(),
-                        ),
+                        subtitle: "ตรวจสอบยอดคงเหลือในคลัง",
+                        onTap: () => Get.to(() => const CheckStockScreen()),
                       ),
                       _buildMenuTile(
                         icon: Icons.receipt_long,
                         iconColor: Colors.teal.shade500,
                         title: "ทำใบสั่งสินค้า",
                         subtitle: "เลือกสินค้าและส่งออกเป็นไฟล์ PDF",
-                        onTap: () => _freshNav<BuyProductsController>(
-                          () => const BuyProductsScreen(),
-                        ),
+                        onTap: () => Get.to(() => const BuyProductsScreen()),
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -126,9 +103,7 @@ class HomePage extends StatelessWidget {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 0,
-        onTap: (index) {
-          controller.changeTab(index);
-        },
+        onTap: (_) {},
       ),
     );
   }
@@ -284,9 +259,7 @@ class HomePage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: GestureDetector(
-                  onTap: () => _freshNav<SalesAccountController>(
-                    () => const SalesAccountScreen(),
-                  ),
+                  onTap: () => Get.to(() => const SalesAccountScreen()),
                   child: _buildDailyReportCard(controller),
                 ),
               ),
@@ -348,13 +321,11 @@ class HomePage extends StatelessWidget {
                   () => FittedBox(
                     alignment: Alignment.centerLeft,
                     fit: BoxFit.scaleDown,
-                    child: Text(
-                      "฿ ${controller.formattedTotal}",
-                      style: const TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D2D2D),
-                      ),
+                    child: moneyFlow(
+                      controller.dailyTotal.value,
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2D2D2D),
                     ),
                   ),
                 ),
@@ -421,7 +392,7 @@ class HomePage extends StatelessWidget {
 
   Widget _buildSummaryItem({
     required String label,
-    required RxString value,
+    required RxDouble value,
     required Color color,
     required IconData icon,
   }) {
@@ -448,13 +419,11 @@ class HomePage extends StatelessWidget {
           Obx(
             () => FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(
-                "฿ ${value.value}",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
+              child: moneyFlow(
+                value.value,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
               ),
             ),
           ),
@@ -464,7 +433,6 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildScanToSellCard(BuildContext context) {
-    final HomeController homeController = Get.find<HomeController>();
     return InkWell(
       onTap: () async {
         var barcode = await Get.to(() => const ScanBarcodePage(showBookButton: true));
@@ -478,7 +446,6 @@ class HomePage extends StatelessWidget {
             await checkoutCtrl.checkShopAndLoadData();
             await checkoutCtrl.fetchFreshProducts();
             checkoutCtrl.addProductByBarcode(barcode);
-            homeController.changeTab(2);
           });
         }
       },

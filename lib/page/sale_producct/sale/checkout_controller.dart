@@ -3,6 +3,7 @@ import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/api/api_shop.dart';
 import 'package:eazy_store/api/api_sale.dart';
 import 'package:eazy_store/model/request/baskets_model.dart';
+import 'package:eazy_store/model/response/debtor_response.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/sales_model_request.dart';
 import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
@@ -11,8 +12,16 @@ import 'package:eazy_store/page/sale_producct/sale/park_order_controller.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/model/response/shop_response.dart';
+
+// แสดงราคาตามจริง ไม่ปัดเศษทิ้ง แต่ไม่บังคับ .00 ต่อท้ายถ้าเป็นจำนวนเต็ม
+String formatMoney(num value) => NumberFormat('#,##0.##').format(value);
+
+// เหมือน formatMoney แต่ไม่มี comma คั่นหลักพัน ใช้ตอน prefill ข้อความลงช่องแก้ไข
+// ที่ต้อง parse กลับเป็นตัวเลขตอนบันทึก (comma จะทำให้ double.tryParse() พังเงียบๆ)
+String formatMoneyPlain(num value) => NumberFormat('0.##').format(value);
 
 class CheckoutController extends GetxController {
   // 🛒 ตะกร้าสินค้า
@@ -21,13 +30,21 @@ class CheckoutController extends GetxController {
   // 🔍 คลังสินค้า
   var allProducts = <ProductResponse>[];
   var searchResults = <ProductResponse>[].obs;
+  // isSearching = มีคำค้นหาอยู่ในช่องไหม (คุมว่าจะโชว์หน้าค้นหาหรือหน้าตะกร้า)
+  // isSearchLoading = กำลังยิง request ค้นหาอยู่ไหม (คุมแค่ spinner)
+  // ต้องแยกกันเพราะเดิมใช้ตัวเดียวกัน พอค้นหาเสร็จ (ไม่ว่าจะเจอหรือไม่เจอ) จะถูกเซ็ตเป็น
+  // false ทันที ทำให้หน้าค้นหาหลุดกลับไปเป็นหน้าตะกร้าทั้งที่ยังมีคำค้นหาค้างอยู่ในช่อง
   var isSearching = false.obs;
+  var isSearchLoading = false.obs;
 
   // 💰 การชำระเงิน
   var isDebtMode = false.obs;
   var isProcessingPayment = false.obs;
   var paymentMethod = "จ่ายเงินสด".obs;
   final receivedAmountController = TextEditingController();
+
+  /// หน้า CheckoutPage เป็นคนกำหนดให้ ใช้เปิดแผ่นจ่ายเงินสดจากหน้าอื่น
+  void Function(BuildContext context)? openCashPaymentSheet;
   final noteController = TextEditingController();
   var changeAmount = 0.0.obs;
   var shopQrCodeUrl = "".obs;
@@ -86,6 +103,10 @@ class CheckoutController extends GetxController {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int currentShopId = prefs.getInt('shopId') ?? 0;
 
+    // ✅ ซิงค์ร้านปัจจุบันให้ ParkOrderController เสมอ (คอนโทรลเลอร์นี้เป็น permanent
+    // singleton อยู่ข้ามการสลับร้าน) กันออเดอร์ที่พักไว้ของร้านอื่นรั่วมาโชว์/กู้คืนข้ามร้าน
+    _parkCtrl.currentShopId.value = currentShopId;
+
     if (loadedShopId != currentShopId) {
       print(
         "♻️ ร้านค้าเปลี่ยน ($loadedShopId -> $currentShopId) กำลังรีเซ็ตข้อมูล...",
@@ -108,7 +129,7 @@ class CheckoutController extends GetxController {
   Future<List<ProductResponse>> _fetchProductsFromApi(int shopId) async {
     List<ProductResponse> allFetched = [];
     try {
-      var response = await ApiProduct.getProductsByShop(shopId);
+      var response = await ApiProduct.getProductsByShop(shopId, limit: 1000);
       List<ProductResponse> list = [];
       if (response is List<ProductResponse>) {
         list = response;
@@ -124,24 +145,32 @@ class CheckoutController extends GetxController {
       final nullBarcodeData = await ApiProduct.getNullBarcodeProducts(shopId);
       final List<ProductResponse> nullBarcodeList = nullBarcodeData.map((item) {
         return ProductResponse(
-          productId: int.tryParse(item['product_id']?.toString() ?? item['id']?.toString() ?? ""),
+          productId: int.tryParse(
+            item['product_id']?.toString() ?? item['id']?.toString() ?? "",
+          ),
           shopId: shopId,
           categoryId: int.tryParse(item['category_id']?.toString() ?? "") ?? 0,
           productCode: item['product_code']?.toString(),
           name: item['name'] ?? '',
           barcode: item['barcode']?.toString(),
           imgProduct: item['img_product'] ?? item['image'] ?? '',
-          sellPrice: double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
-          costPrice: double.tryParse(item['cost_price']?.toString() ?? "0") ?? 0.0,
+          sellPrice:
+              double.tryParse(item['sell_price']?.toString() ?? "0") ?? 0.0,
+          costPrice:
+              double.tryParse(item['cost_price']?.toString() ?? "0") ?? 0.0,
           stock: int.tryParse(item['stock']?.toString() ?? "") ?? 999,
           unit: item['unit'] ?? '',
-          status: item['status'] == true || item['status'] == 1 || item['status']?.toString().toLowerCase() == 'true',
+          status:
+              item['status'] == true ||
+              item['status'] == 1 ||
+              item['status']?.toString().toLowerCase() == 'true',
           categoryName: item['category_name']?.toString().trim(),
         );
       }).toList();
 
       for (var p in nullBarcodeList) {
-        if (p.status == true && !allFetched.any((existing) => existing.productId == p.productId)) {
+        if (p.status == true &&
+            !allFetched.any((existing) => existing.productId == p.productId)) {
           allFetched.add(p);
         }
       }
@@ -173,7 +202,9 @@ class CheckoutController extends GetxController {
     try {
       if (loadedShopId != null && loadedShopId != 0) {
         allProducts = await _fetchProductsFromApi(loadedShopId!);
-        print("✅ โหลดสินค้าสำเร็จทั้งหมด: ${allProducts.length} รายการ (รวมไม่มีบาร์โค้ด)");
+        print(
+          "✅ โหลดสินค้าสำเร็จทั้งหมด: ${allProducts.length} รายการ (รวมไม่มีบาร์โค้ด)",
+        );
       }
     } catch (e) {
       print("❌ Error loading products: $e");
@@ -187,36 +218,54 @@ class CheckoutController extends GetxController {
         // ✅ แนบ timestamp เพื่อล้างแคชรูปภาพเก่า (Prevent caching)
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final url = shop.imgQrcode;
-        shopQrCodeUrl.value = url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
+        shopQrCodeUrl.value =
+            url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
       }
     } catch (e) {
       print("Error loading shop data: $e");
     }
   }
 
+  // ป้องกัน race condition: ทุกครั้งที่พิมพ์จะยิง onSearchChanged ใหม่แบบ async
+  // ถ้าคำค้นหาเก่า (เช่น "a") ยิง API ช้ากว่าคำค้นหาใหม่ (เช่น "ab") ที่หาเจอจาก local
+  // cache แล้วเสร็จก่อน ผลลัพธ์เก่าที่มาทีหลังจะทับผลลัพธ์ใหม่ทำให้รายการที่เพิ่งขึ้น
+  // หายไปเฉยๆ (ยิ่งตะกร้าใหญ่ยิ่ง jank ทำให้พิมพ์ติดกันถี่ๆ จนโดนชนกันง่ายขึ้น)
+  // แก้โดยให้ทุก request มีเลขกำกับ (_searchRequestId) แล้วเช็คก่อน apply ผลทุกจุดว่า
+  // ยังเป็น request ล่าสุดอยู่ไหม ถ้าไม่ใช่ (มี request ใหม่กว่าแซงไปแล้ว) ก็ทิ้งผลนั้น
+  int _searchRequestId = 0;
+
   void onSearchChanged(String query) async {
     if (query.isEmpty) {
+      _searchRequestId++;
       isSearching.value = false;
+      isSearchLoading.value = false;
       searchResults.clear();
       return;
     }
 
+    final int requestId = ++_searchRequestId;
     isSearching.value = true;
+    isSearchLoading.value = true;
 
-    // 🔍 ค้นหาจาก local cache ก่อนเสมอ เพื่อแสดงผลหลายรายการทันที
-    final localMatches = allProducts.where((p) {
-      return p.name.toLowerCase().contains(query.toLowerCase()) ||
-          (p.barcode != null &&
-              p.barcode!.toLowerCase().contains(query.toLowerCase()));
-    }).toList();
-
-    if (localMatches.isNotEmpty) {
-      searchResults.assignAll(localMatches);
-      return;
-    }
-
-    // 🌐 ไม่พบใน local → fallback ไป API (เช่น สแกนบาร์โค้ดสินค้าใหม่)
+    // ✅ ครอบทั้งฟังก์ชันด้วย try/finally กัน isSearchLoading ค้างเป็น true ตลอดกาล
+    // (เดิมถ้าเจอใน local cache หรือค้นหาไม่เจอเลย จะไม่มีจุดไหนตั้งกลับเป็น false
+    // ทำให้จอค้างเป็น spinner ไม่มีทางรู้ว่าค้นหาจบแล้ว)
     try {
+      // 🔍 ค้นหาจาก local cache ก่อนเสมอ เพื่อแสดงผลหลายรายการทันที
+      final localMatches = allProducts.where((p) {
+        return p.name.toLowerCase().contains(query.toLowerCase()) ||
+            (p.barcode != null &&
+                p.barcode!.toLowerCase().contains(query.toLowerCase()));
+      }).toList();
+
+      if (localMatches.isNotEmpty) {
+        if (requestId != _searchRequestId)
+          return; // มี request ใหม่กว่าแซงไปแล้ว
+        searchResults.assignAll(localMatches);
+        return;
+      }
+
+      // 🌐 ไม่พบใน local → fallback ไป API (เช่น สแกนบาร์โค้ดสินค้าใหม่)
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int currentShopId = prefs.getInt('shopId') ?? 0;
 
@@ -225,6 +274,8 @@ class CheckoutController extends GetxController {
         currentShopId,
       );
 
+      if (requestId != _searchRequestId) return; // มี request ใหม่กว่าแซงไปแล้ว
+
       if (product != null && product.status == true) {
         searchResults.assignAll([product]);
       } else {
@@ -232,7 +283,9 @@ class CheckoutController extends GetxController {
       }
     } catch (e) {
       print("Search API Error: $e");
-      searchResults.clear();
+      if (requestId == _searchRequestId) searchResults.clear();
+    } finally {
+      if (requestId == _searchRequestId) isSearchLoading.value = false;
     }
   }
 
@@ -256,7 +309,9 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> openInternalScanner() async {
-    var result = await Get.to(() => const ScanBarcodePage(showBookButton: true));
+    var result = await Get.to(
+      () => const ScanBarcodePage(showBookButton: true),
+    );
     if (result != null && result is String) {
       await addProductByBarcode(result);
     }
@@ -296,13 +351,13 @@ class CheckoutController extends GetxController {
         currentShopId,
       );
       Get.back();
-      if (product != null) {
+      if (product != null && product.status == true) {
         _addToCart(product, unit: product.matchedUnit);
         allProducts.add(product);
       } else {
         _showWarningDialog(
           "ไม่พบสินค้า",
-          "รหัสบาร์โค้ดนี้ไม่มีในระบบของร้านค้า",
+          "รหัสบาร์โค้ดนี้ไม่มีในระบบของร้านค้า หรือถูกปิดการขายแล้ว",
         );
       }
     } catch (e) {
@@ -355,6 +410,7 @@ class CheckoutController extends GetxController {
           unitId: unit?.productUnitId,
           unitName: uName,
           conversionQty: conv,
+          unit: product.unit.isNotEmpty ? product.unit : 'ชิ้น',
         ),
       );
     } else {
@@ -372,11 +428,21 @@ class CheckoutController extends GetxController {
     }
   }
 
+  // เอาสต็อกปัจจุบันจาก allProducts (รีเฟรชแล้วตอนเปิดหน้า) แทนค่า snapshot เดิม
+  // ที่ติดมากับตะกร้า กันขายเกินสต็อกจริงถ้าสต็อกลดลงหลังหยิบใส่ตะกร้าไปแล้ว
+  int _currentMaxStock(ProductItem item) {
+    final match = allProducts.firstWhereOrNull(
+      (p) => p.productId.toString() == item.id,
+    );
+    return match?.stock ?? item.maxStock;
+  }
+
   void increaseItem(ProductItem item) {
+    final int maxStock = _currentMaxStock(item);
     int usedBase = cartItems
         .where((i) => i.id == item.id)
         .fold(0, (sum, i) => sum + i.conversionQty);
-    if (usedBase + item.conversionQty <= item.maxStock) {
+    if (usedBase + item.conversionQty <= maxStock) {
       cartItems.add(
         ProductItem(
           id: item.id,
@@ -384,10 +450,11 @@ class CheckoutController extends GetxController {
           price: item.price,
           category: item.category,
           imagePath: item.imagePath,
-          maxStock: item.maxStock,
+          maxStock: maxStock,
           unitId: item.unitId,
           unitName: item.unitName,
           conversionQty: item.conversionQty,
+          unit: item.unit,
         ),
       );
     } else {
@@ -404,6 +471,46 @@ class CheckoutController extends GetxController {
   void decreaseItem(ProductItem item) {
     int index = cartItems.indexWhere((e) => e.lineKey == item.lineKey);
     if (index != -1) cartItems.removeAt(index);
+  }
+
+  // ✨ ตั้งจำนวนสินค้าโดยตรง (ใช้ตอนพิมพ์จำนวนเอง แทนการกด +/- ทีละครั้ง)
+  void setItemQuantity(ProductItem item, int newQty) {
+    final int maxStock = _currentMaxStock(item);
+    final clamped = newQty.clamp(0, maxStock);
+    final currentQty = cartItems.where((i) => i.id == item.id).length;
+
+    if (clamped == currentQty) return;
+
+    if (clamped == 0) {
+      cartItems.removeWhere((i) => i.id == item.id);
+      return;
+    }
+
+    if (clamped > currentQty) {
+      final toAdd = clamped - currentQty;
+      cartItems.addAll(
+        List.generate(
+          toAdd,
+          (_) => ProductItem(
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            category: item.category,
+            imagePath: item.imagePath,
+            maxStock: maxStock,
+            unit: item.unit,
+          ),
+        ),
+      );
+    } else {
+      var toRemove = currentQty - clamped;
+      for (int i = cartItems.length - 1; i >= 0 && toRemove > 0; i--) {
+        if (cartItems[i].id == item.id) {
+          cartItems.removeAt(i);
+          toRemove--;
+        }
+      }
+    }
   }
 
   void removeItem(ProductItem item) =>
@@ -457,6 +564,7 @@ class CheckoutController extends GetxController {
             unitId: item.unitId,
             unitName: item.unitName,
             conversionQty: item.conversionQty,
+            unit: item.unit,
           ),
         );
       }
@@ -500,6 +608,11 @@ class CheckoutController extends GetxController {
   }
 
   Future<void> resumeOrder(String parkId) async {
+    // ✅ เช็คว่าเจอออเดอร์ที่พักไว้จริงก่อน ค่อยล้างตะกร้าปัจจุบัน
+    // (เดิมล้างตะกร้าไปก่อนแล้วค่อยเช็ค ถ้าไม่เจอออเดอร์ที่พักไว้จะเสียของในตะกร้าปัจจุบันไปฟรีๆ)
+    final parked = _parkCtrl.retrieveOrder(parkId);
+    if (parked == null) return;
+
     if (cartItems.isNotEmpty) {
       _parkCtrl.parkCurrentOrder(cartItems.toList());
     }
@@ -507,21 +620,21 @@ class CheckoutController extends GetxController {
     noteController.clear();
     receivedAmountController.clear();
     changeAmount.value = 0.0;
-    final parked = _parkCtrl.retrieveOrder(parkId);
-    if (parked == null) return;
 
     if (allProducts.isEmpty) await _loadAllProducts();
 
+    bool stockReduced = false;
     for (final pi in parked.items) {
       final match = allProducts.firstWhereOrNull(
         (p) => p.productId.toString() == pi.id,
       );
       final effectiveMaxStock = match?.stock ?? pi.maxStock;
-      // clamp เป็นหน่วยฐานก่อน แล้วค่อยแปลงกลับเป็นจำนวนหน่วยที่พักไว้
-      // (เผื่อสต็อกลดลงระหว่างที่พักออเดอร์ไว้ จนไม่พอสำหรับหน่วยใหญ่แล้ว)
+      // clamp เป็นหน่วยฐานก่อน แล้วค่อยแปลงกลับเป็นจำนวนหน่วยที่ขาย
+      // (เผื่อสต็อกลดลงระหว่างที่พักออเดอร์ไว้ จนไม่พอสำหรับหน่วยที่พักไว้)
       final totalBaseNeeded = pi.quantity * pi.conversionQty;
       final clampedBase = totalBaseNeeded.clamp(0, effectiveMaxStock);
       final qty = pi.conversionQty > 0 ? clampedBase ~/ pi.conversionQty : 0;
+      if (qty < pi.quantity) stockReduced = true;
       for (int i = 0; i < qty; i++) {
         cartItems.add(ProductItem(
           id: pi.id,
@@ -533,8 +646,21 @@ class CheckoutController extends GetxController {
           unitId: pi.unitId,
           unitName: pi.unitName,
           conversionQty: pi.conversionQty,
+          unit: pi.unit,
         ));
       }
+    }
+
+    // ✅ แจ้งเตือนถ้าสต็อกลดลงระหว่างที่พักออเดอร์ไว้ จนต้องปรับจำนวนลง
+    // (เดิมปรับลดเงียบๆ แคชเชียร์ไม่รู้ว่าจำนวนที่กู้กลับมาน้อยกว่าที่พักไว้จริง)
+    if (stockReduced) {
+      Get.snackbar(
+        'สต็อกไม่พอ',
+        'สินค้าบางรายการมีสต็อกลดลงตั้งแต่พักออเดอร์ไว้ ระบบปรับจำนวนในตะกร้าให้อัตโนมัติแล้ว กรุณาตรวจสอบก่อนขาย',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+      );
     }
   }
 
@@ -582,7 +708,7 @@ class CheckoutController extends GetxController {
 
     double received = double.tryParse(receivedAmountController.text) ?? 0;
 
-    // เช็คยอดเงินรับมาเฉพาะเงินสด
+    // เช็คยอดเงินรับมาเฉพาะเงินสด เทียบกับยอดจริงเป๊ะๆ (ไม่ปัดเต็มบาท กันเงินขาดตอนราคาสินค้ามีทศนิยม)
     if (paymentMethod.value == "จ่ายเงินสด" && received < totalPrice) {
       _showWarningDialog(
         "ยอดเงินไม่พอ",
@@ -711,7 +837,7 @@ class CheckoutController extends GetxController {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                "${totalPrice.toInt()} ฿",
+                                "${formatMoney(totalPrice)} ฿",
                                 style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
@@ -732,6 +858,7 @@ class CheckoutController extends GetxController {
                       child: OutlinedButton(
                         onPressed: () => Get.back(),
                         style: OutlinedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade100,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           side: BorderSide(color: Colors.grey.shade300),
                           shape: RoundedRectangleBorder(
@@ -822,11 +949,15 @@ class CheckoutController extends GetxController {
         final key = item.lineKey;
         if (groupedItems.containsKey(key)) {
           var existingItem = groupedItems[key]!;
+          // รวมราคาจริงของทุกชิ้น ไม่ใช้ราคาชิ้นล่าสุดคูณจำนวน เผื่อราคาสินค้าเดียวกัน
+          // เปลี่ยนกลางทางขณะที่ตะกร้ายังมีของราคาเก่าค้างอยู่
+          final int newAmount = existingItem.amount + 1;
+          final double newTotal = existingItem.totalPrice + item.price;
           groupedItems[key] = SaleItemRequest(
             productId: productId,
-            amount: existingItem.amount + 1,
-            pricePerUnit: item.price,
-            totalPrice: (existingItem.amount + 1) * item.price,
+            amount: newAmount,
+            pricePerUnit: newTotal / newAmount,
+            totalPrice: newTotal,
             productUnitId: item.unitId,
           );
         } else {
@@ -863,7 +994,8 @@ class CheckoutController extends GetxController {
         receivedAmountController.clear();
         await _loadAllProducts();
       } else {
-        final errorMsg = result?['error'] ?? "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้";
+        final errorMsg =
+            result?['error'] ?? "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้";
         _showErrorDialog("เกิดข้อผิดพลาด", errorMsg);
       }
     } catch (e) {
@@ -874,7 +1006,11 @@ class CheckoutController extends GetxController {
     }
   }
 
-  void registerNewDebtor() => Get.to(() => DebtRegisterScreen());
+  /// เปิดหน้าสมัครบัญชีลูกหนี้ และคืนข้อมูลลูกหนี้ที่เพิ่งสมัคร (null = ยกเลิก/ไม่สำเร็จ)
+  Future<DebtorResponse?> registerNewDebtor() async {
+    final result = await Get.to(() => DebtRegisterScreen());
+    return result is DebtorResponse ? result : null;
+  }
 
   @override
   void onClose() {

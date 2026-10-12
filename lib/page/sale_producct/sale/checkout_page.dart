@@ -15,6 +15,13 @@ class CheckoutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final CheckoutController controller = Get.put(CheckoutController());
 
+    // ให้หน้าอื่น (เช่น หน้าบันทึกค้างชำระ) สั่งเปิดแผ่นจ่ายเงินสดของหน้านี้ได้
+    controller.openCashPaymentSheet = (ctx) => controller.openPaymentSheet(
+      ctx,
+      false,
+      _PaymentBottomSheet(controller: controller),
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.fetchFreshProducts();
     });
@@ -37,7 +44,7 @@ class CheckoutPage extends StatelessWidget {
                     child: Column(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
                           child: Container(
                             decoration: BoxDecoration(
                               color: const Color(0xFFF5F5F5),
@@ -71,12 +78,15 @@ class CheckoutPage extends StatelessWidget {
                           ),
                         ),
                         Expanded(
-                          child: Obx(() {
-                            if (controller.isSearching.value) {
-                              return _buildSearchResults(controller);
-                            }
-                            return _buildCartList(context, controller);
-                          }),
+                          child: RefreshIndicator(
+                            onRefresh: controller.fetchFreshProducts,
+                            child: Obx(() {
+                              if (controller.isSearching.value) {
+                                return _buildSearchResults(controller);
+                              }
+                              return _buildCartList(context, controller);
+                            }),
+                          ),
                         ),
                       ],
                     ),
@@ -97,20 +107,35 @@ class CheckoutPage extends StatelessWidget {
   }
 
   Widget _buildSearchResults(CheckoutController controller) {
-    if (controller.isSearching.value && controller.searchResults.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+    if (controller.isSearchLoading.value && controller.searchResults.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          Center(
+            heightFactor: 3,
+            child: CircularProgressIndicator(),
+          ),
+        ],
+      );
     }
     if (controller.searchResults.isEmpty) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          const Icon(Icons.search_off, size: 60, color: Colors.grey),
-          const SizedBox(height: 10),
-          const Text("ไม่พบสินค้า", style: TextStyle(color: Colors.grey)),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 80),
+              const Icon(Icons.search_off, size: 60, color: Colors.grey),
+              const SizedBox(height: 10),
+              const Text("ไม่พบสินค้า", style: TextStyle(color: Colors.grey)),
+            ],
+          ),
         ],
       );
     }
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: 10),
       itemCount: controller.searchResults.length,
       separatorBuilder: (c, i) => const Divider(height: 1),
@@ -139,12 +164,14 @@ class CheckoutPage extends StatelessWidget {
           title: Text(
             product.name,
             style: const TextStyle(fontWeight: FontWeight.bold),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "฿${product.sellPrice.toStringAsFixed(0)} | คงเหลือ: ${product.stock}",
+                "฿${formatMoney(product.sellPrice)} | คงเหลือ: ${product.stock}",
               ),
               if (product.activeUnits.isNotEmpty) ...[
                 const SizedBox(height: 6),
@@ -185,21 +212,21 @@ class CheckoutPage extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 "รายการในตะกร้า",
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
               Obx(() {
                 final parkCtrl = Get.find<ParkOrderController>();
-                final count = parkCtrl.parkedOrders.length;
+                final count = parkCtrl.visibleOrders.length;
                 if (count == 0) return const SizedBox.shrink();
                 return GestureDetector(
                   onTap: () => _showParkedOrdersSheet(context, controller),
@@ -230,22 +257,26 @@ class CheckoutPage extends StatelessWidget {
         Expanded(
           child: Obx(() {
             if (controller.cartItems.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_basket_outlined,
-                      size: 80,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "ตะกร้าว่างเปล่า",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 80),
+                      Icon(
+                        Icons.shopping_basket_outlined,
+                        size: 80,
+                        color: Colors.grey[300],
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "ตะกร้าว่างเปล่า",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ],
               );
             }
             final groupedItems = <String, List<ProductItem>>{};
@@ -256,7 +287,8 @@ class CheckoutPage extends StatelessWidget {
               groupedItems[item.lineKey]!.add(item);
             }
             return ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               itemCount: groupedItems.keys.length,
               separatorBuilder: (c, i) =>
                   const Divider(height: 1, color: Color(0xFFEEEEEE)),
@@ -291,21 +323,22 @@ class CheckoutPage extends StatelessWidget {
       },
       child: Container(
         color: Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 15),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     item.name,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
@@ -320,25 +353,25 @@ class CheckoutPage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const SizedBox(height: 5),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    "${totalItemPrice.toInt()} บาท",
+                    "${formatMoney(totalItemPrice)} บาท",
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 3),
                 Text(
-                  "ต่อหน่วย ${item.price.toInt()}",
-                  style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  "หน่วยละ ${formatMoney(item.price)} บาท",
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
               ],
             ),
@@ -379,73 +412,93 @@ class CheckoutPage extends StatelessWidget {
     CheckoutController controller,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, -4),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.04),
+            offset: const Offset(0, -2),
+            blurRadius: 8,
           ),
         ],
       ),
       child: SafeArea(
         top: false,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "รวมทั้งหมด",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(width: 20),
-                  Obx(
-                    () => Text(
-                      "${controller.totalPrice.toInt()} บาท",
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
+            // แถวยอดรวม — บรรทัดเดียว ไม่ต้องมีเส้นคั่นให้เปลืองที่
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "รวมทั้งหมด",
+                  style: TextStyle(fontSize: 15, color: Colors.black54),
+                ),
+                Obx(
+                  () => Text(
+                    "${formatMoney(controller.totalPrice)} บาท",
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const Divider(height: 30, color: Color(0xFFEEEEEE)),
-            Obx(() {
-              if (controller.cartItems.isEmpty) return const SizedBox.shrink();
-              return Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: controller.parkOrder,
-                      icon: const Icon(Icons.pause_circle_outline, color: Colors.white, size: 20),
-                      label: const Text(
-                        'พักออเดอร์',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF59E0B),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 1,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-              );
-            }),
+            const SizedBox(height: 10),
+
+            // ปุ่มทั้งหมดอยู่แถวเดียว: พักออเดอร์เป็นไอคอน (รอง) / ชำระเงินเด่นสุด
             Row(
               children: [
+                Obx(() {
+                  if (controller.cartItems.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: SizedBox(
+                        height: 46,
+                        child: OutlinedButton(
+                          onPressed: controller.parkOrder,
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFEF3E2),
+                            foregroundColor: const Color(0xFFB45309),
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            side: const BorderSide(color: Color(0xFFF59E0B)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.pause_circle_outline, size: 17),
+                                SizedBox(width: 4),
+                                Text(
+                                  "พักออเดอร์",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
                 Expanded(
+                  flex: 3,
                   child: _actionButton(
                     "ชำระเงิน",
                     const Color(0xFF00C853),
@@ -456,8 +509,9 @@ class CheckoutPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 15),
+                const SizedBox(width: 8),
                 Expanded(
+                  flex: 3,
                   child: _actionButton(
                     "ค้างชำระ",
                     const Color(0xFF03A9F4),
@@ -473,20 +527,25 @@ class CheckoutPage extends StatelessWidget {
   }
 
   Widget _actionButton(String label, Color color, VoidCallback onTap) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 2,
-      ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return SizedBox(
+      height: 46,
+      child: ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 1,
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
@@ -736,7 +795,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                   () => FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      "${controller.totalPrice.toInt()} บาท",
+                      "${formatMoney(controller.totalPrice)} บาท",
                       style: const TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
@@ -847,7 +906,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                               () => FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  "${controller.changeAmount.value.toInt()} ฿",
+                                  "${formatMoney(controller.changeAmount.value)} ฿",
                                   style: TextStyle(
                                     fontSize: 26,
                                     fontWeight: FontWeight.bold,
@@ -929,7 +988,7 @@ class _PaymentBottomSheet extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
-                        "📱 ให้ลูกค้าสแกนจ่ายผ่านแอปธนาคาร",
+                        "ให้ลูกค้าสแกนจ่ายผ่านแอปธนาคาร",
                         style: TextStyle(color: Colors.blue),
                       ),
                     ),

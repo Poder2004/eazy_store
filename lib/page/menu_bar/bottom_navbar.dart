@@ -168,8 +168,14 @@ class BottomNavBar extends StatelessWidget {
   // แล้วยอดขายวันนี้ไม่อัปเดต) — ต้องลบ controller เก่าทิ้งเองก่อน ให้แน่ใจว่า Get.put ครั้ง
   // ถัดไปที่หน้าปลายทางได้ instance ใหม่จริงๆ และ onInit() (ซึ่งไป fetch ข้อมูล) ทำงานทุกครั้ง
   void _navigateToPage(int index) {
+    // ✅ ใช้ Get.off() แทน Get.to() เพื่อ "แทนที่" หน้าปัจจุบันแทนการ push ซ้อนไปเรื่อยๆ
+    // (เดิมสลับแท็บไปมาหลายรอบจะ push หน้าใหม่ทับไปเรื่อยๆ กด back ต้องกดหลายที
+    // และ controller ของแท็บเดิมค้างอยู่ในหน่วยความจำสะสมโดยไม่ถูกลบ)
     if (index == 0) {
-      if (Get.isRegistered<HomeController>()) Get.delete<HomeController>();
+      // ✅ รีเฟรชข้อมูลหน้า Home ก่อนข้ามหน้า
+      if (Get.isRegistered<HomeController>()) {
+        Get.find<HomeController>().fetchTodaySales();
+      }
       Get.off(() => const HomePage());
     } else if (index == 1) {
       if (Get.isRegistered<SalesAccountController>()) {
@@ -182,7 +188,10 @@ class BottomNavBar extends StatelessWidget {
       }
       Get.off(() => DebtLedgerScreen());
     } else if (index == 4) {
-      if (Get.isRegistered<ProfileController>()) Get.delete<ProfileController>();
+      // ✅ รีเฟรชข้อมูลหน้า โปรไฟล์ ก่อนข้ามหน้า
+      if (Get.isRegistered<ProfileController>()) {
+        Get.find<ProfileController>().loadProfileData();
+      }
       Get.off(() => const ProfilePage());
     }
   }

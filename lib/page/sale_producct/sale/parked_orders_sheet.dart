@@ -42,7 +42,7 @@ class ParkedOrdersSheet extends StatelessWidget {
               ),
               const Spacer(),
               Obx(() => Text(
-                '${parkCtrl.parkedOrders.length} รายการ',
+                '${parkCtrl.visibleOrders.length} รายการ',
                 style: const TextStyle(color: Colors.grey, fontSize: 14),
               )),
             ],
@@ -51,7 +51,8 @@ class ParkedOrdersSheet extends StatelessWidget {
           const Divider(height: 1),
           const SizedBox(height: 8),
           Obx(() {
-            if (parkCtrl.parkedOrders.isEmpty) {
+            final orders = parkCtrl.visibleOrders;
+            if (orders.isEmpty) {
               return const Padding(
                 padding: EdgeInsets.symmetric(vertical: 32),
                 child: Column(
@@ -69,10 +70,10 @@ class ParkedOrdersSheet extends StatelessWidget {
               ),
               child: ListView.separated(
                 shrinkWrap: true,
-                itemCount: parkCtrl.parkedOrders.length,
+                itemCount: orders.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
-                  final order = parkCtrl.parkedOrders[index];
+                  final order = orders[index];
                   final timeStr = DateFormat('HH:mm').format(order.parkedAt);
                   final itemCount = order.items.fold<int>(0, (sum, i) => sum + i.quantity);
 

@@ -2,8 +2,26 @@ import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/page/product/check_price/check_price_controller.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (ตอนกำลังค้นหา) ──────────────
+List<ProductResponse> _fakeProducts() => List.generate(
+  6,
+  (i) => ProductResponse(
+    shopId: 0,
+    categoryId: 0,
+    productCode: '000000',
+    name: 'ชื่อสินค้า',
+    imgProduct: '',
+    sellPrice: 100,
+    costPrice: 0,
+    stock: 0,
+    unit: 'ชิ้น',
+  ),
+);
 
 class CheckPriceScreen extends StatelessWidget {
   const CheckPriceScreen({super.key});
@@ -44,8 +62,17 @@ class CheckPriceScreen extends StatelessWidget {
               Expanded(
                 child: Obx(() {
                   if (controller.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: primaryColor),
+                    final fake = _fakeProducts();
+                    return Skeletonizer(
+                      enabled: true,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        itemCount: fake.length,
+                        itemBuilder: (context, index) =>
+                            _buildPriceCard(fake[index], primaryColor),
+                      ),
                     );
                   }
 
@@ -53,12 +80,14 @@ class CheckPriceScreen extends StatelessWidget {
                   if (controller.filteredProducts.isEmpty) {
                     return ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 100),
+                      children: [
+                        const SizedBox(height: 100),
                         Center(
                           child: Text(
-                            "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด", // ✅ แก้ไขตรงนี้แล้ว
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                            controller.hasSearched.value
+                                ? "ไม่พบข้อมูลสินค้า"
+                                : "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด",
+                            style: const TextStyle(color: Colors.grey, fontSize: 16),
                           ),
                         ),
                       ],
@@ -223,7 +252,7 @@ class CheckPriceScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                product.sellPrice.toStringAsFixed(0),
+                formatMoney(product.sellPrice),
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,

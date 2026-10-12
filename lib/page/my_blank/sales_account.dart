@@ -2,9 +2,15 @@ import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:number_flow_flutter/number_flow_flutter.dart';
 import 'package:eazy_store/page/my_blank/advanced_report_page.dart';
+import 'package:eazy_store/page/debt/debtLedger/debt_ledger.dart';
+import 'package:eazy_store/widgets/money_flow.dart';
 import 'sales_account_controller.dart';
 import 'package:eazy_store/model/response/dashboard_detail_response.dart';
+
+// ─── ตัวเลขจำนวน (ไม่ใช่เงิน) แบบ animate rolling number ตอนข้อมูลเปลี่ยน ──────────
+const _kCountFormat = NumberFlowFormat.decimal(minFraction: 0, maxFraction: 0);
 
 // ─── Light Theme Tokens ───────────────────────────────────────────────────────
 const _kBg = Color(0xFFEDEEF2);
@@ -65,20 +71,7 @@ class SalesAccountScreen extends StatelessWidget {
                       children: [
                         _buildPeriodNav(context, c),
                         const SizedBox(height: 14),
-                        Obx(() {
-                          if (c.isLoading.value) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 60),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: _kBlue,
-                                  strokeWidth: 2.5,
-                                ),
-                              ),
-                            );
-                          }
-                          return _buildKpiLayout(context, c);
-                        }),
+                        Obx(() => _buildKpiLayout(context, c)),
                       ],
                     ),
                   ),
@@ -295,6 +288,10 @@ class SalesAccountScreen extends StatelessWidget {
     final trendLabel = c.getTrendTextLabel();
     return Column(
       children: [
+        // ─── ยอดหนี้คงค้างทั้งหมด (ไม่เปลี่ยนตามช่วงเวลาที่เลือก) ────────────
+        _OutstandingDebtCard(c: c),
+        const SizedBox(height: 12),
+
         // ─── แถว 1: กำไรสุทธิ + ยอดขายรวม + รับเงินจริง (การ์ดรวม) ────────
         _ProfitSalesCard(
           netProfit: c.netProfit.value,
@@ -305,7 +302,6 @@ class SalesAccountScreen extends StatelessWidget {
           actualPaidTrend: c.actualPaidTrend.value,
           trendLabel: trendLabel,
           onTap: canDrill ? () => _showAllProductStats(context, c) : null,
-          formatNumber: c.formatNumber,
         ),
         const SizedBox(height: 12),
 
@@ -324,7 +320,7 @@ class SalesAccountScreen extends StatelessWidget {
 
         // ─── Full-width: จำนวนรายการ ──────────────────────────────────────
         _TransactionCard(
-          count: c.formatNumber(c.totalTransactions.value.toDouble()),
+          count: c.totalTransactions.value,
           trend: c.transTrend.value,
           trendLabel: trendLabel,
           selectedView: c.selectedView.value,
@@ -405,7 +401,7 @@ class SalesAccountScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'บิล #${item.saleId}',
+                              'บิล',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
@@ -488,7 +484,7 @@ class SalesAccountScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DetailSheet(
-        title: 'บิล #${bill.saleId}',
+        title: 'บิล',
         icon: Icons.receipt_long_rounded,
         iconColor: _kPurple,
         contentBuilder: (scrollCtrl) => Obx(() {
@@ -649,7 +645,7 @@ class SalesAccountScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '฿${c.formatNumber(item.unitPrice)} × ${item.qty} ชิ้น',
+                              '฿${c.formatNumber(item.unitPrice)} x ${item.qty} ชิ้น',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: _kSub,
@@ -733,8 +729,19 @@ class SalesAccountScreen extends StatelessWidget {
                 ),
                 child: Row(
                   children: const [
+                    SizedBox(
+                      width: 44,
+                      child: Text(
+                        'ลำดับ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _kInk,
+                        ),
+                      ),
+                    ),
                     Expanded(
-                      flex: 3,
+                      flex: 2,
                       child: Text(
                         'ชื่อสินค้า / จำนวน',
                         style: TextStyle(
@@ -788,25 +795,28 @@ class SalesAccountScreen extends StatelessWidget {
                 child: ListView.builder(
                   controller: scrollCtrl,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
-                  itemCount: items.length + 1, // เพิ่มแถวรวมยอดท้ายตาราง
+                  itemCount: items.length + 1, // เพิ่มแถวรวมยอดด้านบนตาราง
                   itemBuilder: (_, i) {
-                    // แถวสุดท้ายเป็นแถวสรุปยอดรวม (Total Row)
-                    if (i == items.length) {
+                    // แถวแรกเป็นแถวสรุปยอดรวม (Total Row)
+                    if (i == 0) {
                       return Container(
-                        margin: const EdgeInsets.only(top: 8),
+                        margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: _kBg,
+                          color: _kPurpleDim,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: _kBorder),
+                          border: Border.all(
+                            color: _kPurple.withValues(alpha: 0.25),
+                          ),
                         ),
                         child: Row(
                           children: [
+                            const SizedBox(width: 44),
                             Expanded(
-                              flex: 3,
+                              flex: 2,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -872,8 +882,8 @@ class SalesAccountScreen extends StatelessWidget {
                     }
 
                     // แถวสินค้าปกติ
-                    final item = items[i];
-                    final isEven = i % 2 == 0;
+                    final item = items[i - 1];
+                    final isEven = (i - 1) % 2 == 0;
                     return Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -887,9 +897,21 @@ class SalesAccountScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
+                          // คอลัมน์ ลำดับ
+                          SizedBox(
+                            width: 44,
+                            child: Text(
+                              '$i',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _kSub,
+                              ),
+                            ),
+                          ),
                           // คอลัมน์ ชื่อสินค้า / จำนวน
                           Expanded(
-                            flex: 3,
+                            flex: 2,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -929,7 +951,7 @@ class SalesAccountScreen extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '฿${c.formatNumber(item.totalSales)}',
+                              '${c.formatNumber(item.totalSales)}',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontSize: 13,
@@ -942,7 +964,7 @@ class SalesAccountScreen extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '฿${c.formatNumber(item.totalCost)}',
+                              '${c.formatNumber(item.totalCost)}',
                               textAlign: TextAlign.right,
                               style: const TextStyle(
                                 fontSize: 13,
@@ -955,7 +977,7 @@ class SalesAccountScreen extends StatelessWidget {
                           Expanded(
                             flex: 2,
                             child: Text(
-                              '฿${c.formatNumber(item.profit)}',
+                              '${c.formatNumber(item.profit)}',
                               textAlign: TextAlign.right,
                               style: TextStyle(
                                 fontSize: 13,
@@ -1030,7 +1052,6 @@ class _ProfitSalesCard extends StatelessWidget {
   final double actualPaid, actualPaidTrend;
   final String trendLabel;
   final VoidCallback? onTap;
-  final String Function(double) formatNumber;
 
   const _ProfitSalesCard({
     required this.netProfit,
@@ -1040,7 +1061,6 @@ class _ProfitSalesCard extends StatelessWidget {
     required this.actualPaid,
     required this.actualPaidTrend,
     required this.trendLabel,
-    required this.formatNumber,
     this.onTap,
   });
 
@@ -1143,14 +1163,12 @@ class _ProfitSalesCard extends StatelessWidget {
             FittedBox(
               alignment: Alignment.centerLeft,
               fit: BoxFit.scaleDown,
-              child: Text(
-                '฿${formatNumber(netProfit)}',
-                style: const TextStyle(
-                  fontSize: 46,
-                  fontWeight: FontWeight.w800,
-                  color: _kInk,
-                  letterSpacing: -1.5,
-                ),
+              child: moneyFlow(
+                netProfit,
+                fontSize: 46,
+                fontWeight: FontWeight.w800,
+                color: _kInk,
+                letterSpacing: -1.5,
               ),
             ),
             const SizedBox(height: 14),
@@ -1179,7 +1197,7 @@ class _ProfitSalesCard extends StatelessWidget {
                 Expanded(
                   child: _SalesCostCol(
                     label: 'ยอดขายรวม',
-                    amount: '฿${formatNumber(totalSales)}',
+                    value: totalSales,
                     trend: salesTrend,
                     iconBg: _kBlueDim,
                     iconFg: _kBlue,
@@ -1196,7 +1214,7 @@ class _ProfitSalesCard extends StatelessWidget {
                 Expanded(
                   child: _SalesCostCol(
                     label: 'รับเงินจริง',
-                    amount: '฿${formatNumber(actualPaid)}',
+                    value: actualPaid,
                     trend: actualPaidTrend,
                     iconBg: _kGreenDim,
                     iconFg: _kGreen,
@@ -1229,7 +1247,8 @@ class _ProfitSalesCard extends StatelessWidget {
 
 // ─── Sales/Cost Column ภายใน _ProfitSalesCard ─────────────────────────────────
 class _SalesCostCol extends StatelessWidget {
-  final String label, amount;
+  final String label;
+  final double value;
   final double trend;
   final Color iconBg, iconFg;
   final IconData iconData;
@@ -1237,7 +1256,7 @@ class _SalesCostCol extends StatelessWidget {
 
   const _SalesCostCol({
     required this.label,
-    required this.amount,
+    required this.value,
     required this.trend,
     required this.iconBg,
     required this.iconFg,
@@ -1309,14 +1328,12 @@ class _SalesCostCol extends StatelessWidget {
         FittedBox(
           alignment: Alignment.centerLeft,
           fit: BoxFit.scaleDown,
-          child: Text(
-            amount,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: _kInk,
-              letterSpacing: -.5,
-            ),
+          child: moneyFlow(
+            value,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: _kInk,
+            letterSpacing: -.5,
           ),
         ),
       ],
@@ -1325,7 +1342,177 @@ class _SalesCostCol extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// แถว 2 ซ้าย: ยอดหนี้รวม
+// ยอดหนี้คงค้างทั้งหมด (สถานะปัจจุบันของทุกลูกหนี้ — ไม่เปลี่ยนตามวันนี้/เดือนนี้/ปีนี้
+// เพราะเป็นยอดสะสมจริง ค่าเดียวกับที่หน้า home ใช้)
+// ─────────────────────────────────────────────────────────────────────────────
+class _OutstandingDebtCard extends StatelessWidget {
+  final SalesAccountController c;
+  const _OutstandingDebtCard({required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final amount = c.totalOutstandingDebt.value;
+      final count = c.debtorCount.value;
+
+      return GestureDetector(
+        onTap: () => Get.to(() => DebtLedgerScreen()),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _kCard,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: _kBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: _kRedDim,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: _kRed,
+                      size: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'ยอดหนี้คงค้างทั้งหมด',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _kInk,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _kCard2,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _kBorder),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock_clock_rounded, size: 10, color: _kSub),
+                        SizedBox(width: 3),
+                        Text(
+                          'ไม่เปลี่ยนตามช่วงเวลา',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: _kSub,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: moneyFlow(
+                        amount,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: _kRed,
+                        letterSpacing: -.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _kCard2,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.people_alt_rounded, size: 12, color: _kSub),
+                        const SizedBox(width: 4),
+                        count > 0
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  NumberFlow(
+                                    value: count,
+                                    format: _kCountFormat,
+                                    locale: 'en_US',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: _kSub,
+                                    ),
+                                  ),
+                                  const Text(
+                                    ' คนติดหนี้',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: _kSub,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const Text(
+                                'ไม่มีคนติดหนี้',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _kSub,
+                                ),
+                              ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Row(
+                children: [
+                  Icon(Icons.touch_app_rounded, size: 11, color: _kMuted),
+                  SizedBox(width: 4),
+                  Text(
+                    'แตะเพื่อดูรายละเอียดลูกหนี้',
+                    style: TextStyle(fontSize: 11, color: _kMuted),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// แถว 2 ซ้าย: หนี้ใหม่ช่วงนี้ (ยอดขายติดหนี้ที่เกิดขึ้นในช่วงเวลาที่เลือก — เปลี่ยนตามตัวกรอง)
 // ─────────────────────────────────────────────────────────────────────────────
 class _DebtCompactCard extends StatelessWidget {
   final SalesAccountController c;
@@ -1335,7 +1522,6 @@ class _DebtCompactCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final amount = c.totalDebt.value;
-      final isLoading = c.isLoading.value;
       final periodLabel = c.selectedView.value;
 
       return Container(
@@ -1386,37 +1572,26 @@ class _DebtCompactCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            const Text(
-              'ยอดหนี้รวม',
-              style: TextStyle(
+            Text(
+              'หนี้ใหม่$periodLabel',
+              style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: _kInk,
               ),
             ),
             const SizedBox(height: 4),
-            isLoading
-                ? const SizedBox(
-                    height: 20,
-                    child: LinearProgressIndicator(
-                      color: _kRed,
-                      backgroundColor: _kRedDim,
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                  )
-                : FittedBox(
-                    alignment: Alignment.centerLeft,
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '฿${_fmt(amount)}',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: _kRed,
-                        letterSpacing: -.5,
-                      ),
-                    ),
-                  ),
+            FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: moneyFlow(
+                amount,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: _kRed,
+                letterSpacing: -.5,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1430,7 +1605,9 @@ class _DebtCompactCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    amount > 0 ? 'มีหนี้ค้างชำระ' : 'ปลอดหนี้',
+                    amount > 0
+                        ? 'มีหนี้เกิดใหม่ช่วงนี้'
+                        : 'ไม่มีหนี้ใหม่ช่วงนี้',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -1446,12 +1623,6 @@ class _DebtCompactCard extends StatelessWidget {
       );
     });
   }
-
-  String _fmt(double v) => v >= 1000000
-      ? '${(v / 1000000).toStringAsFixed(1)}M'
-      : v >= 1000
-      ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K'
-      : v.toStringAsFixed(v == v.truncate() ? 0 : 2);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1465,7 +1636,6 @@ class _CollectedDebtCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Obx(() {
       final amount = c.totalCollectedDebt.value;
-      final isLoading = c.isLoading.value;
       final periodLabel = c.selectedView.value;
 
       return Container(
@@ -1525,28 +1695,17 @@ class _CollectedDebtCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            isLoading
-                ? const SizedBox(
-                    height: 20,
-                    child: LinearProgressIndicator(
-                      color: _kGreen,
-                      backgroundColor: _kGreenDim,
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                  )
-                : FittedBox(
-                    alignment: Alignment.centerLeft,
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '฿${_fmt(amount)}',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: _kGreen,
-                        letterSpacing: -.5,
-                      ),
-                    ),
-                  ),
+            FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: moneyFlow(
+                amount,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: _kGreen,
+                letterSpacing: -.5,
+              ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1576,12 +1735,6 @@ class _CollectedDebtCard extends StatelessWidget {
       );
     });
   }
-
-  String _fmt(double v) => v >= 1000000
-      ? '${(v / 1000000).toStringAsFixed(1)}M'
-      : v >= 1000
-      ? '${(v / 1000).toStringAsFixed(v % 1000 == 0 ? 0 : 1)}K'
-      : v.toStringAsFixed(v == v.truncate() ? 0 : 2);
 }
 
 // ─── Metric Column (used in product stats sheet) ──────────────────────────────
@@ -1756,7 +1909,8 @@ class _DetailSheet extends StatelessWidget {
 
 // ─── Transaction Card ─────────────────────────────────────────────────────────
 class _TransactionCard extends StatelessWidget {
-  final String count, trendLabel, selectedView;
+  final int count;
+  final String trendLabel, selectedView;
   final double trend;
   final VoidCallback? onTap;
 
@@ -1813,14 +1967,31 @@ class _TransactionCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '$count รายการ',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: _kInk,
-                      letterSpacing: -.3,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      NumberFlow(
+                        value: count,
+                        format: _kCountFormat,
+                        locale: 'en_US',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _kInk,
+                          letterSpacing: -.3,
+                        ),
+                      ),
+                      const Text(
+                        ' รายการ',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: _kInk,
+                          letterSpacing: -.3,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(

@@ -19,40 +19,45 @@ class ProductDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F7),
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 300,
-            pinned: true,
-            backgroundColor: primaryColor,
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CircleAvatar(
-                backgroundColor: Colors.black26,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Get.back(),
+      body: RefreshIndicator(
+        onRefresh: controller.refreshProduct,
+        color: primaryColor,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 300,
+              pinned: true,
+              backgroundColor: primaryColor,
+              leading: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CircleAvatar(
+                  backgroundColor: Colors.black26,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Get.back(),
+                  ),
                 ),
               ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                color: Colors.white,
-                child: Hero(
-                  tag: 'product-${controller.product.value.productId}',
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Obx(
-                      () => Image.network(
-                        controller.product.value.imgProduct,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          color: Colors.grey[200],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 100,
-                            color: Colors.grey,
-                          ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  color: Colors.white,
+                  child: Hero(
+                    tag: 'product-${controller.product.value.productId}',
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Obx(
+                        () => Image.network(
+                          controller.product.value.imgProduct,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  size: 100,
+                                  color: Colors.grey,
+                                ),
+                              ),
                         ),
                       ),
                     ),
@@ -60,95 +65,99 @@ class ProductDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-          ),
 
-          // --- ส่วนเนื้อหารายละเอียด ---
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Obx(
-                () => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            controller.product.value.name,
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
+            // --- ส่วนเนื้อหารายละเอียด ---
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Obx(
+                  () => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              controller.product.value.name,
+                              style: const TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                        ),
-                        _statusBadge(controller.product.value.status),
-                      ],
-                    ),
-                    Text(
-                      "รหัสสินค้า: ${controller.product.value.productCode ?? '-'}",
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                    const Divider(height: 40),
-
-                    // ข้อมูลราคาและสต็อก
-                    _buildInfoGrid(controller.product.value, primaryColor),
-
-                    const SizedBox(height: 30),
-
-                    // ข้อมูลเชิงลึกอื่นๆ
-                    _buildDetailRow(
-                      Icons.barcode_reader,
-                      "บาร์โค้ด",
-                      controller.product.value.barcode ?? "ไม่มีข้อมูล",
-                    ),
-                    _buildDetailRow(
-                      Icons.category_outlined,
-                      "หมวดหมู่",
-                      controller.product.value.category?.name ?? "ทั่วไป",
-                    ),
-                    _buildDetailRow(
-                      Icons.scale_outlined,
-                      "หน่วยนับ",
-                      controller.product.value.unit,
-                    ),
-
-                    if (controller.product.value.activeUnits.isNotEmpty) ...[
-                      const Divider(height: 30),
-                      const Text(
-                        "หน่วยขายเพิ่มเติม",
-                        style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
+                          _statusBadge(controller.product.value.status),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      for (final u in controller.product.value.activeUnits)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            children: [
-                              Icon(Icons.inventory_2_outlined, color: Colors.grey[400], size: 20),
-                              const SizedBox(width: 15),
-                              Expanded(
-                                child: Text(
-                                  "${u.unitName} = ${u.conversionQty} ${controller.product.value.unit}",
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                              Text(
-                                "฿${u.sellPrice.toStringAsFixed(0)}",
-                                style: const TextStyle(fontSize: 15, color: Colors.black54),
-                              ),
-                            ],
-                          ),
+                      Text(
+                        "รหัสสินค้า: ${controller.product.value.productCode ?? '-'}",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
                         ),
-                    ],
+                      ),
+                      const Divider(height: 40),
 
-                    const SizedBox(height: 100), // เว้นที่ให้ปุ่มด้านล่าง
-                  ],
+                      // ข้อมูลราคาและสต็อก
+                      _buildInfoGrid(controller.product.value, primaryColor),
+
+                      const SizedBox(height: 30),
+
+                      // ข้อมูลเชิงลึกอื่นๆ
+                      _buildDetailRow(
+                        Icons.barcode_reader,
+                        "บาร์โค้ด",
+                        controller.product.value.barcode ?? "ไม่มีข้อมูล",
+                      ),
+                      _buildDetailRow(
+                        Icons.category_outlined,
+                        "หมวดหมู่",
+                        controller.product.value.category?.name ?? "ทั่วไป",
+                      ),
+                      _buildDetailRow(
+                        Icons.scale_outlined,
+                        "หน่วยนับ",
+                        controller.product.value.unit,
+                      ),
+
+                      if (controller.product.value.activeUnits.isNotEmpty) ...[
+                        const Divider(height: 30),
+                        const Text(
+                          "หน่วยขายเพิ่มเติม",
+                          style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final u in controller.product.value.activeUnits)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                Icon(Icons.inventory_2_outlined, color: Colors.grey[400], size: 20),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: Text(
+                                    "${u.unitName} = ${u.conversionQty} ${controller.product.value.unit}",
+                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                Text(
+                                  "฿${u.sellPrice.toStringAsFixed(0)}",
+                                  style: const TextStyle(fontSize: 15, color: Colors.black54),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+
+
+                      const SizedBox(height: 100), // เว้นที่ให้ปุ่มด้านล่าง
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
 
       // --- ปุ่มจัดการ (แก้ไข/ลบ) ---
@@ -253,9 +262,28 @@ class ProductDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           // ปุ่มลบ
-          IconButton(
-            onPressed: () => _confirmDelete(controller),
-            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 30),
+          // ✨ ใส่กรอบ+พื้นหลังให้ดูเป็นปุ่มชัดเจน ไม่ใช่แค่ไอคอนลอยๆ (เข้าใจง่ายขึ้นว่ากดได้)
+          Material(
+            color: Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _confirmDelete(controller),
+              child: Container(
+                width: 54,
+                height: 54,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withOpacity(0.4)),
+                ),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                  size: 26,
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 10),
 
@@ -272,6 +300,11 @@ class ProductDetailScreen extends StatelessWidget {
                 if (result != null && result is ProductResponse) {
                   controller.product.value = result;
                 }
+                // ดึงข้อมูลล่าสุดซ้ำเสมอตอนกลับมาหน้านี้ ไม่ใช่แค่ตอนมี result
+                // ส่งกลับมาตรงๆ เพราะถ้าเข้าไปเพิ่มสต็อกต่อจากหน้าแก้ไข (Edit ->
+                // Add Stock) แล้วกดย้อนกลับโดยไม่ได้กด "บันทึก" ในหน้าแก้ไขอีกที
+                // result ตรงนี้จะเป็น null แต่สต็อกจริงถูกอัปเดตในเซิร์ฟเวอร์ไปแล้ว
+                await controller.refreshProduct();
               },
               icon: const Icon(Icons.edit, color: Colors.white),
               label: const Text(

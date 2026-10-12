@@ -30,6 +30,10 @@ class EditShopController extends GetxController {
 
   var isLoading = false.obs;
 
+  // ✨ ข้อความแจ้งเตือนแบบ real-time ใต้ช่องเบอร์โทรศัพท์/PIN (ว่าง = ไม่มีปัญหา)
+  var phoneError = "".obs;
+  var pinError = "".obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -38,10 +42,24 @@ class EditShopController extends GetxController {
     phoneController = TextEditingController(text: shop.phone);
     addressController = TextEditingController(text: shop.address);
     pinCodeController = TextEditingController(text: shop.pinCode ?? "");
+    phoneController.addListener(_validatePhone);
+    pinCodeController.addListener(_validatePin);
+  }
+
+  void _validatePhone() {
+    final v = phoneController.text.trim();
+    phoneError.value = (v.isNotEmpty && v.length != 10) ? "ยังไม่ครบ 10 หลัก" : "";
+  }
+
+  void _validatePin() {
+    final v = pinCodeController.text.trim();
+    pinError.value = (v.isNotEmpty && v.length != 6) ? "ยังไม่ครบ 6 หลัก" : "";
   }
 
   @override
   void onClose() {
+    phoneController.removeListener(_validatePhone);
+    pinCodeController.removeListener(_validatePin);
     nameController.dispose();
     phoneController.dispose();
     addressController.dispose();
@@ -116,6 +134,16 @@ class EditShopController extends GetxController {
       return;
     }
 
+    // 3. เช็ค PIN ต้องเป็นตัวเลข 6 หลักเท่านั้น (กันบันทึก PIN สั้น/ผิดรูปแบบ)
+    final pin = pinCodeController.text.trim();
+    if (pin.length != 6 || !RegExp(r'^[0-9]{6}$').hasMatch(pin)) {
+      _showWarningDialog(
+        "รหัส PIN ไม่ถูกต้อง",
+        "กรุณากรอกรหัส PIN เป็นตัวเลขให้ครบ 6 หลัก",
+      );
+      return;
+    }
+
     isLoading.value = true;
     try {
       String imageUrl = shop.imgShop;
@@ -179,7 +207,10 @@ class EditShopController extends GetxController {
       }
     } catch (e) {
       print("Error SaveShop: $e");
-      _showWarningDialog("Error", "เกิดข้อผิดพลาด: $e");
+      _showWarningDialog(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถบันทึกข้อมูลร้านค้าได้ กรุณาลองใหม่อีกครั้ง",
+      );
     } finally {
       isLoading.value = false;
     }

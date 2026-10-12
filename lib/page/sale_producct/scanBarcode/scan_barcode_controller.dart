@@ -57,6 +57,19 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
       facing: CameraFacing.back,
       torchEnabled: false,
       returnImage: false,
+      // ✅ จำกัดให้อ่านเฉพาะฟอร์แมตบาร์โค้ดสินค้า ไม่รวม QR Code/Data Matrix/PDF417/Aztec
+      // กันกล้องไปอ่าน QR code หรือลิงก์ที่ไม่เกี่ยวข้องเข้ามาแทนรหัสสินค้า
+      formats: const [
+        BarcodeFormat.ean13,
+        BarcodeFormat.ean8,
+        BarcodeFormat.upcA,
+        BarcodeFormat.upcE,
+        BarcodeFormat.code128,
+        BarcodeFormat.code39,
+        BarcodeFormat.code93,
+        BarcodeFormat.codabar,
+        BarcodeFormat.itf,
+      ],
     );
   }
 
@@ -187,9 +200,21 @@ class ScanBarcodeController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  void goToListPage() {
+  void goToListPage() async {
+    // ✅ เช็ค ณ จุดนี้ (ก่อนหน้านี้เอง) ว่าหน้าที่พาเรามาสแกนคือ CheckoutPage ไหม
+    // เพราะพอ push ManualListPage ไปแล้ว Get.previousRoute จะกลายเป็นหน้าสแกนนี้เอง
+    // เช็คทีหลังจาก ManualListPage จะไม่มีทางรู้ว่าก่อนหน้าสแกนคือ CheckoutPage หรือเปล่า
+    final bool cameFromCheckout = Get.previousRoute.contains('CheckoutPage');
+
     // ✅ หยุดกล้องก่อนไปหน้าอื่น
     cameraController.stop();
-    Get.to(() => const ManualListPage());
+    await Get.to(
+      () => const ManualListPage(),
+      arguments: {'cameFromCheckout': cameFromCheckout},
+    );
+    // ✅ กลับมาจากหน้ารายการแล้ว เปิดกล้องต่อถ้ายังมีสิทธิ์อยู่ กันจอสแกนค้าง/ดำ
+    if (hasPermission.value) {
+      cameraController.start();
+    }
   }
 }

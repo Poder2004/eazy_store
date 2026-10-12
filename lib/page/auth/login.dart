@@ -3,7 +3,9 @@ import 'package:eazy_store/page/auth/forgot_password.dart';
 import 'package:eazy_store/page/auth/register.dart';
 import 'package:eazy_store/page/auth/verify_register.dart';
 import 'package:eazy_store/model/request/login_request.dart';
+import 'package:eazy_store/model/request/change_email_verify_request.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
+import 'package:eazy_store/utils/device_id.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +14,7 @@ class LoginController extends GetxController {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   var isLoading = false.obs;
+  var isSendingOtp = false.obs;
 
   final Color primaryColor = const Color(0xFF00A3FF);
 
@@ -23,16 +26,19 @@ class LoginController extends GetxController {
 
     isLoading.value = true;
 
+    final deviceId = await DeviceIdHelper.getDeviceId();
+    final deviceName = await DeviceIdHelper.getDeviceName();
     LoginRequest request = LoginRequest(
       username: emailController.text.trim(),
       password: passwordController.text,
+      deviceId: deviceId,
+      deviceName: deviceName,
     );
 
     var res = await ApiAuth.login(request);
     isLoading.value = false;
 
     if (res.effectiveToken != null) {
-      // ✅ เคสที่ 1: Login สำเร็จ
       await _saveSession(res);
       _showSnackbar(
         "สำเร็จ",
@@ -63,7 +69,8 @@ class LoginController extends GetxController {
       await prefs.setString('refresh_token', res.refreshToken!);
     }
     final int expiresIn = (res.expiresIn as int?) ?? 900;
-    final int expiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
+    final int expiresAt =
+        DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
     await prefs.setInt('token_expires_at', expiresAt);
     await prefs.setInt('userId', res.user?.id ?? 0);
     await prefs.setString('username', res.user?.username ?? "");
@@ -115,12 +122,19 @@ class LoginController extends GetxController {
               Row(
                 children: [
                   Expanded(
-                    child: TextButton(
+                    child: OutlinedButton(
                       onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.grey[350]!),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                       child: Text(
                         "ยกเลิก",
                         style: TextStyle(
-                          color: Colors.grey[400],
+                          color: Colors.grey[800],
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -128,29 +142,36 @@ class LoginController extends GetxController {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        Get.to(
-                          () => const VerifyRegistrationPage(),
-                          arguments: {"email": email, "username": username},
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                    child: Obx(
+                      () => ElevatedButton(
+                        onPressed: isSendingOtp.value
+                            ? null
+                            : () => _sendOtpThenGoToVerify(email, username),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        "ไปหน้ายืนยัน OTP",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                        child: isSendingOtp.value
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                "ไปหน้ายืนยัน OTP",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                       ),
                     ),
                   ),
@@ -161,6 +182,24 @@ class LoginController extends GetxController {
         ),
       ),
     );
+  }
+
+  Future<void> _sendOtpThenGoToVerify(String email, String username) async {
+    isSendingOtp.value = true;
+    final res = await ApiAuth.changeEmailVerify(
+      ChangeEmailVerifyRequest(username: username, newEmail: email),
+    );
+    isSendingOtp.value = false;
+
+    if (res.error == null) {
+      Get.back();
+      Get.to(
+        () => const VerifyRegistrationPage(),
+        arguments: {"email": email, "username": username},
+      );
+    } else {
+      _showSnackbar("ผิดพลาด", res.error!, Colors.red);
+    }
   }
 
   void _showSnackbar(String title, String msg, Color color) {
@@ -190,10 +229,25 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
+  late final LoginController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<LoginController>()
+        ? Get.find<LoginController>()
+        : Get.put(LoginController());
+  }
+
+  @override
+  void dispose() {
+    // ไม่ต้อง Get.delete ตรงนี้ เพราะ Get.offAll จะจัดการให้
+    // การ delete ตรงนี้ทำให้เกิด race condition กับ LoginPage ใหม่ที่ถูกสร้างพร้อมกัน
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final LoginController controller = Get.put(LoginController());
     const Color primaryColor = Color(0xFF00A3FF);
     const Color backgroundColor = Color(0xFFF3F7FB);
 
@@ -410,6 +464,10 @@ class _LoginPageState extends State<LoginPage> {
       child: TextField(
         controller: controller,
         obscureText: isPassword ? obscureText : false,
+        // ปิด autocorrect/suggestion เพื่อไม่ให้คีย์บอร์ดหน่วงตัวอักษรไว้รอคำจบ
+        // ก่อนส่งเข้าแอป (บางคีย์บอร์ดจะไม่แสดงตัวอักษรจนกว่าจะพิมพ์ครบคำ)
+        autocorrect: false,
+        enableSuggestions: false,
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,

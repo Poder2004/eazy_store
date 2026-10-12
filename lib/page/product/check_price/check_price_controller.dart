@@ -2,14 +2,17 @@ import 'dart:async';
 import 'package:eazy_store/api/api_product.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PriceController extends GetxController {
   var isLoading = false.obs;
-  var filteredProducts = <ProductResponse>[].obs; 
+  var filteredProducts = <ProductResponse>[].obs;
   var selectedIndex = 2.obs;
+  // แยกสถานะ "ยังไม่ได้ค้นหา" กับ "ค้นหาแล้วไม่พบ" เพื่อโชว์ข้อความที่ต่างกัน
+  var hasSearched = false.obs;
 
   Timer? _debounce;
   final TextEditingController searchCtrl = TextEditingController();
@@ -41,6 +44,7 @@ class PriceController extends GetxController {
         handleApiSearch(query);
       } else {
         filteredProducts.clear(); // ลบช่องค้นหาแล้วให้ซ่อนรายการไว้เหมือนเดิม
+        hasSearched.value = false;
       }
     });
   }
@@ -52,12 +56,14 @@ class PriceController extends GetxController {
       await handleApiSearch(query);
     } else {
       filteredProducts.clear();
+      hasSearched.value = false;
     }
   }
 
   // 🔍 ฟังก์ชันค้นหาผ่าน API (แบบ LIKE เพื่อให้เจอได้หลายรายการจากคำเดียว)
   Future<void> handleApiSearch(String keyword) async {
     isLoading.value = true;
+    hasSearched.value = true;
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
@@ -76,7 +82,9 @@ class PriceController extends GetxController {
       }
 
       var activeList = list.where((p) => p.status == true).toList();
-      activeList.sort((a, b) => a.name.compareTo(b.name));
+      activeList.sort(
+        (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
+      );
 
       filteredProducts.assignAll(activeList);
     } catch (e) {

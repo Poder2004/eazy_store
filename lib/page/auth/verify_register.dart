@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:eazy_store/page/auth/login.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/verify_registration_request.dart';
@@ -17,14 +18,14 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     6,
     (i) => TextEditingController(),
   );
-  final List<FocusNode> _nodes = List.generate(6, (i) => FocusNode());
+  final List<FocusNode> _nodes = [];
 
   int _counter = 60;
   Timer? _timer;
   bool _isLoading = false;
   late String email, username;
 
-  // โทนสีฟ้าพรีเมียม
+
   final Color primaryColor = const Color(0xFF0288D1);
   final Color bgColor = const Color(0xFFF8FBFF);
 
@@ -33,8 +34,33 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     super.initState();
     email = Get.arguments['email'];
     username = Get.arguments['username'];
-    // เริ่มตัวนับเวลาทันทีเมื่อเปิดหน้า (เพราะรหัสถูกส่งมาจากหน้า Signup/Login แล้ว)
+    
+    for (int i = 0; i < 6; i++) {
+      final node = FocusNode(onKeyEvent: (node, event) => _handleBackspaceKey(i, event));
+    
+      node.addListener(() {
+        if (node.hasFocus) {
+          _controllers[i].selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controllers[i].text.length,
+          );
+        }
+      });
+      _nodes.add(node);
+    }
+   
     _startTimer();
+  }
+
+  KeyEventResult _handleBackspaceKey(int index, KeyEvent event) {
+    if (event is KeyDownEvent &&  event.logicalKey == LogicalKeyboardKey.backspace &&
+        _controllers[index].text.isEmpty &&  index > 0) {
+     
+      _controllers[index - 1].clear();
+      _nodes[index - 1].requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -61,16 +87,16 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
     });
   }
 
-  // ฟังก์ชันส่งรหัสใหม่ (จะทำงานเมื่อกดปุ่ม Resend และ Timer เป็น 0)
   void _resendCode() async {
     setState(() => _isLoading = true);
+
     final res = await ApiAuth.changeEmailVerify(
       ChangeEmailVerifyRequest(username: username, newEmail: email),
     );
     setState(() => _isLoading = false);
 
     if (res.error == null) {
-      _startTimer(); // เริ่มนับถอยหลังใหม่หลังจากส่งรหัสสำเร็จ
+      _startTimer(); 
       Get.snackbar(
         "สำเร็จ",
         "เราได้ส่งรหัสใหม่ไปยัง $email แล้ว",
@@ -113,57 +139,69 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
   }
 
   void _showSuccessDialog() {
+    // หยุด timer ก่อน เพื่อป้องกัน setState ถูกเรียกหลัง dispose
+    _timer?.cancel();
+
     Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        child: Padding(
-          padding: const EdgeInsets.all(30),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.check_circle_outline_rounded,
-                size: 70,
-                color: Colors.green,
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "ยืนยันสำเร็จ",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "บัญชีของคุณพร้อมใช้งานแล้ว\nกรุณาเข้าสู่ระบบเพื่อเริ่มใช้งาน",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+      WillPopScope(
+        onWillPop: () async => false, // ป้องกันกดปุ่ม back ปิด dialog
+        child: Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+          child: Padding(
+            padding: const EdgeInsets.all(30),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 70,
+                  color: Colors.green,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  "ยืนยันสำเร็จ",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "บัญชีของคุณพร้อมใช้งานแล้ว\nกรุณาเข้าสู่ระบบเพื่อเริ่มใช้งาน",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () => Get.offAll(() => const LoginPage()),
-                  child: const Text(
-                    "ไปหน้าล็อกอิน",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                    onPressed: () {
+                      // ปิด dialog ก่อน แล้วค่อย navigate
+                      Get.back();
+                      Future.microtask(() => Get.offAll(() => const LoginPage()));
+                    },
+                    child: const Text(
+                      "ไปหน้าล็อกอิน",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+      barrierDismissible: false,
     );
   }
+
 
   void _changeEmailDialog() {
     final newEmailController = TextEditingController(text: email);
@@ -226,19 +264,27 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
                         ),
                       ),
                       onPressed: () {
-                        if (newEmailController.text.trim().isNotEmpty) {
-                          setState(
-                            () => email = newEmailController.text.trim(),
-                          );
-                          Get.back();
-                          // ✨ ไม่สั่ง _startTimer ตรงนี้แล้ว ผู้ใช้ต้องกด "ส่งรหัสอีกครั้ง" เอง
+                        final newEmail = newEmailController.text.trim();
+                        if (!GetUtils.isEmail(newEmail)) {
                           Get.snackbar(
-                            "อัปเดตแล้ว",
-                            "เปลี่ยนอีเมลเป็น $email เรียบร้อย\nกรุณากด 'ส่งรหัสอีกครั้ง'",
+                            "รูปแบบอีเมลไม่ถูกต้อง",
+                            "กรุณากรอกอีเมลให้ถูกต้อง",
                             backgroundColor: Colors.white,
                             colorText: Colors.black87,
                           );
+                          return;
                         }
+                        setState(() => email = newEmail);
+                        Get.back();
+                     
+                        Future.delayed(const Duration(milliseconds: 300), () {
+                          Get.snackbar(
+                            "อัปเดตแล้ว",
+                            "เปลี่ยนอีเมลเป็น $newEmail เรียบร้อย\nกรุณากด 'ส่งรหัสอีกครั้ง'",
+                            backgroundColor: Colors.white,
+                            colorText: Colors.black87,
+                          );
+                        });
                       },
                       child: const Text(
                         "บันทึก",
@@ -252,7 +298,11 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
           ),
         ),
       ),
-    );
+    ).whenComplete(() {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        newEmailController.dispose();
+      });
+    });
   }
 
   @override
@@ -374,6 +424,7 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        
         border: Border.all(
           color: _nodes[i].hasFocus ? primaryColor : Colors.grey[300]!,
           width: 2,
@@ -391,15 +442,34 @@ class _VerifyRegistrationPageState extends State<VerifyRegistrationPage> {
         focusNode: _nodes[i],
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        maxLength: 1,
+       
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(2),
+        ],
         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         decoration: const InputDecoration(
           counterText: "",
           border: InputBorder.none,
         ),
+        onTap: () {
+        
+          _controllers[i].selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controllers[i].text.length,
+          );
+        },
         onChanged: (v) {
+        
+          if (v.length > 1) {
+            v = v.substring(v.length - 1);
+            _controllers[i].value = TextEditingValue(
+              text: v,
+              selection: TextSelection.collapsed(offset: v.length),
+            );
+          }
+         
           if (v.isNotEmpty && i < 5) _nodes[i + 1].requestFocus();
-          if (v.isEmpty && i > 0) _nodes[i - 1].requestFocus();
           if (i == 5 && v.isNotEmpty) _verify();
         },
       ),

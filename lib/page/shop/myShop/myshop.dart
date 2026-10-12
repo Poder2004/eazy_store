@@ -19,6 +19,21 @@ class MyShopPage extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
+        
+            Positioned(
+              top: 20,
+              left: 20,
+              child: IconButton(
+                onPressed: controller.logout,
+                icon: const Icon(Icons.logout_rounded, color: Colors.black87),
+                tooltip: "ออกจากระบบ",
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey[100],
+                  shape: const CircleBorder(),
+                ),
+              ),
+            ),
+
             // --- Top Section (Profile) ---
             Positioned(
               top: 20,
@@ -90,35 +105,54 @@ class MyShopPage extends StatelessWidget {
                             return Slidable(
                               key: ValueKey(shop.shopId),
 
-                              // Action Pane ด้านขวา (ปัดซ้าย)
+                            
                               endActionPane: ActionPane(
                                 motion: const ScrollMotion(),
+                                extentRatio: 0.34,
                                 children: [
                                   // ปุ่มแก้ไข
-                                  SlidableAction(
+                                  CustomSlidableAction(
                                     onPressed: (context) {
                                       controller.goToEditShop(shop);
                                     },
                                     backgroundColor: Colors.blue,
                                     foregroundColor: Colors.white,
-                                    icon: Icons.edit,
-                                    label: 'แก้ไข',
                                     borderRadius: const BorderRadius.horizontal(
                                       left: Radius.circular(15),
                                     ),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.edit, size: 18),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'แก้ไข',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   // ปุ่มลบ
-                                  SlidableAction(
+                                  CustomSlidableAction(
                                     onPressed: (context) {
                                       // เรียกใช้ฟังก์ชันที่เราเตรียมไว้ใน Controller ตัวเดียวจบ
                                       controller.confirmAndDeleteShop(shop);
                                     },
                                     backgroundColor: Colors.red,
                                     foregroundColor: Colors.white,
-                                    icon: Icons.delete,
-                                    label: 'ลบ',
                                     borderRadius: const BorderRadius.horizontal(
                                       right: Radius.circular(15),
+                                    ),
+                                    child: const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.delete, size: 18),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          'ลบ',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],

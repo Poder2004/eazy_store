@@ -1,18 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'edit_profile_controller.dart';
 
-class EditProfilePage extends StatelessWidget {
+class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
 
+  @override
+  State<EditProfilePage> createState() => _EditProfilePageState();
+}
+
+class _EditProfilePageState extends State<EditProfilePage> {
   final Color primaryColor = const Color(0xFF4F46E5);
   final Color bgColor = const Color(0xFFF4F7FA);
   final Color textColor = const Color(0xFF0F172A);
 
+  late final EditProfileController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ สร้าง controller ใหม่ทุกครั้งที่เปิดหน้านี้ กันข้อมูล/รหัสผ่านเก่าค้าง
+    // จากการเปิดหน้านี้รอบก่อนหน้าในเซสชันเดียวกัน
+    controller = Get.put(EditProfileController());
+  }
+
+  @override
+  void dispose() {
+    Get.delete<EditProfileController>();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final EditProfileController controller = Get.put(EditProfileController());
-
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -74,6 +94,11 @@ class EditProfilePage extends StatelessWidget {
                       label: "เบอร์โทรศัพท์",
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
+                      errorText: controller.phoneError,
                     ),
 
                     const Padding(
@@ -90,10 +115,11 @@ class EditProfilePage extends StatelessWidget {
                       keyboardType: TextInputType.emailAddress,
                       helperText:
                           "* หากเปลี่ยนอีเมล ระบบจะส่งรหัสไปให้ยืนยันใหม่",
+                      errorText: controller.emailError,
                     ),
                     const SizedBox(height: 16),
 
-                    // ✨ ช่องรหัสผ่าน โยน controller หลักเข้าไปเพื่อให้ปุ่มตาทำงานได้
+
                     _buildTextField(
                       controller: controller.passwordCtrl,
                       label: "รหัสผ่านใหม่",
@@ -101,6 +127,7 @@ class EditProfilePage extends StatelessWidget {
                       isPassword: true,
                       mainController: controller,
                       helperText: "* เว้นว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน",
+                      errorText: controller.passwordError,
                     ),
                   ],
                 ),
@@ -175,6 +202,8 @@ class EditProfilePage extends StatelessWidget {
     TextInputType keyboardType = TextInputType.text,
     String? helperText,
     EditProfileController? mainController,
+    List<TextInputFormatter>? inputFormatters,
+    RxString? errorText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,26 +237,45 @@ class EditProfilePage extends StatelessWidget {
                 ),
                 onPressed: mainController.togglePasswordVisibility, // กดสลับตา
               ),
+              inputFormatters: inputFormatters,
             ),
           )
         else
-          // ถ้าไม่ใช่รหัสผ่าน ไม่ต้องมี Obx เพื่อแก้ปัญหา GetX Error
+
           _buildInputForm(
             controller: controller,
             icon: icon,
             keyboardType: keyboardType,
             isObscure: false,
             suffixIcon: null,
+            inputFormatters: inputFormatters,
           ),
+
+        // ✨ ข้อความแจ้งเตือนสีแดงแบบ real-time เมื่อกรอกไม่ตรงเงื่อนไข
+        if (errorText != null)
+          Obx(() {
+            if (errorText.value.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                errorText.value,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+          }),
 
         if (helperText != null) ...[
           const SizedBox(height: 6),
           Text(
             helperText,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11.5,
               color: isPassword
-                  ? Colors.blueGrey.shade300
+                  ? const Color.fromARGB(255, 45, 69, 80)
                   : const Color(0xFFF59E0B),
               fontStyle: FontStyle.italic,
             ),
@@ -244,11 +292,13 @@ class EditProfilePage extends StatelessWidget {
     required TextInputType keyboardType,
     required bool isObscure,
     Widget? suffixIcon,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: isObscure,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: const TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w600,

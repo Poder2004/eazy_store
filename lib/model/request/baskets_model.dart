@@ -7,6 +7,7 @@ class ProductItem {
   final String category;
   final String imagePath;
   final int maxStock;
+  final String unit;
   RxBool showDelete;
 
   // หน่วยที่ขายรายการนี้ — unitId เป็น null แปลว่าเป็นหน่วยฐาน (พฤติกรรมเดิม)
@@ -30,6 +31,7 @@ class ProductItem {
     this.unitName = 'ชิ้น',
     this.conversionQty = 1,
     this.barcode,
+    required this.unit,
   }) : showDelete = false.obs;
 
   // key ไว้จัดกลุ่ม/นับจำนวนในตะกร้า — สินค้าเดียวกันแต่คนละหน่วยต้องแยกกัน

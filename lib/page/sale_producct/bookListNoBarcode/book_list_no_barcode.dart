@@ -1,148 +1,221 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:eazy_store/model/request/baskets_model.dart';
+import 'package:eazy_store/widgets/pagination_controls.dart';
+import 'package:eazy_store/widgets/product_filter_sheet.dart';
+import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'book_list_no_barcode_controller.dart';
 
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading ──────────────────────────────
+List<ProductItem> _fakeProducts() => List.generate(
+  6,
+  (i) => ProductItem(
+    id: '_fake_$i',
+    name: 'ชื่อสินค้า',
+    price: 0,
+    category: '',
+    imagePath: '',
+    maxStock: 10,
+    unit: 'ชิ้น',
+  ),
+);
+
 // ----------------------------------------------------------------------
-// 3. View (UI คงเดิม)
+// สมุดสินค้า — 2 แท็บ: ไม่มีบาร์โค้ด / มีบาร์โค้ด
+// (ช่องค้นหา + ตัวกรอง + ปุ่มเพิ่มลงรายการขาย ใช้ร่วมกันทั้ง 2 แท็บ)
 // ----------------------------------------------------------------------
 class ManualListPage extends StatelessWidget {
   const ManualListPage({super.key});
 
+  static const Color _activeBlue = Color(0xFF2979FF);
+  static const Color _primaryColor = Color(0xFF6B8E23);
+
   @override
   Widget build(BuildContext context) {
     final ManualListController controller = Get.put(ManualListController());
-    final Color activeBlue = const Color(0xFF2979FF);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.grey),
-          onPressed: () => Get.back(),
-        ),
-        title: const Text(
-          "สมุดสินค้า",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.grey),
+            onPressed: () => Get.back(),
+          ),
+          title: const Text(
+            "สมุดสินค้า",
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(58),
+            child: _buildTabBar(),
           ),
         ),
-      ),
-      body: Column(
-        children: [
-          _buildTabs(controller, activeBlue),
-          const SizedBox(height: 12),
-          _buildSearchAndFilter(controller),
-          const SizedBox(height: 10),
-          Expanded(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final list = controller.currentFilteredList;
-              if (list.isEmpty) {
-                return Center(
-                  child: Text(
-                    controller.activeTab.value == 0
-                        ? "ไม่พบสินค้าไม่มีบาร์โค้ด"
-                        : "ไม่พบสินค้าที่มีบาร์โค้ด",
-                    style: const TextStyle(color: Colors.grey),
+        body: Column(
+          children: [
+            _buildSearchAndFilter(controller),
+            const SizedBox(height: 10),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildTabBody(
+                    controller: controller,
+                    products: controller.pagedProducts,
+                    emptyText: "ยังไม่มีสินค้าที่ไม่มีบาร์โค้ด",
+                    currentPage: controller.currentPage,
+                    totalPages: controller.totalPages,
+                    itemsPerPage: controller.itemsPerPage,
+                    updateLimit: controller.updateLimit,
+                    changePage: controller.changePage,
                   ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: list.length,
-                itemBuilder: (context, index) {
-                  return _buildProductCard(list[index], activeBlue, controller);
-                },
-              );
-            }),
-          ),
-          _buildCheckoutButton(controller),
-        ],
+                  _buildTabBody(
+                    controller: controller,
+                    products: controller.pagedBarcodeProducts,
+                    emptyText: "ยังไม่มีสินค้าที่มีบาร์โค้ด",
+                    currentPage: controller.currentPageBarcode,
+                    totalPages: controller.totalPagesBarcode,
+                    itemsPerPage: controller.itemsPerPageBarcode,
+                    updateLimit: controller.updateLimitBarcode,
+                    changePage: controller.changePageBarcode,
+                  ),
+                ],
+              ),
+            ),
+            _buildCheckoutButton(controller),
+          ],
+        ),
       ),
     );
   }
 
-  // แท็บสลับระหว่างสินค้าไม่มีบาร์โค้ด (ดีฟอลต์) กับสินค้าที่มีบาร์โค้ด
-  // เผื่อกรณีสแกนไม่ติด จะได้มาหาจากตรงนี้แทนได้
-  Widget _buildTabs(ManualListController controller, Color activeColor) {
+  // แท็บสไตล์ segmented — active เป็นพื้นขาว, inactive เทาจาง
+  Widget _buildTabBar() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
         ),
-        child: Obx(
-          () => Row(
-            children: [
-              Expanded(
-                child: _buildTabButton(
-                  controller,
-                  index: 0,
-                  label: "ไม่มีบาร์โค้ด",
-                  activeColor: activeColor,
-                ),
-              ),
-              Expanded(
-                child: _buildTabButton(
-                  controller,
-                  index: 1,
-                  label: "มีบาร์โค้ด",
-                  activeColor: activeColor,
-                ),
+        child: TabBar(
+          dividerColor: Colors.transparent,
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
+          labelColor: _activeBlue,
+          unselectedLabelColor: Colors.grey.shade500,
+          labelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          tabs: const [
+            Tab(text: "ไม่มีบาร์โค้ด"),
+            Tab(text: "มีบาร์โค้ด"),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTabButton(
-    ManualListController controller, {
-    required int index,
-    required String label,
-    required Color activeColor,
+  // เนื้อหาของแต่ละแท็บ: list + pagination ของแท็บนั้นๆ
+  Widget _buildTabBody({
+    required ManualListController controller,
+    required RxList<ProductItem> products,
+    required String emptyText,
+    required RxInt currentPage,
+    required RxInt totalPages,
+    required RxInt itemsPerPage,
+    required void Function(int) updateLimit,
+    required void Function(int) changePage,
   }) {
-    final selected = controller.activeTab.value == index;
-    return GestureDetector(
-      onTap: () => controller.activeTab.value = index,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+    return Column(
+      children: [
+        Expanded(
+          child: Obx(() {
+            if (controller.isLoading.value) {
+              final fake = _fakeProducts();
+              return Skeletonizer(
+                enabled: true,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: fake.length,
+                  itemBuilder: (context, index) => _buildProductCard(
+                    fake[index],
+                    _activeBlue,
+                    controller,
                   ),
-                ]
-              : null,
+                ),
+              );
+            }
+            if (products.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 64,
+                      color: Colors.grey.shade300,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      emptyText,
+                      style: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                return _buildProductCard(
+                  products[index],
+                  _activeBlue,
+                  controller,
+                );
+              },
+            );
+          }),
         ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: selected ? activeColor : Colors.grey[600],
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
+        PaginationControls(
+          currentPage: currentPage,
+          totalPages: totalPages,
+          itemsPerPage: itemsPerPage,
+          updateLimit: updateLimit,
+          changePage: changePage,
+          primaryColor: _primaryColor,
+          isLoading: controller.isLoading,
         ),
-      ),
+      ],
     );
   }
 
@@ -154,11 +227,11 @@ class ManualListPage extends StatelessWidget {
     return GestureDetector(
       onTap: () => controller.toggleSelection(product.id),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(9),
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
@@ -171,21 +244,21 @@ class ManualListPage extends StatelessWidget {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(10),
               child: Image.network(
                 product.imagePath,
-                width: 44,
-                height: 44,
+                width: 70,
+                height: 70,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey[200],
-                  width: 44,
-                  height: 44,
+                  width: 70,
+                  height: 70,
                   child: const Icon(Icons.image_outlined, color: Colors.grey),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 15),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,38 +266,29 @@ class ManualListPage extends StatelessWidget {
                   Text(
                     product.name,
                     style: const TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 5),
                   Text(
-                    "${product.price.toStringAsFixed(0)} บาท",
+                    "${formatMoney(product.price)} บาท",
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey[700],
                     ),
                   ),
-                  if (product.barcode != null && product.barcode!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      "บาร์โค้ด: ${product.barcode}",
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ],
               ),
             ),
             Obx(() {
               final isSelected = controller.selectedIds.contains(product.id);
               return Container(
-                width: 22,
-                height: 22,
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isSelected ? activeColor : Colors.transparent,
@@ -234,7 +298,7 @@ class ManualListPage extends StatelessWidget {
                   ),
                 ),
                 child: isSelected
-                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    ? const Icon(Icons.check, size: 16, color: Colors.white)
                     : null,
               );
             }),
@@ -244,57 +308,46 @@ class ManualListPage extends StatelessWidget {
     );
   }
 
+  // ช่องค้นหา + ปุ่มตัวกรอง (หมวดหมู่+จัดเรียง) วางเรียงกันแบบเดียวกับหน้าเช็คสต็อกสินค้า
   Widget _buildSearchAndFilter(ManualListController controller) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: TextField(
-              onChanged: (val) => controller.searchQuery.value = val,
-              decoration: const InputDecoration(
-                hintText: "ค้นหาชื่อสินค้า",
-                prefixIcon: Icon(Icons.search, color: Colors.grey),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 15),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(10),
               ),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Obx(
-              () => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: controller.selectedCategory.value,
-                    items: controller.categories
-                        .map(
-                          (val) =>
-                              DropdownMenuItem(value: val, child: Text(val)),
-                        )
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) controller.selectedCategory.value = val;
-                    },
-                  ),
+              child: TextField(
+                onChanged: (val) => controller.searchQuery.value = val,
+                decoration: const InputDecoration(
+                  hintText: "ค้นหาชื่อสินค้า",
+                  prefixIcon: Icon(Icons.search, color: Colors.grey),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 15),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Obx(
+            () => ProductFilterButton(
+              categories: controller.categories,
+              selectedCategoryId: controller.selectedCategoryId.value,
+              sortFields: defaultProductSortFields,
+              selectedSortValue: controller.selectedSortOption.value,
+              defaultSortValue: 'name_asc',
+              onApply: (categoryId, sortValue) => controller.applyFilter(
+                categoryId: categoryId,
+                sortOption: sortValue,
+              ),
+              onClear: controller.clearFilter,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

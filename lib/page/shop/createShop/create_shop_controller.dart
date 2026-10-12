@@ -6,31 +6,54 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Imports ของโปรเจกต์ (เช็ค path ให้ตรงกับของคุณนะครับ)
 import 'package:eazy_store/page/homepage/home_page.dart';
 import 'package:eazy_store/page/homepage/home_controller.dart';
+import 'package:eazy_store/page/shop/myShop/myshop.dart';
+import 'package:eazy_store/page/shop/myShop/myshop_controller.dart';
 import '../../../model/response/shop_response.dart';
 import '../../../api/api_shop.dart';
 import '../set_shop_pin_page.dart';
 import '../../../api/api_service_image.dart';
+import 'package:eazy_store/utils/error_message.dart';
+import 'package:eazy_store/utils/thai_sort.dart';
 
 class CreateShopController extends GetxController {
-  // --- Input Controllers ---
+  // ==========================================
+  // 1. ตัวแปรและ Controllers (State & Controllers)
+  // ==========================================
   final shopNameController = TextEditingController();
   final shopPhoneController = TextEditingController();
   final addressController = TextEditingController();
-  final zipCodeController = TextEditingController();
 
   var isLoading = false.obs;
 
-  // --- Image Picker ---
   final ImagePicker _picker = ImagePicker();
-  Rx<File?> profileImage = Rx<File?>(null); // shopImage
+  Rx<File?> profileImage = Rx<File?>(null);
   Rx<File?> qrImage = Rx<File?>(null);
 
+  final selectedProvince = Rx<String?>(null);
+  final selectedDistrict = Rx<String?>(null);
+  final selectedSubDistrict = Rx<String?>(null);
+  Map<String, dynamic>? _fullAddressData;
+  final provinces = <String>[].obs;
+  final districts = <String>[].obs;
+  final subdistricts = <String>[].obs;
+
+  var currentPin = "".obs;
+  var isConfirmPinStep = false.obs;
+  String firstPin = "";
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadAddressData();
+  }
+
+  // ==========================================
+  //  จัดการรูปภาพ (Image Picker Logic)
+  // ==========================================
   Future<void> pickImage(ImageSource source, {required bool isProfile}) async {
     try {
-      // การขอสิทธิ์กล้อง/รูปภาพ ถูกจัดการรวมไว้ใน ImagePickerSheet แล้ว
       final XFile? image = await _picker.pickImage(
         source: source,
         imageQuality: 80,
@@ -44,34 +67,28 @@ class CreateShopController extends GetxController {
         }
       }
     } catch (e) {
-      print(
-        "Error picking image: $e",
-      ); // ปริ้นออกมาดูใน Console ว่า Error จริงๆ คืออะไร
-      Get.snackbar("เกิดข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้: $e");
+      print("Error picking image: $e");
+      Get.snackbar(
+        "เกิดข้อผิดพลาด",
+        "ไม่สามารถเลือกรูปภาพได้ กรุณาลองใหม่อีกครั้ง",
+      );
     }
   }
 
-  // --- Address Logic ---
-  final selectedProvince = Rx<String?>(null);
-  final selectedDistrict = Rx<String?>(null);
-  final selectedSubDistrict = Rx<String?>(null);
-  Map<String, dynamic>? _fullAddressData;
-  final provinces = <String>[].obs;
-  final districts = <String>[].obs;
-  final subdistricts = <String>[].obs;
-
-  @override
-  void onInit() {
-    super.onInit();
-    _loadAddressData();
-  }
-
+  // ==========================================
+  // จัดการที่อยู่ (Address Logic)
+  // ==========================================
   Future<void> _loadAddressData() async {
     try {
       const assetPath =
           'assets/data_address/province_with_district_and_sub_district.json';
       final String response = await rootBundle.loadString(assetPath);
       final List<dynamic> rawData = jsonDecode(response);
+      rawData.sort((a, b) {
+        final nameA = a['name_th'] as String? ?? '';
+        final nameB = b['name_th'] as String? ?? '';
+        return thaiSortKey(nameA).compareTo(thaiSortKey(nameB));
+      });
       final Map<String, dynamic> structuredData = {};
       for (var province in rawData) {
         String provinceName =
@@ -79,22 +96,12 @@ class CreateShopController extends GetxController {
         structuredData[provinceName] = province;
       }
       _fullAddressData = structuredData;
-      provinces.value = _fullAddressData!.keys.toList();
+      final provinceList = _fullAddressData!.keys.toList();
+      provinceList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+      provinces.value = provinceList;
     } catch (e) {
       print("Error load address: $e");
     }
-  }
-
-  void _resetDistrictAndSubdistrict() {
-    selectedDistrict.value = null;
-    selectedSubDistrict.value = null;
-    districts.clear();
-    subdistricts.clear();
-  }
-
-  void _resetSubdistrict() {
-    selectedSubDistrict.value = null;
-    subdistricts.clear();
   }
 
   void onProvinceChanged(String? newValue) {
@@ -104,14 +111,18 @@ class CreateShopController extends GetxController {
     }
     selectedProvince.value = newValue;
     _resetDistrictAndSubdistrict();
-    final provinceData = _fullAddressData![newValue];
+    final provinceData = _fullAddressData![newValue]; //เข้าไปใน จ ที่เลือก
     final List<dynamic>? rawDistricts =
-        provinceData?['districts'] as List<dynamic>?;
+        provinceData?['districts'] as List<dynamic>?; //เเสดง  อ ออกมา
+
     if (rawDistricts != null) {
-      districts.value = rawDistricts
+      final districtList = rawDistricts
           .map((district) => district['name_th'] as String? ?? '')
           .whereType<String>()
+          .where((name) => name.isNotEmpty)
           .toList();
+      districtList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+      districts.value = districtList; //เอาเข้าช่องที่ 2 เพื่อเอาไปเเสดง
     }
   }
 
@@ -136,10 +147,13 @@ class CreateShopController extends GetxController {
         final List<dynamic>? rawSubdistricts =
             selectedDistrictData['sub_districts'] as List<dynamic>?;
         if (rawSubdistricts != null) {
-          subdistricts.value = rawSubdistricts
+          final subList = rawSubdistricts
               .map((sub) => sub['name_th'] as String? ?? '')
               .whereType<String>()
+              .where((name) => name.isNotEmpty)
               .toList();
+          subList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+          subdistricts.value = subList;
         }
       }
     }
@@ -149,23 +163,27 @@ class CreateShopController extends GetxController {
     selectedSubDistrict.value = newValue;
   }
 
-  // =========================================================
-  // 🔥 ส่วนที่เพิ่มใหม่: Logic การจัดการ PIN และ Validate
-  // =========================================================
+  void _resetDistrictAndSubdistrict() {
+    selectedDistrict.value = null;
+    selectedSubDistrict.value = null;
+    districts.clear();
+    subdistricts.clear();
+  }
 
-  var currentPin = "".obs; // PIN ที่กำลังพิมพ์
-  var isConfirmPinStep = false.obs; // อยู่หน้ายืนยันไหม?
-  String firstPin = ""; // PIN รอบแรก
+  void _resetSubdistrict() {
+    selectedSubDistrict.value = null;
+    subdistricts.clear();
+  }
 
-  // 1. ฟังก์ชัน Validate ก่อนไปหน้า PIN
+  // ==========================================
+  //  ตรวจสอบข้อมูลก่อนไปตั้งรหัส (Validation)
+  // ==========================================
   void validateAndGoToPin() {
-    // ดึงค่าเบอร์โทรออกมาเช็ค
     String phone = shopPhoneController.text.trim();
 
-    // เช็คว่ากรอกครบทุกช่องไหม
-    if (shopNameController.text.isEmpty ||
+    if (shopNameController.text.trim().isEmpty ||
         phone.isEmpty ||
-        addressController.text.isEmpty ||
+        addressController.text.trim().isEmpty ||
         selectedProvince.value == null ||
         profileImage.value == null ||
         qrImage.value == null) {
@@ -176,8 +194,6 @@ class CreateShopController extends GetxController {
       return;
     }
 
-    // 🔥 เช็คเงื่อนไขเบอร์โทรศัพท์: ต้องเป็นตัวเลขเท่านั้น และต้องครบ 10 หลัก
-    // ใช้ RegExp(r'^[0-9]+$') เพื่อเช็คว่าเป็นตัวเลข 0-9 เท่านั้น
     if (phone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(phone)) {
       _showErrorSnackbar(
         "เบอร์โทรศัพท์ไม่ถูกต้อง",
@@ -186,14 +202,126 @@ class CreateShopController extends GetxController {
       return;
     }
 
-    // ถ้าผ่านเงื่อนไขทั้งหมด -> ไปหน้า PIN
     currentPin.value = "";
     firstPin = "";
     isConfirmPinStep.value = false;
     Get.to(() => const SetShopPinPage());
   }
 
-  // ฟังก์ชันเสริมสำหรับแสดง Snackbar แจ้งเตือน (ช่วยให้ Code สะอาดขึ้น)
+  // ==========================================
+  //  จัดการรหัส PIN (Numpad & Confirm)
+  // ==========================================
+
+  void confirmCurrentPin() {
+    if (currentPin.value.length != 6) {
+      Get.snackbar(
+        "รหัส PIN ไม่ครบ",
+        "กรุณากรอก PIN ให้ครบ 6 หลัก",
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    if (!isConfirmPinStep.value) {
+      firstPin = currentPin.value;
+      currentPin.value = "";
+      isConfirmPinStep.value = true;
+    } else {
+      if (currentPin.value == firstPin) {
+        _showPinSuccessDialog(firstPin);
+      } else {
+        Get.snackbar(
+          "รหัสไม่ตรงกัน",
+          "กรุณาตั้งรหัสใหม่อีกครั้ง",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        currentPin.value = "";
+        firstPin = "";
+        isConfirmPinStep.value = false;
+      }
+    }
+  }
+
+  // ==========================================
+  // ส่งข้อมูลขึ้นเซิร์ฟเวอร์
+  // ==========================================
+  Future<void> _submitAllDataToBackend(String confirmedPin) async {
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
+    isLoading.value = true;
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      int userId = prefs.getInt('userId') ?? 0;
+
+      if (userId == 0) {
+        Get.back();
+        Get.snackbar("ข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้");
+        return;
+      }
+
+      final uploadService = ImageUploadService();
+      String? shopImageUrl = await uploadService.uploadImage(
+        profileImage.value!,
+      );
+      String? qrImageUrl = await uploadService.uploadImage(qrImage.value!);
+
+      if (shopImageUrl == null || qrImageUrl == null) {
+        Get.back();
+        Get.snackbar("ผิดพลาด", "อัปโหลดรูปภาพไม่สำเร็จ");
+        return;
+      }
+
+      String fullAddress =
+          "${addressController.text} "
+          "ต.${selectedSubDistrict.value ?? ''} "
+          "อ.${selectedDistrict.value ?? ''} "
+          "จ.${selectedProvince.value ?? ''}";
+
+      ShopResponse request = ShopResponse(
+        shopId: 0,
+        userId: userId,
+        name: shopNameController.text,
+        phone: shopPhoneController.text,
+        address: fullAddress,
+        pinCode: confirmedPin,
+        imgShop: shopImageUrl,
+        imgQrcode: qrImageUrl,
+      );
+
+      bool isSuccess = await ApiShop().createShop(request);
+
+      Get.back();
+      isLoading.value = false;
+
+      if (isSuccess) {
+        await prefs.setString('shopName', shopNameController.text);
+        _showShopCreatedSuccessDialog();
+      } else {
+        Get.snackbar("ล้มเหลว", "สร้างร้านค้าไม่สำเร็จ");
+      }
+    } catch (e) {
+      Get.back();
+      isLoading.value = false;
+      print("Error submit: $e");
+      Get.snackbar(
+        "เกิดข้อผิดพลาด",
+        friendlyError(
+          e,
+          fallback: "ไม่สามารถบันทึกข้อมูลร้านค้าได้ กรุณาลองใหม่อีกครั้ง",
+        ),
+      );
+    }
+  }
+
+  // ==========================================
+  // ส่วนของ Dialog (UI popups ย่อย)
+  // ==========================================
   void _showErrorSnackbar(String title, String message) {
     Get.dialog(
       Dialog(
@@ -201,16 +329,14 @@ class CreateShopController extends GetxController {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min, // ให้ขนาดพอดีกับเนื้อหา
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // ไอคอนเตือนสีส้ม/เหลือง
               const Icon(
                 Icons.warning_amber_rounded,
                 color: Colors.orange,
                 size: 60,
               ),
               const SizedBox(height: 16),
-
               Text(
                 title,
                 style: const TextStyle(
@@ -220,15 +346,12 @@ class CreateShopController extends GetxController {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-
               Text(
                 message,
                 style: const TextStyle(fontSize: 16, color: Colors.black54),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-
-              // ปุ่มตกลง
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -239,7 +362,7 @@ class CreateShopController extends GetxController {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () => Get.back(), // ปิด Dialog
+                  onPressed: () => Get.back(),
                   child: const Text(
                     "ตกลง",
                     style: TextStyle(
@@ -254,65 +377,10 @@ class CreateShopController extends GetxController {
           ),
         ),
       ),
-      barrierDismissible: true, // คลิกพื้นที่ว่างรอบๆ เพื่อปิดได้
+      barrierDismissible: true,
     );
   }
 
-  // 2. Logic Numpad
-  void addPinDigit(String digit) {
-    if (currentPin.value.length < 6) {
-      currentPin.value += digit;
-    }
-  }
-
-  void deletePinDigit() {
-    if (currentPin.value.isNotEmpty) {
-      currentPin.value = currentPin.value.substring(
-        0,
-        currentPin.value.length - 1,
-      );
-    }
-  }
-
-  // 3. Logic ยืนยัน PIN
-  void confirmCurrentPin() {
-    if (currentPin.value.length != 6) {
-      Get.snackbar(
-        "รหัส PIN ไม่ครบ",
-        "กรุณากรอก PIN ให้ครบ 6 หลัก",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-      return;
-    }
-
-    if (!isConfirmPinStep.value) {
-      // จบรอบแรก
-      firstPin = currentPin.value;
-      currentPin.value = "";
-      isConfirmPinStep.value = true;
-    } else {
-      // จบรอบสอง (ยืนยัน)
-      if (currentPin.value == firstPin) {
-        // PIN ตรงกัน -> แสดง Dialog สำเร็จ -> ส่งข้อมูล
-        _showPinSuccessDialog(firstPin);
-      } else {
-        // PIN ไม่ตรง
-        Get.snackbar(
-          "รหัสไม่ตรงกัน",
-          "กรุณาตั้งรหัสใหม่อีกครั้ง",
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        currentPin.value = "";
-        firstPin = "";
-        isConfirmPinStep.value = false;
-      }
-    }
-  }
-
-  // Dialog ตั้ง PIN สำเร็จ
   void _showPinSuccessDialog(String finalPin) {
     Get.dialog(
       Dialog(
@@ -345,8 +413,7 @@ class CreateShopController extends GetxController {
                     shape: const StadiumBorder(),
                   ),
                   onPressed: () {
-                    Get.back(); // ปิด Dialog PIN
-                    // 🔥 เริ่มส่งข้อมูลทั้งหมดเข้า Backend
+                    Get.back();
                     _submitAllDataToBackend(finalPin);
                   },
                   child: const Text(
@@ -361,86 +428,6 @@ class CreateShopController extends GetxController {
       ),
       barrierDismissible: false,
     );
-  }
-
-  // 4. ฟังก์ชันส่งข้อมูลจริง (ย้ายมาจาก submitShopInfo เดิม)
-  Future<void> _submitAllDataToBackend(String confirmedPin) async {
-    // แสดง Loading
-    Get.dialog(
-      const Center(child: CircularProgressIndicator()),
-      barrierDismissible: false,
-    );
-    isLoading.value = true;
-
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int userId = prefs.getInt('userId') ?? 0;
-
-      if (userId == 0) {
-        Get.back();
-        Get.snackbar("ข้อผิดพลาด", "ไม่พบข้อมูลผู้ใช้");
-        return;
-      }
-
-      // --- Upload Images (แนะนำใช้ Cloudinary ตามที่คุยกัน) ---
-      final uploadService = ImageUploadService();
-      String? shopImageUrl = await uploadService.uploadImage(
-        profileImage.value!,
-      );
-      String? qrImageUrl = await uploadService.uploadImage(qrImage.value!);
-
-      if (shopImageUrl == null || qrImageUrl == null) {
-        Get.back();
-        Get.snackbar("ผิดพลาด", "อัปโหลดรูปภาพไม่สำเร็จ");
-        return;
-      }
-
-      // --- เตรียมที่อยู่ ---
-      String fullAddress =
-          "${addressController.text} "
-          "ต.${selectedSubDistrict.value ?? ''} "
-          "อ.${selectedDistrict.value ?? ''} "
-          "จ.${selectedProvince.value ?? ''} "
-          "${zipCodeController.text}";
-
-      // --- สร้าง Request (ใส่ PIN ที่ได้มา) ---
-      ShopResponse request = ShopResponse(
-        shopId: 0,
-        userId: userId,
-        name: shopNameController.text,
-        phone: shopPhoneController.text,
-        address: fullAddress,
-        pinCode: confirmedPin, // ✅ ใช้ PIN ที่ User ตั้ง
-        imgShop: shopImageUrl,
-        imgQrcode: qrImageUrl,
-      );
-
-      // --- เรียก API ---
-      bool isSuccess = await ApiShop().createShop(request);
-
-      Get.back(); // ปิด Loading
-      isLoading.value = false;
-
-      if (isSuccess) {
-        // หา shopId ของร้านที่เพิ่งสร้างจาก getShops()
-        final shops = await ApiShop().getShops();
-        for (var shop in shops) {
-          if (shop.name == shopNameController.text) {
-            await prefs.setInt('shopId', shop.shopId);
-            break;
-          }
-        }
-        await prefs.setString('shopName', shopNameController.text);
-        _showShopCreatedSuccessDialog();
-      } else {
-        Get.snackbar("ล้มเหลว", "สร้างร้านค้าไม่สำเร็จ");
-      }
-    } catch (e) {
-      Get.back();
-      isLoading.value = false;
-      print("Error submit: $e");
-      Get.snackbar("เกิดข้อผิดพลาด", "$e");
-    }
   }
 
   void _showShopCreatedSuccessDialog() {
@@ -488,8 +475,8 @@ class CreateShopController extends GetxController {
                 child: ElevatedButton(
                   onPressed: () {
                     Get.back();
-                    Get.delete<HomeController>();
-                    Get.offAll(() => const HomePage());
+                    Get.delete<MyShopController>(force: true); // เคลียร์ MyShopController เพื่อให้ดึงข้อมูลใหม่
+                    Get.offAll(() => const MyShopPage()); // กลับไปหน้าเลือกร้านค้า
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),

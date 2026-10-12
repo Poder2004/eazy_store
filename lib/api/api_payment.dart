@@ -45,7 +45,8 @@ class ApiPayment {
   }
 
   static Future<List<dynamic>?> getPaymentHistory(int debtorId) async {
-    final Uri url = Uri.parse('${AppConfig.baseUrl}/api/payments/$debtorId');
+    final Uri url =
+        Uri.parse('${AppConfig.baseUrl}/api/debtors/$debtorId/payments');
 
     try {
       await AuthGuard.checkAndRefreshIfNeeded();

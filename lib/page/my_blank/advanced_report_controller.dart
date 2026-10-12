@@ -7,8 +7,9 @@ import 'package:eazy_store/model/response/advanced_report_response.dart';
 
 class AdvancedReportController extends GetxController {
   var isLoading = true.obs;
-  // เหลือแค่ 2 ตัวเลือก: เดือนนี้ / ปีนี้
-  var selectedView = 'เดือนนี้'.obs;
+  var hasLoadedOnce = false.obs;
+  // 3 ตัวเลือก: วันนี้ / เดือนนี้ / ปีนี้
+  var selectedView = 'วันนี้'.obs;
   var currentDate = DateTime.now().obs;
   var reportData = Rxn<AdvancedReportResponse>();
   var isAgingDetailLoading = false.obs;
@@ -39,6 +40,7 @@ class AdvancedReportController extends GetxController {
       debugPrint('Error fetching advanced report: $e');
     } finally {
       isLoading(false);
+      hasLoadedOnce(true);
     }
   }
 
@@ -63,6 +65,13 @@ class AdvancedReportController extends GetxController {
   Map<String, String> _getDateRange() {
     final now = currentDate.value;
     final fmt = DateFormat('yyyy-MM-dd');
+    if (selectedView.value == 'วันนี้') {
+      final dateStr = fmt.format(now);
+      return {
+        'start': dateStr,
+        'end': dateStr,
+      };
+    }
     if (selectedView.value == 'เดือนนี้') {
       return {
         'start': fmt.format(DateTime(now.year, now.month, 1)),
@@ -76,7 +85,12 @@ class AdvancedReportController extends GetxController {
     };
   }
 
-  String formatNumber(double value) => NumberFormat('#,##0.##').format(value);
+  String formatNumber(double value) {
+    // จำนวนเต็ม -> ไม่โชว์ทศนิยม (13,699), มีเศษ -> โชว์เต็ม 2 ตำแหน่งเสมอ (13,699.50) ไม่ปัดทิ้ง
+    final hasCents = (value * 100).round() % 100 != 0;
+    final pattern = hasCents ? '#,##0.00' : '#,##0';
+    return NumberFormat(pattern).format(value);
+  }
 
   String formatCompact(double value) {
     if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
@@ -86,6 +100,10 @@ class AdvancedReportController extends GetxController {
 
   String getPeriodLabel() {
     final date = currentDate.value;
+    if (selectedView.value == 'วันนี้') {
+      final thaiYear = date.year + 543;
+      return '${date.day} ${DateFormat('MMMM').format(date)} $thaiYear';
+    }
     if (selectedView.value == 'เดือนนี้') {
       return '${DateFormat('MMMM').format(date)} ${date.year + 543}';
     }
@@ -94,6 +112,9 @@ class AdvancedReportController extends GetxController {
 
   String getPeriodShortLabel() {
     final date = currentDate.value;
+    if (selectedView.value == 'วันนี้') {
+      return '${date.day} ${DateFormat('MMM').format(date)}';
+    }
     if (selectedView.value == 'เดือนนี้') {
       return DateFormat('MMM').format(date);
     }
@@ -102,7 +123,9 @@ class AdvancedReportController extends GetxController {
 
   void navigatePeriod(int direction) {
     final now = currentDate.value;
-    if (selectedView.value == 'เดือนนี้') {
+    if (selectedView.value == 'วันนี้') {
+      currentDate.value = now.add(Duration(days: direction));
+    } else if (selectedView.value == 'เดือนนี้') {
       currentDate.value = DateTime(now.year, now.month + direction, 1);
     } else {
       currentDate.value = DateTime(now.year + direction, 1, 1);
@@ -110,7 +133,18 @@ class AdvancedReportController extends GetxController {
   }
 
   Future<void> selectDate(BuildContext context) async {
-    if (selectedView.value == 'เดือนนี้') {
+    if (selectedView.value == 'วันนี้') {
+      final picked = await showDatePicker(
+        context: context,
+        initialDate: currentDate.value,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2035),
+        locale: const Locale('th', 'TH'),
+      );
+      if (picked != null) {
+        currentDate.value = picked;
+      }
+    } else if (selectedView.value == 'เดือนนี้') {
       _showMonthPicker(context);
     } else {
       _showYearPicker(context);

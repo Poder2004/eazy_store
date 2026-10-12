@@ -17,6 +17,11 @@ class EditProfileController extends GetxController {
   // ✨ เพิ่มตัวแปรสำหรับเปิด-ปิดตา (ซ่อนรหัสผ่าน)
   var isPasswordHidden = true.obs;
 
+  // ✨ ข้อความแจ้งเตือนแบบ real-time ใต้ช่องกรอกแต่ละช่อง (ว่าง = ไม่มีปัญหา)
+  var phoneError = "".obs;
+  var emailError = "".obs;
+  var passwordError = "".obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -24,16 +29,37 @@ class EditProfileController extends GetxController {
     emailCtrl = TextEditingController();
     phoneCtrl = TextEditingController();
     passwordCtrl = TextEditingController();
+    phoneCtrl.addListener(_validatePhone);
+    emailCtrl.addListener(_validateEmail);
+    passwordCtrl.addListener(_validatePassword);
     _loadInitialData();
   }
 
   @override
   void onClose() {
+    phoneCtrl.removeListener(_validatePhone);
+    emailCtrl.removeListener(_validateEmail);
+    passwordCtrl.removeListener(_validatePassword);
     usernameCtrl.dispose();
     emailCtrl.dispose();
     phoneCtrl.dispose();
     passwordCtrl.dispose();
     super.onClose();
+  }
+
+  void _validatePhone() {
+    final v = phoneCtrl.text.trim();
+    phoneError.value = (v.isNotEmpty && v.length != 10) ? "ยังไม่ครบ 10 หลัก" : "";
+  }
+
+  void _validateEmail() {
+    final v = emailCtrl.text.trim();
+    emailError.value = (v.isNotEmpty && !GetUtils.isEmail(v)) ? "รูปแบบอีเมลไม่ถูกต้อง" : "";
+  }
+
+  void _validatePassword() {
+    final v = passwordCtrl.text;
+    passwordError.value = (v.isNotEmpty && v.length <= 6) ? "รหัสผ่านต้องมากกว่า 6 ตัวอักษร" : "";
   }
 
   Future<void> _loadInitialData() async {
@@ -138,6 +164,11 @@ class EditProfileController extends GetxController {
 
   // ✨ 1. เพิ่มฟังก์ชันถามยืนยันก่อน Save
   void confirmSaveProfile() {
+    // สั่งตรวจซ้ำอีกครั้งตอนกดบันทึก เผื่อ error ใต้ช่องยังไม่ทันอัปเดต
+    _validatePhone();
+    _validateEmail();
+    _validatePassword();
+
     // เช็คค่าว่างก่อนถามยืนยัน
     if (usernameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
       _showPremiumDialog(
@@ -149,10 +180,30 @@ class EditProfileController extends GetxController {
       return;
     }
 
-    if (passwordCtrl.text.isNotEmpty && passwordCtrl.text.length < 6) {
+    if (emailError.value.isNotEmpty) {
+      _showPremiumDialog(
+        title: "อีเมลไม่ถูกต้อง",
+        message: "กรุณากรอกอีเมลให้ถูกต้อง",
+        icon: Icons.warning_rounded,
+        color: const Color(0xFFF59E0B),
+      );
+      return;
+    }
+
+    if (phoneError.value.isNotEmpty) {
+      _showPremiumDialog(
+        title: "เบอร์โทรไม่ถูกต้อง",
+        message: "เบอร์โทรต้องมี 10 หลัก",
+        icon: Icons.warning_rounded,
+        color: const Color(0xFFF59E0B),
+      );
+      return;
+    }
+
+    if (passwordError.value.isNotEmpty) {
       _showPremiumDialog(
         title: "รหัสผ่านสั้นเกินไป",
-        message: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+        message: "รหัสผ่านต้องมากกว่า 6 ตัวอักษร",
         icon: Icons.shield_outlined,
         color: const Color(0xFFF59E0B),
       );
@@ -211,6 +262,7 @@ class EditProfileController extends GetxController {
                   Expanded(
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),

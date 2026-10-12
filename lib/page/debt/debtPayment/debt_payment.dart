@@ -850,6 +850,10 @@ class DebtPaymentScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
+                        // กันกดปุ่มซ้ำเร็วๆ จนเปิด PIN dialog ซ้อนกันหลายชั้น
+                        // (ชั้นที่ซ่อนอยู่ด้านล่างจะยังค้างอยู่แม้ปิดชั้นบนสุดไปแล้ว
+                        // ทำให้ดูเหมือนปิดไม่ได้ และถ้ากรอก PIN ยืนยันซ้ำอาจยิงจ่ายซ้ำ)
+                        if (Get.isDialogOpen == true) return;
                         if (controller.amountPaid.value <= 0) {
                           Get.snackbar(
                             'แจ้งเตือน',

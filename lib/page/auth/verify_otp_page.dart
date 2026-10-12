@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:eazy_store/page/auth/reset_password.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:eazy_store/api/api_auth.dart';
 import 'package:eazy_store/model/request/reset_request.dart';
 import 'package:eazy_store/model/request/verify_otp_request.dart';
@@ -18,10 +19,10 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     6,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
+  final List<FocusNode> _focusNodes = [];
 
   bool _isLoading = false;
-  int _secondsRemaining = 60; // ตัวนับเวลาถอยหลัง 60 วินาที
+  int _secondsRemaining = 60; 
   Timer? _timer;
   bool _canResend = false;
 
@@ -32,7 +33,34 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   void initState() {
     super.initState();
     _email = Get.arguments ?? "";
-    _startTimer(); // เริ่มนับเวลาถอยหลังทันทีที่เข้าหน้านี้
+   
+    for (int i = 0; i < 6; i++) {
+      final node = FocusNode(onKeyEvent: (node, event) => _handleBackspaceKey(i, event));
+      
+      node.addListener(() {
+        if (node.hasFocus) {
+          _controllers[i].selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controllers[i].text.length,
+          );
+        }
+      });
+      _focusNodes.add(node);
+    }
+    _startTimer();
+  }
+
+  KeyEventResult _handleBackspaceKey(int index, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace &&
+        _controllers[index].text.isEmpty &&
+        index > 0) {
+     
+      _controllers[index - 1].clear();
+      _focusNodes[index - 1].requestFocus();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -44,7 +72,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     super.dispose();
   }
 
-  // ฟังก์ชันนับเวลาถอยหลังสำหรับการส่งรหัสใหม่
+
   void _startTimer() {
     _secondsRemaining = 60;
     _canResend = false;
@@ -60,10 +88,10 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     });
   }
 
-  // ฟังก์ชันขอส่งรหัส OTP อีกครั้ง
   void _handleResendOTP() async {
     setState(() => _isLoading = true);
     final response = await ApiAuth.requestResetOTP(ResetRequest(email: _email));
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (response.error == null) {
@@ -73,7 +101,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         icon: Icons.mark_email_read,
         color: Colors.green,
       );
-      _startTimer(); // รีเซ็ตเวลาถอยหลังใหม่
+      _startTimer(); 
     } else {
       _showPopup(
         title: "ผิดพลาด",
@@ -92,6 +120,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     final response = await ApiAuth.verifyOTP(
       VerifyOtpRequest(email: _email, otpCode: otp),
     );
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (response.error == null) {
@@ -201,7 +230,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
             ),
             const SizedBox(height: 30),
             const Text(
-              "OTP Verification",
+              "ยืนยันรหัส OTP",
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -228,7 +257,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
               children: List.generate(6, (index) => _buildOtpInput(index)),
             ),
             const SizedBox(height: 40),
-            // 3. ปุ่ม "ส่งรหัสอีกครั้ง" พร้อมตัวนับเวลา
+     
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -263,7 +292,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
-                        "Verify",
+                        "ยืนยันรหัส",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -292,18 +321,39 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
         focusNode: _focusNodes[index],
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        maxLength: 1,
+       
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(2),
+        ],
         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         decoration: const InputDecoration(
           counterText: "",
           border: InputBorder.none,
         ),
+        onTap: () {
+         
+          _controllers[index].selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _controllers[index].text.length,
+          );
+        },
         onChanged: (value) {
-          if (value.isNotEmpty && index < 5)
+
+          if (value.length > 1) {
+            value = value.substring(value.length - 1);
+            _controllers[index].value = TextEditingValue(
+              text: value,
+              selection: TextSelection.collapsed(offset: value.length),
+            );
+          }
+          
+          if (value.isNotEmpty && index < 5) {
             _focusNodes[index + 1].requestFocus();
-          if (value.isEmpty && index > 0) _focusNodes[index - 1].requestFocus();
-          if (value.isNotEmpty && index == 5)
-            _handleVerify(); // พิมพ์ครบ 6 ตัวให้ Verify ทันที
+          }
+          if (value.isNotEmpty && index == 5) {
+            _handleVerify(); 
+          }
         },
       ),
     );

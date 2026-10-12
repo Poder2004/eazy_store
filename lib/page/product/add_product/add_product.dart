@@ -6,6 +6,7 @@ import 'package:eazy_store/widgets/category_bottom_sheet.dart';
 import 'package:eazy_store/widgets/category_disable_dialog.dart';
 import 'package:eazy_store/widgets/inactive_categories_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'add_product_controller.dart'; // ✅ นำเข้า Controller ที่แยกไว้
@@ -97,6 +98,7 @@ class AddProductScreen extends StatelessWidget {
                           textController: controller.costController,
                           hintText: "0.00",
                           isNumber: true,
+                          allowDecimal: true,
                           icon: Icons.monetization_on_outlined,
                         ),
                       ),
@@ -107,6 +109,7 @@ class AddProductScreen extends StatelessWidget {
                           textController: controller.salePriceController,
                           hintText: "0.00",
                           isNumber: true,
+                          allowDecimal: true,
                           icon: Icons.sell_outlined,
                           isHighlight: true,
                         ),
@@ -385,6 +388,7 @@ class AddProductScreen extends StatelessWidget {
     required TextEditingController textController,
     required String hintText,
     bool isNumber = false,
+    bool allowDecimal = false,
     IconData? icon,
     bool isHighlight = false,
   }) {
@@ -412,7 +416,18 @@ class AddProductScreen extends StatelessWidget {
           ),
           child: TextField(
             controller: textController,
-            keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+            keyboardType: isNumber
+                ? TextInputType.numberWithOptions(decimal: allowDecimal)
+                : TextInputType.text,
+            inputFormatters: isNumber
+                ? [
+                    FilteringTextInputFormatter.allow(
+                      allowDecimal
+                          ? RegExp(r'^\d*\.?\d{0,2}')
+                          : RegExp(r'^\d*'),
+                    ),
+                  ]
+                : null,
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
@@ -531,7 +546,13 @@ class AddProductScreen extends StatelessWidget {
       onDisable: () => controller.disableCategory(category),
       onRefreshCategories: (CategoryModel? movedToCategory) async {
         await controller.fetchCategories();
-        controller.selectedCategoryObject.value = movedToCategory;
+        // เปลี่ยน/ล้างหมวดหมู่ที่เลือกในฟอร์ม เฉพาะตอนหมวดหมู่ที่กำลังปิดใช้งาน
+        // เป็นหมวดหมู่เดียวกับที่เลือกอยู่ในฟอร์มนี้เท่านั้น ไม่งั้นปิดหมวดหมู่อื่น
+        // ที่ไม่เกี่ยวข้องก็จะไปรีเซ็ตหมวดหมู่ที่เลือกไว้ในฟอร์มด้วย
+        if (controller.selectedCategoryObject.value?.categoryId ==
+            category.categoryId) {
+          controller.selectedCategoryObject.value = movedToCategory;
+        }
       },
       onReopenBottomSheet: () {
         if (context.mounted) {
@@ -610,6 +631,7 @@ class AddProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(
@@ -736,6 +758,7 @@ class AddProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(
@@ -1069,6 +1092,9 @@ class AddProductScreen extends StatelessWidget {
                 child: TextField(
                   controller: controller.idController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   decoration: InputDecoration(
                     hintText: "พิมพ์หรือสแกน",
                     hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
@@ -1091,7 +1117,20 @@ class AddProductScreen extends StatelessWidget {
               onTap: () async {
                 var result = await Get.to(() => const ScanBarcodePage());
                 if (result != null && result is String) {
-                  controller.idController.text = result;
+                  // ✅ กันเผื่อสแกนเจอฟอร์แมตที่มีตัวอักษรปน (เช่น Code128/Code39)
+                  // ช่องนี้รับเฉพาะตัวเลขเหมือนตอนพิมพ์เอง (digitsOnly formatter)
+                  final digitsOnly = result.replaceAll(RegExp(r'[^0-9]'), '');
+                  if (digitsOnly.isEmpty) {
+                    Get.snackbar(
+                      "ไม่สามารถใช้ได้",
+                      "รหัสที่สแกนได้ไม่ใช่บาร์โค้ดสินค้า กรุณาสแกนใหม่หรือพิมพ์เอง",
+                      backgroundColor: Colors.orange,
+                      colorText: Colors.white,
+                      margin: const EdgeInsets.all(16),
+                    );
+                    return;
+                  }
+                  controller.idController.text = digitsOnly;
                 }
               },
               borderRadius: BorderRadius.circular(12),

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:eazy_store/model/response/debtor_history_model.dart';
 import 'package:flutter/material.dart';
 import '../../../model/response/debtor_response.dart';
@@ -12,6 +12,7 @@ class DebtorDetailController extends ChangeNotifier {
   List<DebtorHistoryResponse> historyList = [];
   List<PaymentHistoryResponse> paymentList = [];
   bool isLoading = true;
+  bool hasLoadedOnce = false;
   bool isUpdating = false;
 
   void init(DebtorResponse debtor) {
@@ -29,9 +30,10 @@ class DebtorDetailController extends ChangeNotifier {
         fetchPaymentHistory(),
       ]);
     } catch (e) {
-      print("Error fetching all data: $e");
+      debugPrint("โหลดข้อมูลลูกหนี้ไม่สำเร็จ: $e");
     } finally {
       isLoading = false;
+      hasLoadedOnce = true;
       notifyListeners();
     }
   }
@@ -58,7 +60,7 @@ class DebtorDetailController extends ChangeNotifier {
     required String phone,
     required String address,
     required double creditLimit,
-    File? imageFile,
+    XFile? imageFile,
   }) async {
     isUpdating = true;
     notifyListeners();
@@ -86,7 +88,7 @@ class DebtorDetailController extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      print("Update Error: $e");
+      debugPrint("อัปเดตข้อมูลลูกหนี้ไม่สำเร็จ: $e");
       return false;
     } finally {
       isUpdating = false;

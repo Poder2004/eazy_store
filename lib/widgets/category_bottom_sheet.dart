@@ -49,9 +49,12 @@ class CategoryBottomSheet {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
+                        // ✨ Placeholder ด้านซ้าย ขนาดเท่าปุ่มด้านขวา เพื่อให้หัวข้ออยู่กึ่งกลางจริง
+                        const SizedBox(width: 48),
                         Expanded(
                           child: Text(
                             "เลือกหมวดหมู่",
+                            textAlign: TextAlign.center,
                             style: GoogleFonts.prompt(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -59,26 +62,30 @@ class CategoryBottomSheet {
                             ),
                           ),
                         ),
-                        if (onManageInactiveCategories != null)
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert),
-                            tooltip: "จัดการหมวดหมู่",
-                            onSelected: (value) {
-                              if (value == 'inactive') {
-                                Navigator.pop(context);
-                                onManageInactiveCategories();
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'inactive',
-                                child: Text(
-                                  "จัดการหมวดหมู่ที่ปิดใช้งาน",
-                                  style: GoogleFonts.prompt(fontSize: 14),
-                                ),
-                              ),
-                            ],
-                          ),
+                        SizedBox(
+                          width: 48,
+                          child: onManageInactiveCategories != null
+                              ? PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert),
+                                  tooltip: "จัดการหมวดหมู่",
+                                  onSelected: (value) {
+                                    if (value == 'inactive') {
+                                      Navigator.pop(context);
+                                      onManageInactiveCategories();
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      value: 'inactive',
+                                      child: Text(
+                                        "จัดการหมวดหมู่ที่ปิดใช้งาน",
+                                        style: GoogleFonts.prompt(fontSize: 14),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : null,
+                        ),
                       ],
                     ),
                   ),

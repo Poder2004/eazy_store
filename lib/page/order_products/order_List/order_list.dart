@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
 import 'order_list_controller.dart'; // Import controller ที่แยกออกมา
 
 // --- CONSTANTS ---
@@ -14,12 +14,16 @@ class OrderListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // เรียกใช้งาน Controller
-    final controller = Get.put(OrderListController());
+    final controller = Get.put(OrderListController(), permanent: true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadItemsFromBuyPage();
+    });
 
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
-        textScaler: MediaQuery.textScalerOf(context).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+        textScaler: MediaQuery.textScalerOf(
+          context,
+        ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
       ),
       child: Scaffold(
         backgroundColor: _kBackgroundColor,
@@ -28,8 +32,10 @@ class OrderListScreen extends StatelessWidget {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Get.back(),
           ),
-          title: const Text('รายการสั่งของ',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+          title: const Text(
+            'รายการสั่งของ',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+          ),
           centerTitle: true,
           backgroundColor: _kBackgroundColor,
           elevation: 0,
@@ -40,14 +46,19 @@ class OrderListScreen extends StatelessWidget {
             Expanded(
               child: Obx(() {
                 if (controller.orderItems.isEmpty) {
-                  return const Center(child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'));
+                  return const Center(
+                    child: Text('ไม่มีรายการสินค้าที่ต้องสั่งซื้อ'),
+                  );
                 }
                 final items = controller.visibleItems;
                 if (items.isEmpty) {
                   return const Center(child: Text('ไม่พบสินค้าที่ค้นหา'));
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 4.0,
+                  ),
                   itemCount: items.length,
                   itemBuilder: (context, index) =>
                       _buildOrderItemCard(items[index], controller),
@@ -94,7 +105,10 @@ class OrderListScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                  ),
                 ],
               ),
               child: TextField(
@@ -102,8 +116,15 @@ class OrderListScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'ค้นหาในรายการที่เลือกไว้...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 13,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    size: 18,
+                    color: Colors.grey,
+                  ),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -121,6 +142,8 @@ class OrderListScreen extends StatelessWidget {
       final isNoteOpen = controller.notesExpanded.contains(item.id);
       final hasNote = item.noteController.text.isNotEmpty;
       final isUnitEditing = controller.unitsEditing.contains(item.id);
+      final isNameEditing =
+          item.isCustom && controller.namesEditing.contains(item.id);
 
       return Container(
         margin: const EdgeInsets.only(bottom: 10.0),
@@ -128,77 +151,103 @@ class OrderListScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.0),
+
+          border: item.isCustom
+              ? Border(
+                  left: BorderSide(color: const Color(0xFF43A047), width: 3),
+                )
+              : null,
           boxShadow: [
-            BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 4, offset: const Offset(0, 1)),
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
           ],
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: Image.network(
-                    item.imageUrl,
-                    width: 34,
-                    height: 34,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 34,
-                      height: 34,
-                      color: Colors.grey.shade100,
-                      child: const Icon(Icons.image_not_supported, size: 16, color: Colors.grey),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 3),
-                _buildQtyBtn(Icons.remove, () => controller.updateQuantity(item, -1)),
-                _buildQtyField(item.quantityController, (v) {
-                  if (v.isEmpty || v == '0') controller.showDeleteConfirmation(item);
-                }),
-                _buildQtyBtn(Icons.add, () => controller.updateQuantity(item, 1)),
-                const SizedBox(width: 3),
-                SizedBox(
-                  width: 34,
-                  child: isUnitEditing
-                      ? TextField(
-                          controller: item.unitController,
-                          autofocus: true,
-                          maxLines: 1,
-                          style: const TextStyle(fontSize: 10.5, color: Colors.black87),
-                          onSubmitted: (_) => controller.toggleUnitEdit(item.id),
-                          decoration: const InputDecoration(
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 4),
-                            border: UnderlineInputBorder(),
-                          ),
-                        )
-                      : FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            item.unitController.text,
-                            style: const TextStyle(fontSize: 10.5, color: Colors.black45),
-                            maxLines: 1,
+                // รูปภาพ: สินค้า custom ใช้ไอคอนกล่อง / สินค้าปกติใช้รูปจาก network
+                item.isCustom
+                    ? Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Icon(
+                          Icons.add_box_outlined,
+                          size: 18,
+                          color: Color(0xFF43A047),
+                        ),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(7),
+                        child: Image.network(
+                          item.imageUrl,
+                          width: 34,
+                          height: 34,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 34,
+                            height: 34,
+                            color: Colors.grey.shade100,
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
+                      ),
+                const SizedBox(width: 8),
+                // ชื่อสินค้า: custom สามารถแก้ไขได้
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: item.isCustom && isNameEditing
+                        ? TextField(
+                            controller: item.nameController,
+                            autofocus: true,
+                            maxLines: 1,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            onSubmitted: (_) =>
+                                controller.toggleNameEdit(item.id),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 4),
+                              border: UnderlineInputBorder(),
+                            ),
+                          )
+                        : Text(
+                            item.displayName,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                  ),
                 ),
-                _buildIconToggle(
-                  icon: Icons.edit_outlined,
-                  active: isUnitEditing,
-                  onTap: () => controller.toggleUnitEdit(item.id),
-                  color: const Color(0xFF5390F2),
-                  bgColor: const Color(0xFFEAF1FD),
-                ),
+                const SizedBox(width: 3),
+                // ปุ่มแก้ชื่อ (เฉพาะสินค้า custom)
+                if (item.isCustom)
+                  _buildIconToggle(
+                    icon: Icons.edit_outlined,
+                    active: isNameEditing,
+                    onTap: () => controller.toggleNameEdit(item.id),
+                    color: const Color(0xFF43A047),
+                    bgColor: const Color(0xFFE8F5E9),
+                  ),
                 _buildIconToggle(
                   icon: Icons.note_alt_outlined,
                   active: isNoteOpen || hasNote,
@@ -215,6 +264,75 @@ class OrderListScreen extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 42),
+              child: Row(
+                children: [
+                  const Text(
+                    'จำนวน',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildQtyBtn(
+                    Icons.remove,
+                    () => controller.updateQuantity(item, -1),
+                  ),
+                  _buildQtyField(
+                    item.quantityController,
+                    (v) => controller.onQuantityTyped(item, v),
+                  ),
+                  _buildQtyBtn(
+                    Icons.add,
+                    () => controller.updateQuantity(item, 1),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 60,
+                    child: isUnitEditing
+                        ? TextField(
+                            controller: item.unitController,
+                            autofocus: true,
+                            maxLines: 1,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color.fromARGB(228, 22, 22, 22),
+                            ),
+                            onSubmitted: (_) =>
+                                controller.toggleUnitEdit(item.id),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 4),
+                              border: UnderlineInputBorder(),
+                            ),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              item.unitController.text,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color.fromARGB(228, 22, 22, 22),
+                              ),
+                              maxLines: 1,
+                            ),
+                          ),
+                  ),
+                  _buildIconToggle(
+                    icon: Icons.edit_outlined,
+                    active: isUnitEditing,
+                    onTap: () => controller.toggleUnitEdit(item.id),
+                    color: const Color(0xFF5390F2),
+                    bgColor: const Color(0xFFEAF1FD),
+                  ),
+                ],
+              ),
+            ),
             AnimatedSize(
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeInOut,
@@ -228,12 +346,21 @@ class OrderListScreen extends StatelessWidget {
                         style: const TextStyle(fontSize: 12),
                         decoration: InputDecoration(
                           hintText: 'เพิ่มหมายเหตุ (ถ้ามี)',
-                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                          hintStyle: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade400,
+                          ),
                           filled: true,
                           fillColor: Colors.grey.shade100,
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 9,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
                     ),
@@ -249,38 +376,42 @@ class OrderListScreen extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
       child: Container(
-        width: 27, height: 27,
+        width: 27,
+        height: 27,
         margin: const EdgeInsets.symmetric(horizontal: 2),
-        decoration: BoxDecoration(color: _kPrimaryColor, borderRadius: BorderRadius.circular(7)),
+        decoration: BoxDecoration(
+          color: _kPrimaryColor,
+          borderRadius: BorderRadius.circular(7),
+        ),
         child: Icon(icon, color: Colors.white, size: 14),
       ),
     );
   }
 
   Widget _buildQtyField(TextEditingController ctrl, Function(String) onChange) {
-    return SizedBox(
-      width: 30, height: 27,
-      child: TextField(
-        controller: ctrl,
-        keyboardType: TextInputType.number,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-        onChanged: onChange,
-        decoration: InputDecoration(
-          filled: true, fillColor: _kInputFillColor,
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: _kPrimaryColor, width: 1.5),
+    return Container(
+      width: 30,
+      height: 27,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: _kInputFillColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Center(
+        child: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          // กันพิมพ์เลขติดลบ/ตัวอักษรเข้าไปในช่องจำนวน (ทำให้จำนวนสั่งของเพี้ยนตอน export PDF)
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+          onChanged: onChange,
+          decoration: const InputDecoration(
+            isCollapsed: true,
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
           ),
         ),
       ),
@@ -300,7 +431,8 @@ class OrderListScreen extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: 28, height: 28,
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(
             color: active ? color.withOpacity(0.22) : bgColor,
             shape: BoxShape.circle,
@@ -314,16 +446,54 @@ class OrderListScreen extends StatelessWidget {
   Widget _buildBottomActionArea(OrderListController controller) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, -3))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: _buildBigButton('เพิ่มรายการสินค้า', Icons.add, _kPrimaryColor, () => Get.to(() => const BuyProductsScreen())),
+            // แถวบน: ปุ่มเพิ่มสินค้ากำหนดเอง
+            SizedBox(
+              width: double.infinity,
+              child: _buildBigButton(
+                'เพิ่มสินค้ากำหนดเอง',
+                Icons.playlist_add,
+                const Color(0xFF43A047),
+                () => _showAddCustomItemDialog(controller),
+              ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildBigButton('ส่งออกเป็น PDF', Icons.picture_as_pdf, _kSecondaryButtonColor, () => controller.exportToPdf()),
+            const SizedBox(height: 8),
+            // แถวล่าง: ปุ่มเดิม
+            Row(
+              children: [
+                Expanded(
+                  child: _buildBigButton(
+                    'เพิ่มรายการสินค้า',
+                    Icons.add,
+                    _kPrimaryColor,
+                    () {
+                      Get.back();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildBigButton(
+                    'ส่งออกเป็น PDF',
+                    Icons.picture_as_pdf,
+                    _kSecondaryButtonColor,
+                    () => controller.exportToPdf(),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -331,7 +501,12 @@ class OrderListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBigButton(String label, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildBigButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return SizedBox(
       height: 55,
       child: ElevatedButton.icon(
@@ -339,15 +514,176 @@ class OrderListScreen extends StatelessWidget {
         icon: Icon(icon, color: Colors.white, size: 20),
         label: Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
     );
+  }
+
+  // --- Dialog เพิ่มสินค้ากำหนดเอง ---
+  void _showAddCustomItemDialog(OrderListController controller) {
+    final nameCtrl = TextEditingController();
+    final unitCtrl = TextEditingController(text: 'ชิ้น');
+
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF43A047).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.playlist_add,
+                  color: Color(0xFF43A047),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'เพิ่มสินค้ากำหนดเอง',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'สินค้าที่ไม่มีในคลังร้าน',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              // ช่องกรอกชื่อสินค้า
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'ชื่อสินค้า *',
+                  hintText: 'เช่น ถุงขยะดำ',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              // ช่องกรอกหน่วยนับ
+              TextField(
+                controller: unitCtrl,
+                decoration: InputDecoration(
+                  labelText: 'หน่วยนับ',
+                  hintText: 'เช่น แพ็ค, ถุง, กล่อง',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        foregroundColor: Colors.grey[700],
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'ยกเลิก',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final name = nameCtrl.text.trim();
+                        if (name.isEmpty) {
+                          Get.snackbar(
+                            'แจ้งเตือน',
+                            'กรุณากรอกชื่อสินค้า',
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                            snackPosition: SnackPosition.TOP,
+                          );
+                          return;
+                        }
+                        controller.addCustomItem(name, unitCtrl.text.trim());
+                        Get.back();
+                        Get.snackbar(
+                          'เพิ่มสำเร็จ',
+                          'เพิ่ม "$name" เข้ารายการแล้ว',
+                          backgroundColor: const Color(0xFF43A047),
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.TOP,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF43A047),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'เพิ่ม',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(() {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        nameCtrl.dispose();
+        unitCtrl.dispose();
+      });
+    });
   }
 }

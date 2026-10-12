@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../widgets/image_picker_sheet.dart';
-
-// ✅ นำเข้าไฟล์ Controller ที่เพิ่งสร้างใหม่
 import 'create_shop_controller.dart';
 
 class CreateShopPage extends StatelessWidget {
@@ -40,9 +39,20 @@ class CreateShopPage extends StatelessWidget {
               const SizedBox(height: 20),
 
               // --- 1. Profile Image Picker ---
-              const Text(
-                "เลือกรูปโปรไฟล์ร้าน",
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Text.rich(
+                TextSpan(
+                  text: "เลือกรูปโปรไฟล์ร้าน",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 10),
               Center(
@@ -97,6 +107,10 @@ class CreateShopPage extends StatelessWidget {
                 hint: "เบอร์ร้าน",
                 controller: controller.shopPhoneController,
                 inputType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
               ),
 
               const SizedBox(height: 20),
@@ -104,12 +118,23 @@ class CreateShopPage extends StatelessWidget {
               // ----------------------------------------------------
               // ➡️ 4. ส่วน Dropdown ที่อยู่
               // ----------------------------------------------------
-              const Text(
-                "ที่อยู่ร้าน",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Color(0xFF333333),
+              Text.rich(
+                TextSpan(
+                  text: "ที่อยู่ร้าน",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Color(0xFF333333),
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -165,9 +190,23 @@ class CreateShopPage extends StatelessWidget {
               const SizedBox(height: 20),
 
               // --- 2. Upload QR Section ---
-              const Text(
-                "ลิงก์ภาพ QR สำหรับลูกค้าชำระเงินโอน",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              Text.rich(
+                TextSpan(
+                  text: "ลิงก์ภาพ QR สำหรับลูกค้าชำระเงินโอน",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 10),
 
@@ -279,20 +318,36 @@ class CreateShopPage extends StatelessWidget {
     required TextEditingController controller,
     TextInputType inputType = TextInputType.text,
     bool noLabel = false,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!noLabel) ...[
           const SizedBox(height: 20),
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          Text.rich(
+            TextSpan(
+              text: label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+              children: const [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
         TextField(
           controller: controller,
           keyboardType: inputType,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400]),

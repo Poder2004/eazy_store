@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -213,7 +214,7 @@ class ApiProduct {
     } catch (e) {
       return {'success': false, 'error': 'การเชื่อมต่อขัดข้อง: $e'};
     }
-  }
+  }          
 
   static Future<Map<String, dynamic>> moveCategoryProducts({
     required int fromCategoryId,
@@ -263,19 +264,23 @@ class ApiProduct {
     required int shopId,
     required int categoryId,
   }) async {
+    //  ห้ามใช้ totalItems จาก paged response ตรงๆ เพราะฝั่ง backend นับรวม
+    // สินค้าที่ถูกปิดใช้งาน/soft-delete (status = false) มาด้วย ต้องดึงมาทั้งหมด
+    // แล้วกรอง status ฝั่ง client เอง เหมือนหน้าอื่นๆ ที่เรียก getProductsByShop
+    // ไม่งั้น dialog จะโชว์จำนวนสินค้าในหมวดหมู่เกินความจริง
     final result = await getProductsByShop(
       shopId,
       page: 1,
-      limit: 1,
+      limit: 1000,
       categoryId: categoryId,
     );
+    List<ProductResponse> items = [];
     if (result is ProductPagedResponse) {
-      return result.totalItems;
+      items = result.items;
+    } else if (result is List<ProductResponse>) {
+      items = result;
     }
-    if (result is List) {
-      return result.length;
-    }
-    return 0;
+    return items.where((p) => p.status == true).length;
   }
 
   static Future<Map<String, dynamic>> _sendCategoryRequest({
@@ -410,28 +415,28 @@ class ApiProduct {
     }
   }
 
-  // อัปเดตสต็อก (Update Stock) — ถ้าระบุ productUnitId (เช่น เติมเป็น "ลัง")
-  // backend จะแปลงเป็นหน่วยฐานให้เอง (สต็อกเก็บเป็นหน่วยฐานที่เดียวเสมอ)
+  // อัปเดตสต็อก (Update Stock) — RESTful: PATCH /products/:id/stock
+  // ถ้าระบุ productUnitId (เช่น เติมเป็น "ลัง") backend จะแปลงเป็นหน่วยฐานให้เอง
+  // (สต็อกเก็บเป็นหน่วยฐานที่เดียวเสมอ)
   static Future<bool> updateStock(
     int productId,
     int amountToAdd, {
     int? productUnitId,
   }) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/products/stock');
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId/stock');
 
     try {
       await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
-      final response = await http.put(
+      final response = await http.patch(
         url,
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
         },
         body: jsonEncode({
-          "product_id": productId,
           "stock":
               amountToAdd, // ส่งจำนวนที่ต้องการเพิ่มไป (Backend จะไป + เอง)
           "product_unit_id": productUnitId,
@@ -552,7 +557,9 @@ class ApiProduct {
   }
 
   // ✅ ใช้ฟังก์ชันนี้แทน (ส่ง JSON Update ปกติ)
-  static Future<ProductResponse?> updateProduct(
+  /// คืนค่า {success, message, data} เพื่อให้หน้าจอเอาข้อความจากเซิร์ฟเวอร์ไปแสดงได้
+  /// (เช่น "บาร์โค้ดนี้ถูกใช้กับสินค้าอื่นในร้านนี้แล้ว")
+  static Future<Map<String, dynamic>> updateProduct(
     int productId,
     Map<String, dynamic> updateData,
   ) async {
@@ -572,19 +579,31 @@ class ApiProduct {
         body: jsonEncode(updateData), // ส่งข้อมูลรวมถึง URL รูปภาพไปในนี้
       );
 
+      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        return ProductResponse.fromJson(jsonResponse['data']);
-      } else {
-        if (AuthGuard.isUnauthorized(response.statusCode)) {
-          await AuthGuard.handleUnauthorized();
-        }
-        print("Update failed: ${response.body}");
-        return null;
+        return {
+          "success": true,
+          "message": jsonResponse['message'] ?? "แก้ไขข้อมูลเรียบร้อย",
+          "data": ProductResponse.fromJson(jsonResponse['data']),
+        };
       }
+
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {
+        "success": false,
+        "message":
+            jsonResponse['error'] ?? "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      };
     } catch (e) {
-      print("Error updating product: $e");
-      return null;
+      debugPrint("แก้ไขสินค้าไม่สำเร็จ: $e");
+      return {
+        "success": false,
+        "message":
+            "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      };
     }
   }
 
@@ -622,14 +641,14 @@ class ApiProduct {
         if (AuthGuard.isUnauthorized(response.statusCode)) {
           await AuthGuard.handleUnauthorized();
         }
-        throw Exception("Failed to load products: ${response.statusCode}");
+        throw Exception("ไม่สามารถดึงข้อมูลสินค้าได้ กรุณาลองใหม่อีกครั้ง");
       }
     } catch (e) {
-      throw Exception("Error connecting to API: $e");
+      throw Exception("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
     }
   }
 
-  // ✅ ฟังก์ชันสำหรับลบสินค้า (Smart Delete)
+  // ฟังก์ชันสำหรับลบสินค้า (Smart Delete)
   static Future<Map<String, dynamic>> deleteProduct(int productId) async {
     final url = Uri.parse('${AppConfig.baseUrl}/api/products/$productId');
 
@@ -639,7 +658,7 @@ class ApiProduct {
       String? token = prefs.getString('token');
 
       final response = await http.delete(
-        url,
+        url,         
         headers: {"Authorization": "Bearer $token"},
       );
 

@@ -67,7 +67,7 @@ class ApiUser {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('token');
 
-      final url = Uri.parse('${AppConfig.baseUrl}/api/profile/update');
+      final url = Uri.parse('${AppConfig.baseUrl}/api/profile');
 
       final response = await http.put(
         url,

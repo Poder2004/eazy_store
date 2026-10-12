@@ -2,16 +2,17 @@ import 'package:eazy_store/api/api_dashboad.dart';
 import 'package:eazy_store/api/api_shop.dart';
 import 'package:eazy_store/api/api_user.dart';
 import 'package:eazy_store/model/response/shop_response.dart';
-import 'package:eazy_store/page/auth/login.dart';
 import 'package:eazy_store/page/edit_profile/edit_profile_page.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart';
 import 'package:eazy_store/page/shop/editShop/edit_shop.dart';
 import 'package:eazy_store/page/shop/myShop/myshop.dart';
+import 'package:eazy_store/utils/auth_guard.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:eazy_store/utils/error_message.dart';
 
 class ProfileController extends GetxController {
   // ---------------- State Variables ----------------
@@ -32,8 +33,7 @@ class ProfileController extends GetxController {
   var shopImage = "".obs;
 
   // ข้อมูลยอดขาย
-  var todaySales = "0".obs;
-  var isSalesLoading = true.obs;
+  var todaySales = 0.0.obs;
 
   @override
   void onInit() {
@@ -67,8 +67,6 @@ class ProfileController extends GetxController {
     // 3. ดึงยอดขายวันนี้
     if (shopId.value != 0) {
       fetchTodaySales();
-    } else {
-      isSalesLoading.value = false;
     }
 
     // ✨ เสริม: ดึงข้อมูลโปรไฟล์ล่าสุดจาก API เผื่อมีการแก้ไขจากเครื่องอื่น
@@ -77,7 +75,6 @@ class ProfileController extends GetxController {
 
   // ดึง API ยอดขายวันนี้
   Future<void> fetchTodaySales() async {
-    isSalesLoading.value = true;
     try {
       DateTime now = DateTime.now();
       String todayStr = DateFormat('yyyy-MM-dd').format(now);
@@ -89,22 +86,26 @@ class ProfileController extends GetxController {
       );
 
       if (summary != null) {
-        todaySales.value = NumberFormat('#,##0').format(summary.actualPaid);
+        todaySales.value = summary.actualPaid;
       } else {
-        todaySales.value = "0";
+        todaySales.value = 0.0;
       }
     } catch (e) {
       print("Profile - Error fetching today sales: $e");
-      todaySales.value = "0";
-    } finally {
-      isSalesLoading.value = false;
+      todaySales.value = 0.0;
     }
   }
 
   // ฟังก์ชันช่วยสร้างตัวย่อชื่อ (เช่น Sarah Mitchell -> SM)
   String _getInitials(String name) {
-    if (name.isEmpty) return "U";
-    List<String> nameParts = name.trim().split(" ");
+    // ใช้ RegExp(r'\s+') + กรองค่าว่างออก กันชื่อที่มีเว้นวรรคติดกันหลายตัว
+    // (เช่น "John  Doe") ทำให้ได้ element ว่างแล้ว index [0] เข้าไป crash
+    final nameParts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (nameParts.isEmpty) return "U";
     if (nameParts.length > 1) {
       return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
     } else {
@@ -202,7 +203,7 @@ class ProfileController extends GetxController {
       if (Get.isDialogOpen == true) Get.back();
       Get.snackbar(
         "ข้อผิดพลาด",
-        "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: $e",
+        kNetworkErrorMessage,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -233,7 +234,7 @@ class ProfileController extends GetxController {
     try {
       final uri = Uri.parse('$_webBaseUrl$path');
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        throw Exception('Could not launch URL');
+        throw Exception('ไม่สามารถเปิดลิงก์ได้');
       }
     } catch (e) {
       Get.snackbar(
@@ -309,6 +310,7 @@ class ProfileController extends GetxController {
                   child: OutlinedButton(
                     onPressed: () => Get.back(),
                     style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: BorderSide(color: Colors.grey.shade200),
                       shape: RoundedRectangleBorder(
@@ -328,10 +330,8 @@ class ProfileController extends GetxController {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      SharedPreferences prefs =
-                          await SharedPreferences.getInstance();
-                      await prefs.clear();
-                      Get.offAll(() => const LoginPage());
+                      Get.back(); // ปิด bottom sheet ก่อนเรียก logout
+                      await AuthGuard.logout();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE11D48),

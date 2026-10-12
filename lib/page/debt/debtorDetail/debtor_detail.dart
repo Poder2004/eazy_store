@@ -1,10 +1,40 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../../model/response/debtor_response.dart';
 import '../../../model/request/debtor_history_model.dart';
 import '../../../model/response/debtor_history_model.dart';
+import '../../../widgets/confirm_dialog.dart';
+import '../../sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'debtor_detail_controller.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (โหลดครั้งแรกเท่านั้น) ──────────
+List<DebtorHistoryResponse> _fakeHistoryList() => List.generate(
+  3,
+  (i) => DebtorHistoryResponse(
+    orderId: i,
+    date: '01/01/2026',
+    totalAmount: 1000,
+    paidAmount: 0,
+    remainingAmount: 1000,
+    items: [
+      DebtorHistoryItem(name: 'สินค้า', qty: 1, price: 1000, unit: 'ชิ้น'),
+    ],
+  ),
+);
+
+List<PaymentHistoryResponse> _fakePaymentList() => List.generate(
+  3,
+  (i) => PaymentHistoryResponse(
+    paymentId: i,
+    amountPaid: 500,
+    method: 'เงินสด',
+    remainingDebt: 500,
+    date: '01/01/2026',
+    recordedBy: 'พนักงาน',
+  ),
+);
 
 class DebtorDetailScreen extends StatefulWidget {
   final DebtorResponse debtor;
@@ -128,9 +158,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   size: 22,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  message,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ],
             ),
@@ -147,10 +179,12 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
     final phoneController = TextEditingController(text: _controller.currentDebtor.phone);
     final addressController = TextEditingController(text: _controller.currentDebtor.address ?? "");
     final creditController = TextEditingController(
-      text: _controller.currentDebtor.creditLimit.toStringAsFixed(0),
+      text: formatMoneyPlain(_controller.currentDebtor.creditLimit),
     );
 
-    File? selectedImage;
+    // ใช้ XFile + bytes แทน File เพื่อให้รองรับทั้งเว็บและมือถือ
+    XFile? selectedImage;
+    Uint8List? selectedImageBytes;
     final picker = ImagePicker();
 
     showModalBottomSheet(
@@ -206,7 +240,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                       onTap: () async {
                         final pickedFile = await picker.pickImage(source: ImageSource.gallery);
                         if (pickedFile != null) {
-                          setStateSheet(() => selectedImage = File(pickedFile.path));
+                          final bytes = await pickedFile.readAsBytes();
+                          setStateSheet(() {
+                            selectedImage = pickedFile;
+                            selectedImageBytes = bytes;
+                          });
                         }
                       },
                       child: Stack(
@@ -214,8 +252,8 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           CircleAvatar(
                             radius: 45,
                             backgroundColor: Colors.blue.shade50,
-                            backgroundImage: selectedImage != null
-                                ? FileImage(selectedImage!) as ImageProvider
+                            backgroundImage: selectedImageBytes != null
+                                ? MemoryImage(selectedImageBytes!) as ImageProvider
                                 : (_controller.currentDebtor.imgDebtor != null &&
                                       _controller.currentDebtor.imgDebtor!.trim().isNotEmpty)
                                 ? NetworkImage(_controller.currentDebtor.imgDebtor!)
@@ -246,7 +284,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           _buildFormField(nameController, "ชื่อ-นามสกุล", Icons.person_outline),
                           const SizedBox(height: 12),
                           _buildFormField(phoneController, "เบอร์โทรศัพท์", Icons.phone_outlined,
-                              keyboardType: TextInputType.phone),
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ]),
                           const SizedBox(height: 12),
                           _buildFormField(addressController, "ที่อยู่", Icons.home_outlined, maxLines: 2),
                           const SizedBox(height: 12),
@@ -270,23 +312,52 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           ),
                           onPressed: isLoading
                               ? null
-                              : () async {
-                                  setStateSheet(() => isLoading = true);
-                                  final bool success = await _controller.updateDebtorData(
+                              : () {
+                                  // ตรวจสอบข้อมูลให้ครบถ้วนก่อนบันทึก
+                                  final String? errorMessage = _validateDebtorForm(
                                     name: nameController.text,
                                     phone: phoneController.text,
                                     address: addressController.text,
-                                    creditLimit: double.tryParse(creditController.text) ?? 0,
-                                    imageFile: selectedImage,
+                                    creditLimit: creditController.text,
                                   );
-                                  if (sheetContext.mounted) {
-                                    Navigator.pop(sheetContext);
+                                  if (errorMessage != null) {
+                                    _showTopNotification(errorMessage, isError: true);
+                                    return;
                                   }
-                                  if (success) {
-                                    _showTopNotification("บันทึกข้อมูลสำเร็จ");
-                                  } else {
-                                    _showTopNotification("เกิดข้อผิดพลาดในการบันทึก", isError: true);
-                                  }
+
+                                  // ให้ยืนยันอีกครั้งก่อนบันทึกทับข้อมูลเดิมจริง
+                                  ConfirmDialog.show(
+                                    title: 'ยืนยันบันทึกข้อมูล',
+                                    message:
+                                        'ต้องการบันทึกการแก้ไขข้อมูลลูกหนี้ '
+                                        '"${nameController.text.trim()}" ใช่หรือไม่?',
+                                    icon: Icons.save_outlined,
+                                    iconColor: Colors.blue,
+                                    confirmLabel: 'บันทึก',
+                                    confirmColor: Colors.blue,
+                                    onConfirm: () async {
+                                      setStateSheet(() => isLoading = true);
+                                      final bool success = await _controller.updateDebtorData(
+                                        name: nameController.text.trim(),
+                                        phone: phoneController.text.trim(),
+                                        address: addressController.text.trim(),
+                                        creditLimit:
+                                            double.tryParse(creditController.text.trim()) ?? 0,
+                                        imageFile: selectedImage,
+                                      );
+                                      if (sheetContext.mounted) {
+                                        Navigator.pop(sheetContext);
+                                      }
+                                      if (success) {
+                                        _showTopNotification("บันทึกข้อมูลสำเร็จ");
+                                      } else {
+                                        _showTopNotification(
+                                          "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง",
+                                          isError: true,
+                                        );
+                                      }
+                                    },
+                                  );
                                 },
                           child: isLoading
                               ? const SizedBox(
@@ -311,17 +382,43 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
     );
   }
 
+  /// ตรวจสอบความครบถ้วนของข้อมูลลูกหนี้ คืนค่าข้อความแจ้งเตือนภาษาไทย (null = ผ่าน)
+  String? _validateDebtorForm({
+    required String name,
+    required String phone,
+    required String address,
+    required String creditLimit,
+  }) {
+    if (name.trim().isEmpty) return "กรุณากรอกชื่อ-นามสกุลลูกหนี้";
+    if (phone.trim().isEmpty) return "กรุณากรอกเบอร์โทรศัพท์";
+    if (!RegExp(r'^0[0-9]{9}$').hasMatch(phone.trim())) {
+      return "เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก และขึ้นต้นด้วย 0";
+    }
+    if (address.trim().isEmpty) return "กรุณากรอกที่อยู่";
+    if (creditLimit.trim().isEmpty) return "กรุณากรอกวงเงินเครดิต";
+
+    final credit = double.tryParse(creditLimit.trim());
+    if (credit == null) return "กรุณากรอกวงเงินเครดิตเป็นตัวเลข";
+    if (credit <= 0) return "วงเงินเครดิตต้องมากกว่า 0 บาท";
+    if (credit < _controller.currentDebtor.currentDebt) {
+      return "วงเงินเครดิตต้องไม่น้อยกว่ายอดหนี้คงค้างปัจจุบัน";
+    }
+    return null;
+  }
+
   Widget _buildFormField(
     TextEditingController controller,
     String label,
     IconData icon, {
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.blue.shade400, size: 20),
@@ -588,7 +685,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                       style: TextStyle(fontSize: 16),
                     ),
                     Text(
-                      "${debtor.currentDebt.toStringAsFixed(0)} บาท",
+                      "${formatMoney(debtor.currentDebt)} บาท",
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -616,11 +713,11 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Text(
-                    "วงเงิน: ${debtor.creditLimit.toStringAsFixed(0)}",
+                    "วงเงิน: ${formatMoney(debtor.creditLimit)}",
                     style: TextStyle(color: Colors.grey[600],fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                   Text(
-                    "เครดิตคงเหลือ: ${availableCredit.toStringAsFixed(0)}",
+                    "เครดิตคงเหลือ: ${formatMoney(availableCredit)}",
                     style: TextStyle(
                       color: Colors.green[700],
                       fontWeight: FontWeight.bold,
@@ -641,11 +738,16 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
   // ──────────────────────────────────────────────
 
   Widget _buildHistoryList() {
-    if (_controller.isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(),
+    if (!_controller.hasLoadedOnce) {
+      final fake = _fakeHistoryList();
+      return Skeletonizer(
+        enabled: true,
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: fake.length,
+          itemBuilder: (context, index) => _buildDebtCard(fake[index], false),
         ),
       );
     }
@@ -720,7 +822,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
               Row(
                 children: [
                   _buildAmountChip(
-                    label: "ยอดบิล",
+                    label: "รวมยอดบิล",
                     amount: history.totalAmount,
                     color: Colors.blue.shade700,
                     bgColor: Colors.blue.shade50,
@@ -739,7 +841,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                   if (!isPaid) ...[
                     const SizedBox(width: 8),
                     _buildAmountChip(
-                      label: "ค้างบิลนี้",
+                      label: "ยอดค้างชำระ",
                       amount: history.remainingAmount,
                       color: Colors.red.shade700,
                       bgColor: Colors.red.shade50,
@@ -809,17 +911,19 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                             color: Colors.grey.shade500,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          "${pricePerUnit.toStringAsFixed(0)}฿",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
+                        if (item.qty > 1) ...[
+                          const SizedBox(width: 12),
+                          Text(
+                            "${formatMoney(pricePerUnit)}฿",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
                           ),
-                        ),
+                        ],
                         const SizedBox(width: 12),
                         Text(
-                          "${item.price.toStringAsFixed(0)} ฿",
+                          "${formatMoney(item.price)} ฿",
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -841,7 +945,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                       ),
                     ),
                     Text(
-                      "${history.totalAmount.toStringAsFixed(0)} บาท",
+                      "${formatMoney(history.totalAmount)} บาท",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -923,7 +1027,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              "${amount.toStringAsFixed(0)}฿",
+              "${formatMoney(amount)}฿",
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
@@ -941,11 +1045,16 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
   // ──────────────────────────────────────────────
 
   Widget _buildPaymentHistoryList() {
-    if (_controller.isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(40),
-          child: CircularProgressIndicator(),
+    if (!_controller.hasLoadedOnce) {
+      final fake = _fakePaymentList();
+      return Skeletonizer(
+        enabled: true,
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          itemCount: fake.length,
+          itemBuilder: (context, index) => _buildPaymentCard(fake[index]),
         ),
       );
     }
@@ -1025,7 +1134,7 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                         ),
                       ),
                       Text(
-                        "${pay.amountPaid.toStringAsFixed(0)} บาท",
+                        "${formatMoney(pay.amountPaid)} บาท",
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
@@ -1089,8 +1198,8 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.grey.shade200),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
@@ -1100,15 +1209,19 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                         color: Colors.grey.shade500,
                       ),
                       const SizedBox(width: 5),
-                      Text(
-                        "บันทึกโดย: ${pay.recordedBy}",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
+                      Flexible(
+                        child: Text(
+                          "บันทึกโดย: ${pay.recordedBy}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Text(
@@ -1118,14 +1231,17 @@ class _DebtorDetailScreenState extends State<DebtorDetailScreen> {
                           color: Colors.grey.shade600,
                         ),
                       ),
-                      Text(
-                        "${pay.remainingDebt.toStringAsFixed(0)} ฿",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: pay.remainingDebt > 0
-                              ? Colors.orange.shade700
-                              : Colors.green.shade700,
+                      Flexible(
+                        child: Text(
+                          "${formatMoney(pay.remainingDebt)} ฿",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: pay.remainingDebt > 0
+                                ? Colors.orange.shade700
+                                : Colors.green.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

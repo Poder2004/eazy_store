@@ -1,8 +1,11 @@
+import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 // ✅ นำเข้า Controller ที่แยกไว้
 import 'add_stock_controller.dart';
@@ -13,14 +16,43 @@ const Color _kBackgroundColor = Color(0xFFF7F7F7);
 const Color _kInputFillColor = Color(0xFFF0F0E0);
 const Color _kReadOnlyColor = Color(0xFFEEEEEE);
 
-class AddStockScreen extends StatelessWidget {
-  const AddStockScreen({super.key});
+// จำนวนเต็ม -> ไม่โชว์ทศนิยม (200), มีเศษสตางค์ -> โชว์เต็ม 2 ตำแหน่งเสมอ (199.50) ไม่ปัดทิ้ง
+String _fmtPrice(double value) {
+  final hasCents = (value * 100).round() % 100 != 0;
+  return NumberFormat(hasCents ? '#,##0.00' : '#,##0').format(value);
+}
+
+class AddStockScreen extends StatefulWidget {
+  // ถ้าระบุมา จะเปิดหน้านี้พร้อมเลือกสินค้าตัวนี้ให้ทันที (เช่น กด "เพิ่มสต็อก"
+  // จากหน้าแก้ไขสินค้า) แทนที่จะเปิดมาเป็นหน้าค้นหาว่างๆ
+  final ProductResponse? initialProduct;
+  const AddStockScreen({super.key, this.initialProduct});
+
+  @override
+  State<AddStockScreen> createState() => _AddStockScreenState();
+}
+
+class _AddStockScreenState extends State<AddStockScreen> {
+  late final AddStockController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ สร้าง controller ใหม่ทุกครั้งที่เปิดหน้านี้ กันสินค้า/ข้อมูลที่เคยค้นหา
+    // ไว้ในรอบก่อนหน้าค้างอยู่ (โดยเฉพาะตอนระบุ initialProduct มาจากหน้าอื่น
+    // ถ้ายังใช้ controller ตัวเดิมที่ Get.put ค้างไว้ ค่านี้จะถูกมองข้ามไปเงียบๆ)
+    Get.delete<AddStockController>(force: true);
+    controller = Get.put(AddStockController(initialProduct: widget.initialProduct));
+  }
+
+  @override
+  void dispose() {
+    Get.delete<AddStockController>();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ เรียกใช้ Controller
-    final AddStockController controller = Get.put(AddStockController());
-
     return Scaffold(
       backgroundColor: _kBackgroundColor,
       appBar: AppBar(
@@ -70,6 +102,8 @@ class AddStockScreen extends StatelessWidget {
                     padding: EdgeInsets.only(top: 50),
                     child: CircularProgressIndicator(color: _kPrimaryColor),
                   );
+                } else if (controller.noResults.value) {
+                  return _buildNotFoundState();
                 } else {
                   return _buildEmptyState();
                 }
@@ -99,6 +133,22 @@ class AddStockScreen extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด",
+            style: TextStyle(color: Colors.grey[400], fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotFoundState() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 50),
+      child: Column(
+        children: [
+          Icon(Icons.search_off_rounded, size: 80, color: Colors.grey[300]),
+          const SizedBox(height: 10),
+          Text(
+            "ไม่พบข้อมูลสินค้า",
             style: TextStyle(color: Colors.grey[400], fontSize: 16),
           ),
         ],
@@ -266,25 +316,28 @@ class AddStockScreen extends StatelessWidget {
         Container(
           height: 80,
           width: 80,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
             ],
-            image: DecorationImage(
-              image: NetworkImage(
-                controller.foundProduct.value?.imgProduct ?? '',
-              ),
-              fit: BoxFit.cover,
-              onError: (e, s) {},
-            ),
           ),
+          // ใช้ Image.network + errorBuilder แทน DecorationImage.onError ที่ว่างเปล่า
+          // (เดิมโหลดรูปพัง/ลิงก์เสียแล้วเงียบ กลายเป็นกล่องขาวไม่มี fallback icon)
           child:
               controller.foundProduct.value?.imgProduct == null ||
                   controller.foundProduct.value!.imgProduct.isEmpty
               ? const Icon(Icons.image_not_supported, color: Colors.grey)
-              : null,
+              : Image.network(
+                  controller.foundProduct.value!.imgProduct,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.image_not_supported,
+                    color: Colors.grey,
+                  ),
+                ),
         ),
       ],
     );
@@ -432,6 +485,9 @@ class AddStockScreen extends StatelessWidget {
             child: TextField(
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -590,6 +646,9 @@ class AddStockScreen extends StatelessWidget {
                 child: TextField(
                   controller: controller.addAmountController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -654,107 +713,6 @@ class AddStockScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  // 🛡️ ปรับ Popup มาไว้ใน View
-  void _showSaveCheckDialog(AddStockController controller) {
-    if (controller.foundProduct.value == null) return;
-
-    int amount = int.tryParse(controller.addAmountController.text) ?? 0;
-    if (amount <= 0) {
-      Get.snackbar(
-        "แจ้งเตือน",
-        "กรุณาระบุจำนวนที่ต้องการเพิ่ม",
-        backgroundColor: Colors.orange,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.playlist_add_check_circle,
-                size: 60,
-                color: _kPrimaryColor,
-              ),
-              const SizedBox(height: 15),
-              const Text(
-                "ยืนยันเพิ่มสต็อก",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const Divider(height: 30),
-              _buildConfirmRow("สินค้า", controller.nameController.text),
-              _buildConfirmRow(
-                "คงเหลือเดิม",
-                "${controller.currentStockController.text} ${controller.unitController.text}",
-              ),
-              _buildConfirmRow(
-                "เพิ่มจำนวน",
-                "+$amount ${controller.unitController.text}",
-                valueColor: Colors.green,
-              ),
-              const Divider(),
-              _buildConfirmRow(
-                "รวมสุทธิ",
-                "${controller.calculatedTotal.value} ${controller.unitController.text}",
-                isBold: true,
-              ),
-              const SizedBox(height: 30),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "แก้ไข",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back(); // ปิด Popup
-                        controller.executeSave(amount); // ยิง API
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _kPrimaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "ยืนยัน",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      barrierDismissible: false,
     );
   }
 
@@ -836,16 +794,16 @@ class AddStockScreen extends StatelessWidget {
                       _buildChangeRow(
                         icon: Icons.sell_outlined,
                         label: "ราคาขาย",
-                        from: "฿${origSell.toStringAsFixed(0)}",
-                        to: "฿${newSell?.toStringAsFixed(0) ?? '-'}",
+                        from: "฿${_fmtPrice(origSell)}",
+                        to: "฿${newSell != null ? _fmtPrice(newSell) : '-'}",
                         changed: newSell != origSell,
                       ),
                       const SizedBox(height: 10),
                       _buildChangeRow(
                         icon: Icons.shopping_bag_outlined,
                         label: "ราคาต้นทุน",
-                        from: "฿${origCost.toStringAsFixed(0)}",
-                        to: "฿${newCost?.toStringAsFixed(0) ?? '-'}",
+                        from: "฿${_fmtPrice(origCost)}",
+                        to: "฿${newCost != null ? _fmtPrice(newCost) : '-'}",
                         changed: newCost != origCost,
                       ),
                     ],
@@ -874,6 +832,7 @@ class AddStockScreen extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: () => Get.back(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -968,31 +927,6 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildConfirmRow(
-    String label,
-    String value, {
-    Color? valueColor,
-    bool isBold = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor ?? Colors.black87,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActionButtons(AddStockController controller) {
     return Obx(
       () => SizedBox(
@@ -1035,3 +969,4 @@ class AddStockScreen extends StatelessWidget {
     );
   }
 }
+

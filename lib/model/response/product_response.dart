@@ -74,6 +74,9 @@ class ProductResponse {
   // ใช้ตอนค้นหาด้วยบาร์โค้ดของหน่วยขาย (ไม่ใช่บาร์โค้ดหลักของสินค้า) — backend ส่งมา
   // ให้รู้ว่าคำค้นหาตรงกับหน่วยไหน
   final ProductUnitResponse? matchedUnit;
+  // ลำดับตอนถูกติ๊กเลือก (ไม่ได้มาจาก API) ใช้เรียงรายการสั่งของตามลำดับที่
+  // เลือกจริง แทนลำดับในคลังสินค้า ดู BuyProductsController.toggleProduct()
+  int selectionOrder;
 
   ProductResponse({
     this.productId,
@@ -93,6 +96,7 @@ class ProductResponse {
     this.isSelected = false,
     this.units = const [],
     this.matchedUnit,
+    this.selectionOrder = 0,
   });
 
   List<ProductUnitResponse> get activeUnits =>

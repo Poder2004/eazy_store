@@ -5,9 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eazy_store/config/app_config.dart';
 import 'package:eazy_store/page/auth/login.dart';
+import 'package:eazy_store/utils/device_id.dart';
 
 class AuthGuard {
-  // ป้องกันการ refresh ซ้อนกันโดยใช้ Completer เพื่อให้ request อื่นรอผลลัพธ์
   static Completer<bool>? _refreshCompleter;
 
   /// เรียก /api/auth/refresh เพื่อขอ access_token ใหม่
@@ -42,7 +42,8 @@ class AuthGuard {
           return false;
         }
 
-        final expiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
+        final expiresAt =
+            DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
         await prefs.setString('token', newToken);
         await prefs.setInt('token_expires_at', expiresAt);
         if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
@@ -84,10 +85,11 @@ class AuthGuard {
     bool refreshed = await refreshToken();
     if (refreshed) {
       final now = DateTime.now();
-      // แสดง Snackbar จำกัดสูงสุด 1 ครั้งทุกๆ 10 วินาที เพื่อป้องกันการเปิดค้างหรือแสดงซ้อนกันหลายๆ อัน (Snackbar Storm)
-      if (_lastSnackbarTime == null || now.difference(_lastSnackbarTime!) > const Duration(seconds: 10)) {
+
+      if (_lastSnackbarTime == null ||
+          now.difference(_lastSnackbarTime!) > const Duration(seconds: 10)) {
         _lastSnackbarTime = now;
-        Get.closeAllSnackbars(); // ล้างคิว Snackbar ที่ค้างอยู่ทั้งหมดออกไปก่อน
+        Get.closeAllSnackbars();
         Get.snackbar(
           "Session ต่ออายุแล้ว",
           "กรุณาลองใหม่อีกครั้ง",
@@ -109,33 +111,36 @@ class AuthGuard {
       final token = prefs.getString('token');
       final refreshToken = prefs.getString('refresh_token');
 
-      // ถ้าออกจากระบบไปแล้ว (ไม่มี Token ทั้งสองตัว) ไม่ต้องประมวลผลซ้ำ
       if (token == null && refreshToken == null) {
         return;
       }
 
-      // แจ้ง backend ให้ยกเลิก refresh token ด้วย (best effort)
       try {
         if (token != null) {
-          await http.post(
-            Uri.parse('${AppConfig.baseUrl}/api/auth/logout'),
-            headers: {"Authorization": "Bearer $token"},
-          ).timeout(const Duration(seconds: 3));
+          final deviceId = await DeviceIdHelper.getDeviceId();
+          await http
+              .post(
+                Uri.parse('${AppConfig.baseUrl}/api/auth/logout'),
+                headers: {
+                  "Authorization": "Bearer $token",
+                  "Content-Type": "application/json",
+                },
+                body: jsonEncode({"device_id": deviceId}),
+              )
+              .timeout(const Duration(seconds: 3));
         }
       } catch (_) {}
 
-      await prefs.remove('token');
-      await prefs.remove('refresh_token');
-      await prefs.remove('token_expires_at');
-      await prefs.remove('shopId');
-      await prefs.remove('shopName');
-      
-      Get.closeAllSnackbars(); // ล้าง Snackbar ทั้งหมดเมื่อสลับไปหน้าล็อคอิน
+      await prefs.clear();
+
+      Get.closeAllSnackbars();
       Get.offAll(() => const LoginPage());
     } finally {
       _isLoggingOut = false;
     }
   }
+
+  static Future<void> logout() => _clearSessionAndLogout();
 
   static bool isUnauthorized(int statusCode) => statusCode == 401;
 }

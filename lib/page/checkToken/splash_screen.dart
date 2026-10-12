@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../api/api_user.dart';
 import '../../utils/auth_guard.dart';
@@ -39,7 +40,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> checkLogin() async {
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.wait([
+      Future.delayed(const Duration(seconds: 2)),
+      _warmUpFont(),
+    ]);
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('token');
@@ -50,13 +54,11 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // ถ้า token ใกล้หมดหรือหมดแล้ว ลอง refresh ก่อน
     await AuthGuard.checkAndRefreshIfNeeded();
 
     // ยืนยันกับ backend ว่า token ยังใช้ได้
     bool isTokenValid = await ApiUser.verifyToken();
     if (!isTokenValid) {
-      // Refresh ไม่ได้แล้ว → ล้าง session ไปหน้า Login
       await prefs.remove('token');
       await prefs.remove('refresh_token');
       await prefs.remove('token_expires_at');
@@ -71,6 +73,23 @@ class _SplashScreenState extends State<SplashScreen>
     } else {
       Get.off(() => const HomePage());
     }
+  }
+
+  Future<void> _warmUpFont() async {
+    try {
+      GoogleFonts.promptTextTheme();
+
+      await GoogleFonts.pendingFonts().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => [],
+      );
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override

@@ -1,9 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:eazy_store/page/my_blank/advanced_report_controller.dart';
 import 'package:eazy_store/model/response/advanced_report_response.dart';
+
+// ─── ข้อมูลปลอมไว้ขึ้นโครงหน้าตอน Skeleton Loading (โหลดครั้งแรกเท่านั้น) ──────────
+AdvancedReportResponse _fakeReportData() => AdvancedReportResponse(
+  salesChart: List.generate(
+    7,
+    (i) => SalesChartItem(date: '2024-01-0${i + 1}', totalSales: 1000),
+  ),
+  summaryStats: SummaryStats(
+    totalTransactions: 10,
+    totalSales: 10000,
+    averageSales: 1000,
+  ),
+  paymentMethods: PaymentMethods(
+    paidCash: 4000,
+    paidTransfer: 3000,
+    debtAmount: 3000,
+  ),
+  topProducts: List.generate(
+    5,
+    (i) => TopProductItem(productName: 'สินค้า', totalQty: 10, totalSales: 1000),
+  ),
+  debtSummary: DebtSummary(
+    totalOutstanding: 5000,
+    collectedThisMonth: 2000,
+    debtorCount: 3,
+  ),
+  agingReport: AgingReport(safe: 40, warning: 30, danger: 30),
+  topDebtors: List.generate(
+    5,
+    (i) => TopDebtorItem(debtorId: i, name: 'ลูกหนี้', currentDebt: 1000),
+  ),
+  debtCollection: DebtCollection(newDebt: 3000, collectedDebt: 2000),
+);
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const _kBg = Color(0xFFEDEEF2);
@@ -59,6 +94,9 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
+    // ดึงข้อมูลใหม่ทุกครั้งที่เข้าหน้านี้ เผื่อกรณี GetX เก็บ controller
+    // เดิมไว้ (เช่น ลูกหนี้เพิ่งมาชำระเงินจากหน้าอื่นก่อนกลับเข้ามาหน้านี้)
+    c.fetchReportData();
   }
 
   @override
@@ -87,11 +125,16 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               _buildHeader(),
               Expanded(
                 child: Obx(() {
-                  if (c.isLoading.value) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: _kBlue,
-                        strokeWidth: 2.5,
+                  // ✨ Skeleton Loading เฉพาะตอนโหลดครั้งแรกจริงๆ เท่านั้น (ใช้ข้อมูลปลอมขึ้นโครง
+                  // การ์ด/กราฟจริง) ส่วน pull-to-refresh รอบถัดไปจะไม่ขึ้น skeleton ซ้อนกับ
+                  // spinner ของ RefreshIndicator อีกตัว — กันปัญหา "loading 2 ตัวพร้อมกัน"
+                  if (!c.hasLoadedOnce.value) {
+                    return Skeletonizer(
+                      enabled: true,
+                      child: SingleChildScrollView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 48),
+                        child: _buildReportColumn(context, _fakeReportData()),
                       ),
                     );
                   }
@@ -117,27 +160,15 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   }
                   return FadeTransition(
                     opacity: _fadeAnim,
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 48),
-                      child: Column(
-                        children: [
-                          _buildPeriodNav(context),
-                          const SizedBox(height: 10),
-                          _buildKpiRow(data.debtSummary),
-                          const SizedBox(height: 10),
-                          _buildSalesCard(data.salesChart),
-                          const SizedBox(height: 10),
-                          _buildPaymentCard(data.paymentMethods),
-                          const SizedBox(height: 10),
-                          _buildTopProductsCard(data.topProducts),
-                          const SizedBox(height: 10),
-                          _buildAgingCard(data.agingReport),
-                          const SizedBox(height: 10),
-                          _buildTopDebtorsCard(data.topDebtors),
-                          const SizedBox(height: 10),
-                          _buildCashFlowCard(data.debtCollection),
-                        ],
+                    child: RefreshIndicator(
+                      onRefresh: () => c.fetchReportData(),
+                      color: _kBlue,
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 48),
+                        child: _buildReportColumn(context, data),
                       ),
                     ),
                   );
@@ -147,6 +178,29 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
           ),
         ),
       ),
+    );
+  }
+
+  // ─── การ์ด/กราฟทั้งหมดของรายงาน — ใช้ร่วมกันทั้ง Skeleton (ข้อมูลปลอม) และของจริง ─────
+  Widget _buildReportColumn(BuildContext context, AdvancedReportResponse data) {
+    return Column(
+      children: [
+        _buildPeriodNav(context),
+        const SizedBox(height: 10),
+        _buildKpiRow(data.debtSummary),
+        const SizedBox(height: 10),
+        _buildSalesCard(data.salesChart),
+        const SizedBox(height: 10),
+        _buildPaymentCard(data.paymentMethods),
+        const SizedBox(height: 10),
+        _buildTopProductsCard(data.topProducts),
+        const SizedBox(height: 10),
+        _buildAgingCard(data.agingReport),
+        const SizedBox(height: 10),
+        _buildTopDebtorsCard(data.topDebtors),
+        const SizedBox(height: 10),
+        _buildCashFlowCard(data.debtCollection),
+      ],
     );
   }
 
@@ -218,7 +272,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
         borderRadius: BorderRadius.circular(11),
       ),
       child: Row(
-        children: ['เดือนนี้', 'ปีนี้'].map((v) {
+        children: ['วันนี้', 'เดือนนี้', 'ปีนี้'].map((v) {
           final on = c.selectedView.value == v;
           return Expanded(
             child: GestureDetector(
@@ -244,7 +298,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   v,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: on ? _kBlue : _kInk3,
                   ),
@@ -455,15 +509,37 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
     );
   }
 
+  int? _extractHour(String label) {
+    if (label.isEmpty) return null;
+    final d = DateTime.tryParse(label) ?? DateTime.tryParse(label.replaceAll(' ', 'T'));
+    if (d != null && (d.hour != 0 || d.minute != 0 || d.second != 0)) return d.hour;
+    if (label.contains('T')) {
+      final timePart = label.split('T').last;
+      final hourStr = timePart.split(':').first;
+      return int.tryParse(hourStr);
+    }
+    if (label.contains(' ')) {
+      final timePart = label.split(' ').last;
+      final hourStr = timePart.split(':').first;
+      return int.tryParse(hourStr);
+    }
+    return null;
+  }
+
   // ─── Sales Chart ─────────────────────────────────────────────────────────────
   Widget _buildSalesCard(List<SalesChartItem> chartData) {
+    final isToday = c.selectedView.value == 'วันนี้';
     final isMonthly = c.selectedView.value == 'เดือนนี้';
 
     // ── Section header (always shown) ────────────────────────────────────────
     final header = _sectionHeader(
       icon: _iconBox(Icons.trending_up_rounded, _kBlueBg, _kBlue),
       title: 'แนวโน้มยอดขาย',
-      sub: isMonthly ? 'ยอดขายรายวันตลอดเดือน' : 'ยอดขายรวมแต่ละเดือนตลอดปี',
+      sub: isToday
+          ? 'ยอดขายรายชั่วโมงตลอดวัน'
+          : isMonthly
+              ? 'ยอดขายรายวันตลอดเดือน'
+              : 'ยอดขายรวมแต่ละเดือนตลอดปี',
       trailing: Obx(
         () => Container(
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
@@ -485,7 +561,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
 
     // ── Aggregate Data for Yearly View ────────────────────────────────────────
     List<SalesChartItem> displayData = chartData;
-    if (!isMonthly && chartData.isNotEmpty) {
+    if (!isToday && !isMonthly && chartData.isNotEmpty) {
       Map<int, double> monthlySales = {for (var i = 1; i <= 12; i++) i: 0.0};
 
       for (var item in chartData) {
@@ -519,6 +595,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
           children: [
             header,
             Container(
+              width: double.infinity,
               height: 100,
               decoration: BoxDecoration(
                 color: _kSurface2,
@@ -564,9 +641,10 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   .reduce((a, b) => a > b ? a : b)) *
               1.45;
 
+    // Today: 18px/hour (~430px for 24 hours)
     // Monthly: 10px/day (dense, ~310px for 31 days)
     // Yearly: 40px/point to prevent cramped labels
-    final double pxPerPoint = isMonthly ? 10.0 : 40.0;
+    final double pxPerPoint = isToday ? 18.0 : (isMonthly ? 10.0 : 40.0);
     final double chartWidth = displayData.length * pxPerPoint;
 
     const months = [
@@ -600,7 +678,14 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               Widget chart = SizedBox(
                 width: scrollW,
                 height: 106,
-                child: LineChart(
+                child: Skeleton.replace(
+                  replacement: Container(
+                    decoration: BoxDecoration(
+                      color: _kSurface2,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: LineChart(
                   LineChartData(
                     gridData: FlGridData(
                       show: true,
@@ -617,14 +702,33 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                           reservedSize: 22,
                           interval: 1,
                           getTitlesWidget: (v, meta) {
+                            if (v != v.roundToDouble()) return const SizedBox();
                             final idx = v.toInt();
                             if (idx < 0 || idx >= displayData.length)
                               return const SizedBox();
                             final label = displayData[idx].date;
                             try {
-                              final d = DateTime.parse(label);
-                              if (isMonthly) {
-                                // Monthly: show day numbers at key intervals
+                              if (isToday) {
+                                final hour = _extractHour(label) ?? idx;
+                                if (hour == 0 ||
+                                    hour == 6 ||
+                                    hour == 12 ||
+                                    hour == 18 ||
+                                    hour == 23) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      '${hour.toString().padLeft(2, '0')}:00',
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        color: _kInk3,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } else if (isMonthly) {
+                                final d = DateTime.parse(label);
                                 final isLast = idx == chartData.length - 1;
                                 if (d.day == 1 ||
                                     d.day == 7 ||
@@ -645,8 +749,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                                   );
                                 }
                               } else {
-                                // Yearly: detect month CHANGE (not d.day==1)
-                                // because API only returns days with actual sales
+                                final d = DateTime.parse(label);
                                 final isFirst = idx == 0;
                                 final prevMonth = idx > 0
                                     ? DateTime.tryParse(
@@ -695,16 +798,69 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                         fitInsideHorizontally: true,
                         fitInsideVertically: true,
                         getTooltipItems: (touchSpots) => touchSpots
-                            .map(
-                              (s) => LineTooltipItem(
+                            .map((s) {
+                              final idx = s.x.toInt();
+                              if (idx >= 0 && idx < displayData.length) {
+                                final itemDate = displayData[idx].date;
+                                String headerText = '';
+
+                                if (isToday) {
+                                  final hour =
+                                      _extractHour(itemDate) ?? idx;
+                                  final startH =
+                                      hour.toString().padLeft(2, '0');
+                                  final endH =
+                                      ((hour + 1) % 24).toString().padLeft(2, '0');
+                                  headerText = '$startH:00 - $endH:00 น.';
+                                } else if (isMonthly) {
+                                  try {
+                                    final d = DateTime.parse(itemDate);
+                                    headerText = ' ${d.day} ${months[d.month - 1]}';
+                                  } catch (_) {
+                                    headerText = itemDate;
+                                  }
+                                } else {
+                                  try {
+                                    final d = DateTime.parse(itemDate);
+                                    const fullMonths = [
+                                      'มกราคม',
+                                      'กุมภาพันธ์',
+                                      'มีนาคม',
+                                      'เมษายน',
+                                      'พฤษภาคม',
+                                      'มิถุนายน',
+                                      'กรกฎาคม',
+                                      'สิงหาคม',
+                                      'กันยายน',
+                                      'ตุลาคม',
+                                      'พฤศจิกายน',
+                                      'ธันวาคม'
+                                    ];
+                                    headerText =
+                                        '${fullMonths[d.month - 1]} ${d.year + 543}';
+                                  } catch (_) {
+                                    headerText = itemDate;
+                                  }
+                                }
+
+                                return LineTooltipItem(
+                                  '$headerText\n฿${c.formatNumber(s.y)}',
+                                  const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                );
+                              }
+                              return LineTooltipItem(
                                 '฿${c.formatNumber(s.y)}',
                                 const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13,
                                 ),
-                              ),
-                            )
+                              );
+                            })
                             .toList(),
                       ),
                     ),
@@ -748,6 +904,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                     ],
                   ),
                 ),
+                ),
               );
 
               return Column(
@@ -779,6 +936,63 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               );
             },
           ),
+          // ── Peak Hour Indicator for Today ───────────────────────
+          if (isToday && !allZero) ...[
+            () {
+              int peakHour = -1;
+              double maxSales = 0;
+              for (int i = 0; i < displayData.length; i++) {
+                if (displayData[i].totalSales > maxSales) {
+                  maxSales = displayData[i].totalSales;
+                  peakHour = _extractHour(displayData[i].date) ?? i;
+                }
+              }
+              if (peakHour >= 0 && maxSales > 0) {
+                final startH = peakHour.toString().padLeft(2, '0');
+                final endH = ((peakHour + 1) % 24).toString().padLeft(2, '0');
+                return Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8EC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFFE0B2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: Color(0xFFFF9800),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'ช่วงเวลาขายดีที่สุด: ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      Text(
+                        '$startH:00 - $endH:00 น. (฿${c.formatNumber(maxSales)})',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFE65100),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }(),
+          ],
         ],
       ),
     );
@@ -830,7 +1044,16 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    PieChart(
+                    Skeleton.replace(
+                      replacement: Container(
+                        width: 76,
+                        height: 76,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _kSurface2,
+                        ),
+                      ),
+                      child: PieChart(
                       PieChartData(
                         sectionsSpace: 2,
                         centerSpaceRadius: 25,
@@ -871,6 +1094,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                             ),
                         ],
                       ),
+                    ),
                     ),
                     Column(
                       mainAxisSize: MainAxisSize.min,
@@ -1142,7 +1366,6 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.bolt_rounded, size: 12, color: _kInk2),
                   SizedBox(width: 3),
                   Text(
                     'ณ วันนี้',
@@ -1161,14 +1384,16 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
             borderRadius: BorderRadius.circular(6),
             child: Row(
               children: [
+                // ใช้ .ceil() แทน .toInt() กันยอดเศษต่ำกว่า 1 บาท (เช่น 0.5) ถูกปัดเป็น
+                // flex: 0 ซึ่ง Expanded ไม่ยอมรับ (flex ต้อง >= 1) จน throw assertion error
                 if (data.safe > 0)
                   Expanded(
-                    flex: data.safe.toInt(),
+                    flex: data.safe.ceil(),
                     child: Container(height: 8, color: _kGreen),
                   ),
                 if (data.warning > 0)
                   Expanded(
-                    flex: data.warning.toInt(),
+                    flex: data.warning.ceil(),
                     child: Container(
                       height: 8,
                       margin: const EdgeInsets.symmetric(horizontal: 1.5),
@@ -1177,7 +1402,7 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                   ),
                 if (data.danger > 0)
                   Expanded(
-                    flex: data.danger.toInt(),
+                    flex: data.danger.ceil(),
                     child: Container(height: 8, color: const Color(0xFFFF5A6A)),
                   ),
               ],
@@ -1379,6 +1604,14 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
     );
   }
 
+  String? _formatDebtSince(String raw) {
+    if (raw.isEmpty) return null;
+    final datePart = raw.length >= 10 ? raw.substring(0, 10) : raw;
+    final date = DateTime.tryParse(datePart);
+    if (date == null) return null;
+    return '${DateFormat('d MMM').format(date)} ${date.year + 543}';
+  }
+
   Widget _agingDebtorTile(
     AgingBucketDebtorItem item,
     Color accent,
@@ -1458,6 +1691,13 @@ class _AdvancedReportPageState extends State<AdvancedReportPage>
                     ),
                   ],
                 ),
+                if (_formatDebtSince(item.debtSince) case final since when since != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'ตั้งแต่ $since',
+                    style: const TextStyle(fontSize: 10, color: _kInk3),
+                  ),
+                ],
               ],
             ),
           ),

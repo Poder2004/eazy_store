@@ -6,6 +6,7 @@ import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/utils/thai_sort.dart';
 import 'package:flutter/material.dart';
+import 'package:eazy_store/page/order_products/order_List/order_list_controller.dart';
 
 class BuyProductsController extends GetxController {
   var isLoading = true.obs;
@@ -37,6 +38,10 @@ class BuyProductsController extends GetxController {
   // ขอมาทีเดียวให้ครบ (ร้านหนึ่งไม่น่ามีสินค้าเกินนี้) แทนที่จะให้ backend
   // แบ่งหน้า ซึ่ง default เป็น limit=10 ถ้าไม่ส่งค่ามา
   static const int _fetchAllLimit = 100000;
+
+  // นับลำดับตอนติ๊กเลือกสินค้า (เพิ่มขึ้นเรื่อยๆ ไม่มีวันย้อนกลับ) ใช้เรียง
+  // รายการสั่งของตามลำดับที่เลือกจริง แทนลำดับในคลังสินค้า
+  int _selectionCounter = 0;
 
   @override
   void onInit() {
@@ -79,6 +84,16 @@ class BuyProductsController extends GetxController {
   Future<void> fetchProducts() async {
     try {
       isLoading(true);
+
+      // ✅ จำ id สินค้าที่เลือกไว้ (พร้อมลำดับที่เลือก) ก่อนโหลดใหม่ เพราะเปลี่ยน
+      // ตัวกรอง/ค้นหาจะเรียก fetchProducts() ใหม่ทุกครั้ง แทนที่ allProducts
+      // ด้วย object ใหม่ทั้งหมดจาก API (isSelected/selectionOrder เริ่มใหม่เสมอ)
+      // ถ้าไม่จำไว้ การเลือก/ลำดับที่ทำค้างไว้ข้ามหน้าจะหายไปเงียบๆ
+      final selectedOrders = <int?, int>{
+        for (final p in allProducts.where((p) => p.isSelected))
+          p.productId: p.selectionOrder,
+      };
+
       SharedPreferences prefs = await SharedPreferences.getInstance();
       int shopId = prefs.getInt('shopId') ?? 0;
 
@@ -91,13 +106,31 @@ class BuyProductsController extends GetxController {
         limit: _fetchAllLimit,
       );
 
+      List<ProductResponse> fetched;
       if (response is ProductPagedResponse) {
-        allProducts.assignAll(response.items);
+        fetched = response.items;
       } else if (response is List<ProductResponse>) {
-        allProducts.assignAll(response);
+        fetched = response;
       } else {
-        allProducts.clear();
+        fetched = [];
       }
+      // API ไม่กรองสถานะให้ (คืนสินค้าที่ถูกปิดใช้งาน/soft-delete มาด้วย) ต้องกรอง
+      // เองฝั่ง client เหมือนหน้าอื่นๆ ที่เรียก getProductsByShop ไม่งั้นสินค้าที่
+      // ถูกลบไปแล้วจะโผล่มาให้เลือกสั่งของได้อีก
+      fetched = fetched.where((p) => p.status == true).toList();
+
+      // คืนสถานะ "เลือกไว้" + ลำดับที่เลือก ให้สินค้าตัวเดิม แม้จะเป็น object
+      // คนละตัวจาก API รอบนี้
+      if (selectedOrders.isNotEmpty) {
+        for (final p in fetched) {
+          if (selectedOrders.containsKey(p.productId)) {
+            p.isSelected = true;
+            p.selectionOrder = selectedOrders[p.productId]!;
+          }
+        }
+      }
+
+      allProducts.assignAll(fetched);
 
       totalPages.value = allProducts.isEmpty
           ? 1
@@ -149,18 +182,32 @@ class BuyProductsController extends GetxController {
   }
 
   void toggleProduct(int index) {
-    products[index].isSelected = !products[index].isSelected;
+    final product = products[index];
+    product.isSelected = !product.isSelected;
+    // ตีตราลำดับใหม่ทุกครั้งที่ "เลือก" (ไม่ใช่ตอนยกเลิก) เพื่อให้ติ๊กใหม่
+    // ทีหลัง ไปอยู่ท้ายรายการสั่งของเสมอ แม้จะเคยติ๊ก/ยกเลิกตัวนี้มาก่อนแล้ว
+    if (product.isSelected) {
+      product.selectionOrder = ++_selectionCounter;
+    }
     products.refresh();
     allProducts.refresh();
   }
 
   int get selectedCount => allProducts.where((p) => p.isSelected).length;
-  List<ProductResponse> get selectedProducts =>
-      allProducts.where((p) => p.isSelected).toList();
+
+  // เรียงตามลำดับที่ถูกติ๊กเลือกจริง (selectionOrder) ไม่ใช่ลำดับในคลังสินค้า
+  List<ProductResponse> get selectedProducts {
+    final list = allProducts.where((p) => p.isSelected).toList();
+    list.sort((a, b) => a.selectionOrder.compareTo(b.selectionOrder));
+    return list;
+  }
 
   @override
   void onClose() {
     searchCtrl.dispose();
+    // ทำลาย OrderListController อย่างถาวรเมื่อปิดหน้าสั่งซื้อสินค้า (กลับหน้าโฮม)
+    // เพื่อให้รอบถัดไปที่เข้ามาสั่งของใหม่ เริ่มต้นด้วยรายการที่ว่างเปล่าเสมอ
+    Get.delete<OrderListController>(force: true);
     super.onClose();
   }
 }

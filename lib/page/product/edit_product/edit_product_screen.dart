@@ -1,11 +1,13 @@
 // ไฟล์: lib/sale_producct/edit_product_screen.dart (ปรับ path ตามจริงของคุณ)
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/model/response/product_response.dart';
+import 'package:eazy_store/page/product/add_stock/add_stock.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/widgets/category_bottom_sheet.dart';
 import 'package:eazy_store/widgets/category_disable_dialog.dart';
 import 'package:eazy_store/widgets/inactive_categories_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'edit_product_controller.dart'; // ✅ นำเข้า Controller ที่แยกไว้
 
@@ -14,8 +16,37 @@ class EditProductScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ เรียกใช้ Controller
-    final EditProductController controller = Get.put(EditProductController());
+    return _EditProductView();
+  }
+}
+
+class _EditProductView extends StatefulWidget {
+  @override
+  State<_EditProductView> createState() => _EditProductViewState();
+}
+
+class _EditProductViewState extends State<_EditProductView> {
+  late final EditProductController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ สร้าง controller ใหม่ทุกครั้งที่เปิดหน้านี้ กันข้อมูลสินค้าตัวก่อนหน้าค้าง
+    // (ถ้าใช้ Get.put() เฉยๆ ใน build() ของ StatelessWidget เดิม พอเปิดหน้านี้
+    // ซ้ำรอบสอง controller ตัวเก่าที่ยัง put ค้างอยู่จะถูกใช้ต่อ ทำให้ onInit()
+    // ที่อ่าน Get.arguments ไม่ทำงานใหม่ เห็นข้อมูลสินค้า/สต็อกเป็นค่าเก่าจากรอบแรก)
+    Get.delete<EditProductController>(force: true);
+    controller = Get.put(EditProductController());
+  }
+
+  @override
+  void dispose() {
+    Get.delete<EditProductController>();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     const primaryColor = Color(0xFF6B8E23);
 
     return Scaffold(
@@ -211,6 +242,8 @@ class EditProductScreen extends StatelessWidget {
                           controller: controller.barcodeCtrl,
                           icon: Icons.qr_code_scanner,
                           keyboardType: TextInputType.number,
+                          // พิมพ์เองเสร็จแล้วเช็คซ้ำให้ทันที
+                          onEditingDone: controller.onBarcodeChanged,
                         ),
                       ),
                       Padding(
@@ -222,6 +255,8 @@ class EditProductScreen extends StatelessWidget {
                             );
                             if (result != null && result is String) {
                               controller.barcodeCtrl.text = result;
+                              // เตือนทันทีถ้าบาร์โค้ดนี้มีสินค้าตัวอื่นใช้อยู่
+                              controller.onBarcodeChanged(result);
                             }
                           },
                           borderRadius: BorderRadius.circular(10),
@@ -260,15 +295,48 @@ class EditProductScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: _buildTextField(
-                  label: "จำนวนคงเหลือ",
-                  controller: controller.stockCtrl,
-                  icon: Icons.inventory_2,
-                  readOnly: true,
-                  suffix: const Text(
-                    "แก้ไขไม่ได้",
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildTextField(
+                        label: "จำนวนคงเหลือ",
+                        controller: controller.stockCtrl,
+                        icon: Icons.add_box_rounded,
+                        readOnly: true,
+                        onIconTap: () => Get.to(
+                          () => AddStockScreen(
+                            initialProduct: controller.originalProduct,
+                          ),
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Get.to(
+                        () => AddStockScreen(
+                          initialProduct: controller.originalProduct,
+                        ),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6B8E23).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          "เพิ่มสต็อก",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF6B8E23),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 25),
@@ -398,7 +466,13 @@ class EditProductScreen extends StatelessWidget {
       onDisable: () => controller.disableCategory(category),
       onRefreshCategories: (CategoryModel? movedToCategory) async {
         await controller.fetchCategories();
-        controller.selectedCategory.value = movedToCategory;
+        // เปลี่ยน/ล้างหมวดหมู่ที่เลือกในฟอร์ม เฉพาะตอนหมวดหมู่ที่กำลังปิดใช้งาน
+        // เป็นหมวดหมู่เดียวกับที่เลือกอยู่ในฟอร์มนี้เท่านั้น ไม่งั้นปิดหมวดหมู่อื่น
+        // ที่ไม่เกี่ยวข้องก็จะไปรีเซ็ตหมวดหมู่ที่เลือกไว้ในฟอร์มด้วย
+        if (controller.selectedCategory.value?.categoryId ==
+            category.categoryId) {
+          controller.selectedCategory.value = movedToCategory;
+        }
       },
       onReopenBottomSheet: () {
         if (context.mounted) {
@@ -477,6 +551,7 @@ class EditProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(
@@ -603,6 +678,7 @@ class EditProductScreen extends StatelessWidget {
                       onPressed: () =>
                           Navigator.of(context, rootNavigator: true).pop(),
                       style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
                         foregroundColor: Colors.grey[700],
                         side: BorderSide(color: Colors.grey[300]!),
                         shape: RoundedRectangleBorder(
@@ -967,11 +1043,21 @@ class EditProductScreen extends StatelessWidget {
     Widget? suffix,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    void Function(String)? onEditingDone,
+    VoidCallback? onIconTap,
   }) {
     return TextFormField(
       controller: controller,
       readOnly: readOnly,
       keyboardType: keyboardType,
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        if (onEditingDone != null) onEditingDone(controller.text);
+      },
+      onFieldSubmitted: onEditingDone,
+      inputFormatters: keyboardType == TextInputType.number
+          ? [FilteringTextInputFormatter.digitsOnly]
+          : null,
       validator: validator,
       style: TextStyle(
         fontWeight: isPrice ? FontWeight.bold : FontWeight.normal,
@@ -981,9 +1067,14 @@ class EditProductScreen extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.grey.shade500),
-        prefixIcon: icon != null
-            ? Icon(icon, color: Colors.grey.shade400)
-            : null,
+        prefixIcon: icon == null
+            ? null
+            : onIconTap == null
+                ? Icon(icon, color: Colors.grey.shade400)
+                : IconButton(
+                    icon: Icon(icon, color: const Color(0xFF6B8E23)),
+                    onPressed: onIconTap,
+                  ),
         suffixIcon: suffix,
         border: InputBorder.none,
         contentPadding: const EdgeInsets.symmetric(
