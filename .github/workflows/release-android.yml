@@ -1,0 +1,117 @@
+# Build APK (Android) → ออก GitHub Release → สร้างหน้าดาวน์โหลด + QR บน GitHub Pages
+#
+# วิธีออกเวอร์ชันใหม่: git tag v1.0.1 && git push origin v1.0.1   (หรือกด Run workflow ในแท็บ Actions)
+# QR ชี้ที่ .../releases/latest/download/eazy-store.apk จึง "ไม่เปลี่ยน" ทุกเวอร์ชัน พิมพ์ติดร้านได้ครั้งเดียว
+#
+# ตั้งค่าครั้งเดียวใน repo → Settings:
+#   Pages → Build and deployment → Source = "GitHub Actions"
+#   Secrets and variables → Actions → New repository secret (4 ตัว):
+#     ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+name: Release Android
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # สร้าง Release
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release-android
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.2"
+          cache: true
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::ยังไม่ได้ตั้ง secret ANDROID_KEYSTORE_BASE64 (ดูวิธีตั้งที่หัวไฟล์ workflow นี้)"; exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > android/app/upload-keystore.jks
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=$STORE_PW"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PW"
+          } > android/key.properties
+
+      - name: Version info
+        id: meta
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then V="${GITHUB_REF_NAME#v}"; else V="0.0.${GITHUB_RUN_NUMBER}"; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      - run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release --build-name="${{ steps.meta.outputs.version }}" --build-number="${{ github.run_number }}"
+
+      - name: Prepare APK
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk eazy-store.apk
+          ls -lh eazy-store.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', steps.meta.outputs.version) }}
+          name: Eazy Store ${{ steps.meta.outputs.version }}
+          generate_release_notes: true
+          files: eazy-store.apk
+
+      - name: Remove signing key from runner
+        if: always()
+        run: rm -f android/app/upload-keystore.jks android/key.properties
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "qrcode[pil]==8.2"
+
+      - name: Build download page
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: python .github/download-page/build.py _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

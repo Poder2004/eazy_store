@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ดาวน์โหลด Eazy Store</title>
+  <meta name="description" content="ดาวน์โหลดแอป Eazy Store สำหรับ Android">
+  <style>
+    :root {
+      --bg: #f2f4f7; --card: #ffffff; --text: #1d2433; --muted: #667085;
+      --brand: #6b8e23; --brand-dark: #55721a; --line: #e4e7ec; --soft: #f1f5e6;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #11151b; --card: #1a2029; --text: #eef1f6; --muted: #98a2b3;
+              --brand: #8fb33a; --brand-dark: #a6c955; --line: #2a3340; --soft: #232c18; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", Tahoma, sans-serif;
+      display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+    }
+    main { width: 100%; max-width: 440px; }
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+      padding: 28px 24px; text-align: center; box-shadow: 0 8px 30px rgba(16,24,40,.06);
+    }
+    h1 { font-size: 1.6rem; margin: 0 0 4px; }
+    .sub { color: var(--muted); margin: 0 0 22px; font-size: .95rem; }
+    .btn {
+      display: block; width: 100%; background: var(--brand); color: #fff; text-decoration: none;
+      font-weight: 700; font-size: 1.05rem; padding: 15px 18px; border-radius: 14px;
+    }
+    .btn:hover, .btn:focus-visible { background: var(--brand-dark); }
+    .meta { color: var(--muted); font-size: .85rem; margin: 12px 0 0; }
+    .qr-block { margin-top: 24px; padding-top: 22px; border-top: 1px dashed var(--line); }
+    .qr-block p { margin: 0 0 12px; color: var(--muted); font-size: .9rem; }
+    .qr { background: #fff; padding: 10px; border-radius: 14px; border: 1px solid var(--line); display: inline-block; }
+    .qr img { width: 200px; height: 200px; display: block; }
+    @media (max-width: 640px) { .qr-block { display: none; } }  /* บนมือถือใช้ปุ่มดาวน์โหลดได้เลย */
+    details { text-align: left; margin-top: 22px; background: var(--soft); border-radius: 14px; padding: 14px 16px; }
+    summary { cursor: pointer; font-weight: 700; }
+    ol { margin: 10px 0 0; padding-left: 20px; color: var(--text); font-size: .93rem; line-height: 1.7; }
+    footer { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>Eazy Store</h1>
+      <p class="sub">แอปจัดการร้านค้า สำหรับ Android</p>
+
+      <a class="btn" href="{{APK_URL}}" download>ดาวน์โหลดแอป (.apk)</a>
+      <p class="meta">เวอร์ชัน {{VERSION}} · อัปเดต {{DATE}}</p>
+
+      <div class="qr-block">
+        <p>สแกนด้วยมือถือเพื่อดาวน์โหลด</p>
+        <div class="qr"><img src="qr.png" alt="QR code สำหรับดาวน์โหลดแอป Eazy Store" width="200" height="200"></div>
+      </div>
+
+      <details>
+        <summary>วิธีติดตั้ง</summary>
+        <ol>
+          <li>กดดาวน์โหลดไฟล์ <b>eazy-store.apk</b></li>
+          <li>เปิดไฟล์ที่ดาวน์โหลด แล้วกด <b>ติดตั้ง</b></li>
+          <li>ถ้าเครื่องถามเรื่องแหล่งที่มา ให้กด <b>การตั้งค่า</b> แล้วเปิด <b>อนุญาตจากแหล่งนี้</b> (ติดตั้งแอปที่ไม่ได้มาจาก Play Store)</li>
+          <li>เปิดแอปและเข้าสู่ระบบได้เลย</li>
+        </ol>
+      </details>
+    </div>
+    <footer>ใช้บน Android เท่านั้น · ดาวน์โหลดจากหน้านี้เพื่อความปลอดภัย</footer>
+  </main>
+</body>
+</html>
