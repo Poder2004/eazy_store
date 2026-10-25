@@ -25,8 +25,9 @@ Widget moneyFlow(
   // ทำให้ระยะห่างไม่เท่ากันในแต่ละขนาดฟอนต์ ใช้ Row แปะกันแน่นแทน
   return Row(
     mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.baseline,
-    textBaseline: TextBaseline.alphabetic,
+    // ไม่ใช้ CrossAxisAlignment.baseline: NumberFlow วาดด้วย CustomPaint ซึ่งไม่รองรับ
+    // computeDryBaseline (Flutter 3.4x ขึ้นไป) ทำให้ layout พังและหน้าจอขาวทั้งหน้า
+    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       Text('฿', style: style),
       NumberFlow(value: value, format: format, locale: 'en_US', style: style),
