@@ -1118,6 +1118,7 @@ class _EditProductViewState extends State<_EditProductView> {
                           label: "บาร์โค้ด (ถ้ามี)",
                           ctrl: barcodeCtrl,
                           hint: "พิมพ์หรือสแกน",
+                          isNumber: true,
                         ),
                       ),
                       const SizedBox(width: 10),

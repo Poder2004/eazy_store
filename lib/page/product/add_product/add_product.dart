@@ -1191,6 +1191,7 @@ class AddProductScreen extends StatelessWidget {
                         label: "บาร์โค้ด (ถ้ามี)",
                         ctrl: f.barcodeCtrl,
                         hint: "พิมพ์หรือสแกน",
+                        isNumber: true,
                       ),
                     ),
                     const SizedBox(width: 10),

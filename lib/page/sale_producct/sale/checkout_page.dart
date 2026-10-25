@@ -649,6 +649,7 @@ class _QtyStepperState extends State<_QtyStepper> {
             focusNode: _focusNode,
             textAlign: TextAlign.center,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             decoration: InputDecoration(
               isDense: true,

@@ -574,6 +574,7 @@ class DebtPaymentScreen extends StatelessWidget {
                 obscureText: true,
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: 6,
                 style: const TextStyle(
                   fontSize: 28, // ปรับลดจาก 32 เพื่อให้พิมพ์ 6 ตัวไม่ล้น
