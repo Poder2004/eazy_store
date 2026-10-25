@@ -326,14 +326,9 @@ class _LoginPageState extends State<LoginPage> {
                           hintText: "กรอกรหัสผ่าน",
                           isPassword: true,
                           obscureText: _obscurePassword,
-                          onPressStart: () {
+                          onToggleVisibility: () {
                             setState(() {
-                              _obscurePassword = false;
-                            });
-                          },
-                          onPressEnd: () {
-                            setState(() {
-                              _obscurePassword = true;
+                              _obscurePassword = !_obscurePassword;
                             });
                           },
                           icon: Icons.lock_outline,
@@ -445,8 +440,7 @@ class _LoginPageState extends State<LoginPage> {
     bool isPassword = false,
     IconData? icon,
     bool obscureText = false,
-    VoidCallback? onPressStart,
-    VoidCallback? onPressEnd,
+    VoidCallback? onToggleVisibility,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -476,11 +470,9 @@ class _LoginPageState extends State<LoginPage> {
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(20),
           suffixIcon: isPassword
-              ? Listener(
+              ? GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onPointerDown: (_) => onPressStart?.call(),
-                  onPointerUp: (_) => onPressEnd?.call(),
-                  onPointerCancel: (_) => onPressEnd?.call(),
+                  onTap: onToggleVisibility,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
