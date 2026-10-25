@@ -2,6 +2,7 @@ import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/page/product/check_price/check_price_controller.dart';
+import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -136,35 +137,66 @@ class CheckPriceScreen extends StatelessWidget {
   }
 
   Widget _buildSearchBar(PriceController controller, Color primaryColor) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    final shadow = [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.05),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
       ),
-      child: TextField(
-        controller: controller.searchCtrl,
-        decoration: InputDecoration(
-          hintText: 'ค้นหาชื่อสินค้า หรือ สแกนบาร์โค้ด...',
-          hintStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          suffixIcon: IconButton(
-            icon: Icon(Icons.qr_code_scanner_outlined, color: primaryColor),
-            onPressed: controller.openScanner,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 14.0,
-            horizontal: 4.0,
+    ];
+
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15.0),
+              boxShadow: shadow,
+            ),
+            child: TextField(
+              controller: controller.searchCtrl,
+              decoration: InputDecoration(
+                hintText: 'ค้นหาชื่อสินค้า หรือ สแกนบาร์โค้ด...',
+                hintStyle: const TextStyle(color: Colors.grey),
+                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.qr_code_scanner_outlined, color: primaryColor),
+                  onPressed: controller.openScanner,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 14.0,
+                  horizontal: 4.0,
+                ),
+              ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(width: 10),
+        // สมุดสินค้า (รวมสินค้าที่ไม่มีบาร์โค้ด) — อยู่นอกช่องค้นหา
+        Tooltip(
+          message: 'สมุดสินค้าไม่มีบาร์โค้ด',
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15.0),
+            elevation: 0,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(15.0),
+              onTap: () => Get.to(() => const ManualListPage()),
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15.0),
+                  boxShadow: shadow,
+                ),
+                child: Icon(Icons.menu_book_rounded, color: primaryColor),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

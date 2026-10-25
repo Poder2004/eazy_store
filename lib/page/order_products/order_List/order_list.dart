@@ -292,8 +292,31 @@ class OrderListScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   SizedBox(
-                    width: 60,
-                    child: isUnitEditing
+                    width: item.unitOptions.length > 1 ? 86 : 60,
+                    child: item.unitOptions.length > 1
+                        // สินค้าที่มีหลายหน่วย: เลือกจาก dropdown (ใหญ่สุดก่อน)
+                        ? DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: item.unitOptions.contains(item.unitController.text)
+                                  ? item.unitController.text
+                                  : item.unitOptions.first,
+                              isDense: true,
+                              isExpanded: true,
+                              icon: const Icon(Icons.arrow_drop_down, size: 20),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color.fromARGB(228, 22, 22, 22),
+                              ),
+                              items: [
+                                for (final u in item.unitOptions)
+                                  DropdownMenuItem(value: u, child: Text(u)),
+                              ],
+                              onChanged: (v) {
+                                if (v != null) controller.setUnit(item, v);
+                              },
+                            ),
+                          )
+                        : isUnitEditing
                         ? TextField(
                             controller: item.unitController,
                             autofocus: true,
@@ -323,13 +346,16 @@ class OrderListScreen extends StatelessWidget {
                             ),
                           ),
                   ),
-                  _buildIconToggle(
-                    icon: Icons.edit_outlined,
-                    active: isUnitEditing,
-                    onTap: () => controller.toggleUnitEdit(item.id),
-                    color: const Color(0xFF5390F2),
-                    bgColor: const Color(0xFFEAF1FD),
-                  ),
+                  // ปุ่มพิมพ์หน่วยเอง: เฉพาะสินค้ากำหนดเอง (สินค้าจากคลังใช้ dropdown
+                  // หรือหน่วยเดียวที่มีอยู่ ไม่ต้องแก้ชื่อหน่วย)
+                  if (item.isCustom)
+                    _buildIconToggle(
+                      icon: Icons.edit_outlined,
+                      active: isUnitEditing,
+                      onTap: () => controller.toggleUnitEdit(item.id),
+                      color: const Color(0xFF5390F2),
+                      bgColor: const Color(0xFFEAF1FD),
+                    ),
                 ],
               ),
             ),

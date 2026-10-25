@@ -20,6 +20,7 @@ class EditProductController extends GetxController {
   late TextEditingController barcodeCtrl;
   late TextEditingController stockCtrl;
   late TextEditingController unitCtrl;
+  late TextEditingController lowStockCtrl;
 
   // เก็บราคาเดิมไว้ใช้ส่งกลับ API (ราคาแก้ไขได้ผ่านหน้า Add Stock)
   double _currentSellPrice = 0.0;
@@ -58,6 +59,9 @@ class EditProductController extends GetxController {
       _currentCostPrice = originalProduct.costPrice;
       stockCtrl = TextEditingController(text: originalProduct.stock.toString());
       unitCtrl = TextEditingController(text: originalProduct.unit);
+      lowStockCtrl = TextEditingController(
+        text: originalProduct.lowStockThreshold.toString(),
+      );
       units.assignAll(originalProduct.activeUnits);
 
       // กำหนดค่าหมวดหมู่เริ่มต้นจากข้อมูลสินค้าที่มีอยู่ เพื่อป้องกันไม่ให้แสดง "ไม่ระบุ" หรือ "เลือกหมวดหมู่" ระหว่างโหลดข้อมูล
@@ -87,6 +91,7 @@ class EditProductController extends GetxController {
       barcodeCtrl = TextEditingController();
       stockCtrl = TextEditingController(text: '0');
       unitCtrl = TextEditingController();
+      lowStockCtrl = TextEditingController(text: '10');
 
       // แล้วค่อยเด้งกลับทันที
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -102,6 +107,7 @@ class EditProductController extends GetxController {
     barcodeCtrl.dispose();
     stockCtrl.dispose();
     unitCtrl.dispose();
+    lowStockCtrl.dispose();
     super.onClose();
   }
 
@@ -379,6 +385,12 @@ class EditProductController extends GetxController {
         "unit": unitCtrl.text.trim(),
         "category_id": selectedCategory.value!.categoryId,
       };
+
+      // เว้นว่างไว้ = ไม่แก้เกณฑ์เดิม
+      final lowStock = int.tryParse(lowStockCtrl.text.trim());
+      if (lowStock != null) {
+        updateData["low_stock_threshold"] = lowStock;
+      }
 
       if (newImageUrl != null) {
         updateData["img_product"] = newImageUrl;

@@ -16,9 +16,13 @@ class OrderItem {
   final TextEditingController quantityController;
   final TextEditingController noteController;
 
-  // หน่วยนับที่แก้ไขได้เฉพาะในใบสั่งของนี้ (ไม่บันทึกกลับลงสินค้าจริง)
-  // เริ่มต้นจาก `unit` เดิม แต่ผู้ใช้พิมพ์ทับได้ เช่นเปลี่ยน "คู่" เป็น "1 โหล"
+  // หน่วยที่เลือกไว้ในใบสั่งของนี้ (ไม่บันทึกกลับลงสินค้าจริง)
+  // - สินค้าจากคลัง: เลือกจาก unitOptions เท่านั้น (ใหญ่สุดก่อน เช่น ลัง ก่อน ขวด)
+  // - สินค้ากำหนดเอง (unitOptions ว่าง): พิมพ์เองได้
   final TextEditingController unitController;
+
+  // หน่วยที่สินค้านี้มีให้เลือก เรียงจากใหญ่ไปเล็ก — ว่าง = สินค้ากำหนดเอง
+  final List<String> unitOptions;
 
   // จำนวนล่าสุดที่ยังถูกต้อง (>0) ไว้ใช้คืนค่าตอนกดยกเลิกลบ เพราะพอผู้ใช้พิมพ์
   // เลขในช่องจนกลายเป็น "0" ไปแล้ว ตัว TextField เองจะอัปเดต .text ไปก่อน
@@ -39,6 +43,7 @@ class OrderItem {
     required int initialQuantity,
     String initialNote = '',
     this.isCustom = false,
+    this.unitOptions = const [],
   }) : quantityController = TextEditingController(
          text: initialQuantity.toString(),
        ),
@@ -84,6 +89,12 @@ class OrderListController extends GetxController {
     } else {
       notesExpanded.add(id);
     }
+  }
+
+  // เลือกหน่วยจาก dropdown (สินค้าจากคลัง)
+  void setUnit(OrderItem item, String unit) {
+    item.unitController.text = unit;
+    orderItems.refresh();
   }
 
   void toggleUnitEdit(String id) {
@@ -138,7 +149,9 @@ class OrderListController extends GetxController {
             (item) => OrderItem(
               id: item.productId.toString(),
               name: item.name,
-              unit: item.largestUnit?.unitName ?? item.unit,
+              // เริ่มที่หน่วยใหญ่สุด (สั่งของมักสั่งเป็นลัง/แพ็ค) เปลี่ยนได้ใน dropdown
+              unit: item.orderUnitNames.first,
+              unitOptions: item.orderUnitNames,
               imageUrl: item.imgProduct,
               initialQuantity: 1,
             ),

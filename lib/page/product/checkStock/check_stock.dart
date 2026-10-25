@@ -186,7 +186,7 @@ class CheckStockScreen extends StatelessWidget {
 
   Widget _buildProductCard(ProductResponse product, Color warningColor) {
     final bool isOutOfStock = product.stock == 0;
-    final bool isLowStock = product.stock <= 10;
+    final bool isLowStock = product.stock <= product.lowStockThreshold;
     final Color stockColor = isLowStock
         ? const Color(0xFFE53935)
         : const Color(0xFF2E7D32);

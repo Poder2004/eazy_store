@@ -10,6 +10,9 @@ class ProductRequest {
   final String unit;
   final bool status;
 
+  // คงเหลือ (หน่วยฐาน) ที่ ≤ ค่านี้ = สินค้าใกล้หมด — null = ให้ backend ใช้ค่าเริ่มต้น (10)
+  final int? lowStockThreshold;
+
   // หน่วยขายเพิ่มเติม (ลัง/แพ็ค) ที่จะสร้างพร้อมกับสินค้านี้เลย — แต่ละรายการเป็น
   // map ตาม ProductUnitResponse.toJson() (unit_name, conversion_qty, barcode, sell_price, cost_price)
   final List<Map<String, dynamic>> units;
@@ -25,6 +28,7 @@ class ProductRequest {
     required this.stock,
     required this.unit,
     this.status = true,
+    this.lowStockThreshold,
     this.units = const [],
   });
 
@@ -40,6 +44,7 @@ class ProductRequest {
       "stock": stock,
       "unit": unit,
       "status": status,
+      if (lowStockThreshold != null) "low_stock_threshold": lowStockThreshold,
       "units": units,
       // หมายเหตุ: เราไม่ส่ง category object กลับไป เพราะ backend มักใช้แค่ category_id ในการ save
     };

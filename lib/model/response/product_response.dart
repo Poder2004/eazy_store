@@ -61,6 +61,9 @@ class ProductResponse {
   final String unit;
   final bool status;
 
+  // คงเหลือ (หน่วยฐาน) ที่ ≤ ค่านี้ = สินค้าใกล้หมด (ตั้งรายสินค้า ค่าเริ่มต้น 10)
+  final int lowStockThreshold;
+
   // ✅ ใช้ Type เป็น CategoryModel (จากไฟล์ที่ Import มา)
   final CategoryModel? category;
 
@@ -91,6 +94,7 @@ class ProductResponse {
     required this.stock,
     required this.unit,
     this.status = true,
+    this.lowStockThreshold = 10,
     this.category,
     this.categoryName,
     this.isSelected = false,
@@ -103,6 +107,20 @@ class ProductResponse {
       units.where((u) => u.status).toList();
 
   // หน่วยที่แปลงเป็นหน่วยฐานได้มากที่สุด (เช่น ลัง) — ใช้เป็นค่าเริ่มต้นตอนลงของ/สั่งของ
+  // ชื่อหน่วยที่เลือกได้ตอนสั่งของ เรียงจากหน่วยใหญ่สุดไปเล็กสุด (เช่น ลัง, แพ็ค, ขวด)
+  // หน่วยฐานอยู่ท้ายสุดเสมอ — สินค้าที่ไม่มีหน่วยเพิ่มจะได้แค่หน่วยฐานอันเดียว
+  List<String> get orderUnitNames {
+    final bigToSmall = [...activeUnits]
+      ..sort((a, b) => b.conversionQty.compareTo(a.conversionQty));
+    final names = <String>[];
+    for (final u in bigToSmall) {
+      if (!names.contains(u.unitName)) names.add(u.unitName);
+    }
+    final base = unit.isEmpty ? 'ชิ้น' : unit;
+    if (!names.contains(base)) names.add(base);
+    return names;
+  }
+
   ProductUnitResponse? get largestUnit {
     final active = activeUnits;
     if (active.isEmpty) return null;
@@ -132,6 +150,7 @@ class ProductResponse {
       stock: json['stock'] ?? 0,
       unit: json['unit'] ?? '',
       status: json['status'] ?? true,
+      lowStockThreshold: (json['low_stock_threshold'] as num?)?.toInt() ?? 10,
 
       // ยัด Object Category เข้าไป (เผื่อใช้ทีหลัง)
       category: catObj,

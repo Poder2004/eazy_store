@@ -183,7 +183,7 @@ class BuyProductsScreen extends StatelessWidget {
     BuyProductsController controller,
   ) {
     final bool isOutOfStock = product.stock == 0;
-    final bool isLowStock = product.stock <= 10;
+    final bool isLowStock = product.stock <= product.lowStockThreshold;
     final Color stockColor = isOutOfStock
         ? const Color(0xFFE53935)
         : isLowStock

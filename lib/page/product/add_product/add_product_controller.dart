@@ -34,14 +34,45 @@ class AddProductController extends GetxController {
   final _picker = ImagePicker();
   var categoryList = <CategoryModel>[].obs;
 
+  // หน่วยนับหลัก = หน่วยย่อยที่เล็กที่สุดของสินค้า (สต็อกนับเป็นหน่วยนี้เสมอ)
+  // หน่วยใหญ่อย่าง ลัง/แพ็ค/กล่อง ไปเพิ่มเป็น "หน่วยขายเพิ่มเติม" แทน (ดู packUnitOptions)
   final List<String> unitOptions =
-      ['ชิ้น', 'กล่อง', 'ลัง', 'ขวด', 'ซอง', 'กิโลกรัม', 'แพ็ค']
+      [
+        'ชิ้น',
+        'อัน',
+        'ขวด',
+        'ซอง',
+        'กระป๋อง',
+        'ก้อน',
+        'ลูก',
+        'ขีด',
+        'ด้าม',
+        'แท่ง',
+        'หน่อย',
+        'กิโลกรัม',
+      ]
         ..sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
+
+  // ชื่อหน่วยขายเพิ่มเติมที่พบบ่อย (หน่วยใหญ่ที่แปลงเป็นหน่วยฐานได้) เรียงตามความนิยม
+  final List<String> packUnitOptions = [
+    'ลัง',
+    'แพ็ค',
+    'โหล',
+    'กล่อง',
+    'ถุง',
+    'ห่อ',
+    'เซ็ต',
+    'แผง',
+    'กระสอบ',
+    'ถัง',
+  ];
 
   final nameController = TextEditingController();
   final costController = TextEditingController();
   final salePriceController = TextEditingController();
   final stockController = TextEditingController();
+  // คงเหลือ (หน่วยฐาน) ที่ ≤ ค่านี้ = สินค้าใกล้หมด (ค่าเริ่มต้น 10 เท่าที่แอปใช้มาตลอด)
+  final lowStockController = TextEditingController(text: '10');
   final unitController = TextEditingController();
   final idController = TextEditingController();
 
@@ -68,6 +99,7 @@ class AddProductController extends GetxController {
     costController.dispose();
     salePriceController.dispose();
     stockController.dispose();
+    lowStockController.dispose();
     unitController.dispose();
     idController.dispose();
     for (final f in unitForms) {
@@ -198,6 +230,7 @@ class AddProductController extends GetxController {
         ),
         unit: unitController.text.trim(),
         status: true,
+        lowStockThreshold: int.tryParse(lowStockController.text.trim()),
         units: unitsPayload,
       );
 
@@ -293,6 +326,7 @@ class AddProductController extends GetxController {
     costController.clear();
     salePriceController.clear();
     stockController.clear();
+    lowStockController.text = '10';
     unitController.clear();
     idController.clear();
     selectedCategoryObject.value = null;

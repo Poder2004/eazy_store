@@ -126,7 +126,7 @@ class AddProductScreen extends StatelessWidget {
                       const SizedBox(width: 15),
                       Expanded(
                         child: _buildModernField(
-                          label: "จำนวนเริ่มต้น",
+                          label: "จำนวนสต็อก",
                           textController: controller.stockController,
                           hintText: "0",
                           isNumber: true,
@@ -147,6 +147,19 @@ class AddProductScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 15),
+                  _buildModernField(
+                    label: "แจ้งเตือนเมื่อสต็อกเหลือไม่เกิน",
+                    textController: controller.lowStockController,
+                    hintText: "10",
+                    isNumber: true,
+                    icon: Icons.notifications_active_outlined,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "เมื่อคงเหลือ (นับเป็นหน่วยเล็กสุด) เท่ากับหรือน้อยกว่าค่านี้ จะขึ้นว่า \"สินค้าใกล้หมด\"",
+                    style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -849,7 +862,12 @@ class AddProductScreen extends StatelessWidget {
                 vertical: 14,
               ),
               suffixIcon: GestureDetector(
-                onTap: () => _showUnitBottomSheet(context, controller),
+                onTap: () => _showUnitBottomSheet(
+                  context,
+                  textCtrl: controller.unitController,
+                  options: controller.unitOptions,
+                  title: "เลือกหน่วยนับ",
+                ),
                 child: const Icon(Icons.arrow_drop_down, color: Colors.grey),
               ),
             ),
@@ -859,10 +877,14 @@ class AddProductScreen extends StatelessWidget {
     );
   }
 
+  // Bottom sheet เลือกชื่อหน่วย ใช้ทั้งหน่วยนับหลักและชื่อหน่วยขายเพิ่มเติม
+  // (พิมพ์เองในช่องได้เหมือนเดิม เลือกจากรายการเป็นแค่ทางลัด)
   void _showUnitBottomSheet(
-    BuildContext context,
-    AddProductController controller,
-  ) {
+    BuildContext context, {
+    required TextEditingController textCtrl,
+    required List<String> options,
+    required String title,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -886,7 +908,7 @@ class AddProductScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                "เลือกหน่วยนับ",
+                title,
                 style: GoogleFonts.prompt(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -897,14 +919,14 @@ class AddProductScreen extends StatelessWidget {
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: controller.unitOptions.length,
+                  itemCount: options.length,
                   itemBuilder: (context, index) {
-                    final unit = controller.unitOptions[index];
-                    final isSelected = controller.unitController.text == unit;
+                    final unit = options[index];
+                    final isSelected = textCtrl.text.trim() == unit;
 
                     return InkWell(
                       onTap: () {
-                        controller.unitController.text = unit;
+                        textCtrl.text = unit;
                         Navigator.pop(context);
                       },
                       child: Container(
@@ -956,112 +978,275 @@ class AddProductScreen extends StatelessWidget {
     );
   }
 
+  // ช่องกรอกของฟอร์มหน่วยขายเพิ่มเติม — สไตล์เดียวกับ _buildModernField (label ด้านบน
+  // พื้นเทาอ่อน มุมโค้ง) แต่รองรับ prefix/suffix เช่น ฿ และชื่อหน่วยฐาน
+  Widget _buildUnitInput({
+    required String label,
+    required TextEditingController ctrl,
+    String? hint,
+    bool isNumber = false,
+    bool allowDecimal = false,
+    String? prefixText,
+    Widget? suffix,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: _kInputFillColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: TextField(
+            controller: ctrl,
+            keyboardType: isNumber
+                ? TextInputType.numberWithOptions(decimal: allowDecimal)
+                : TextInputType.text,
+            inputFormatters: isNumber
+                ? [
+                    FilteringTextInputFormatter.allow(
+                      allowDecimal
+                          ? RegExp(r'^\d*\.?\d{0,2}')
+                          : RegExp(r'^\d*'),
+                    ),
+                  ]
+                : null,
+            style: const TextStyle(fontSize: 15),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              // prefixText จะโผล่เฉพาะตอนโฟกัส ใช้ prefixIcon เพื่อให้เห็น ฿ ตลอด
+              prefixIcon: prefixText == null
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 4),
+                      child: Center(
+                        widthFactor: 1,
+                        child: Text(
+                          prefixText.trim(),
+                          style: const TextStyle(fontSize: 15, color: Colors.black54),
+                        ),
+                      ),
+                    ),
+              suffixIcon: suffix == null
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(right: 14),
+                      child: Center(widthFactor: 1, child: suffix),
+                    ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 13,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildUnitFormRow(AddProductController controller, int index) {
     final f = controller.unitForms[index];
+    String baseUnitLabel() {
+      final base = controller.unitController.text.trim();
+      return base.isEmpty ? "หน่วยฐาน" : base;
+    }
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 16),
       decoration: BoxDecoration(
-        color: _kInputFillColor,
-        borderRadius: BorderRadius.circular(12),
+        color: _kCardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // หัวการ์ด: ลำดับ + สรุปสั้นๆ ว่า "1 ลัง = 12 ขวด" อัปเดตตามที่พิมพ์
           Row(
             children: [
-              Expanded(
-                child: TextField(
-                  controller: f.nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: "ชื่อหน่วย เช่น ลัง",
-                    isDense: true,
-                    border: OutlineInputBorder(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _kPrimaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "หน่วยที่ ${index + 1}",
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: _kPrimaryColor,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([
+                    f.nameCtrl,
+                    f.conversionCtrl,
+                    controller.unitController,
+                  ]),
+                  builder: (_, __) {
+                    final name = f.nameCtrl.text.trim();
+                    final conv = f.conversionCtrl.text.trim();
+                    final ready = name.isNotEmpty && conv.isNotEmpty;
+                    return Text(
+                      ready ? "1 $name = $conv ${baseUnitLabel()}" : "",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
+                      ),
+                    );
+                  },
+                ),
+              ),
               IconButton(
                 onPressed: () => controller.removeUnitForm(index),
-                icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
+                icon: Icon(Icons.delete_outline_rounded, color: Colors.red[300]),
                 tooltip: "ลบหน่วยนี้",
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: f.conversionCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: "1 หน่วยนี้ = กี่หน่วยฐาน",
-              hintText: "เช่น 12",
-              isDense: true,
-              border: OutlineInputBorder(),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Builder(
+                        builder: (ctx) => _buildUnitInput(
+                          label: "ชื่อหน่วย",
+                          ctrl: f.nameCtrl,
+                          hint: "เช่น ลัง, แพ็ค",
+                          suffix: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              FocusScope.of(ctx).unfocus();
+                              _showUnitBottomSheet(
+                                ctx,
+                                textCtrl: f.nameCtrl,
+                                // ตัดชื่อที่ซ้ำกับหน่วยฐานออก (ระบบไม่ให้ใช้ชื่อซ้ำ)
+                                options: controller.packUnitOptions
+                                    .where((u) =>
+                                        u != controller.unitController.text.trim())
+                                    .toList(),
+                                title: "เลือกชื่อหน่วยขาย",
+                              );
+                            },
+                            child: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildUnitInput(
+                        label: "แปลงเป็นหน่วยฐาน",
+                        ctrl: f.conversionCtrl,
+                        hint: "เช่น 12",
+                        isNumber: true,
+                        suffix: ListenableBuilder(
+                          listenable: controller.unitController,
+                          builder: (_, __) => ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 56),
+                            child: Text(
+                              baseUnitLabel(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: _buildUnitInput(
+                        label: "บาร์โค้ด (ถ้ามี)",
+                        ctrl: f.barcodeCtrl,
+                        hint: "พิมพ์หรือสแกน",
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    InkWell(
+                      onTap: () async {
+                        var result = await Get.to(() => const ScanBarcodePage());
+                        if (result != null && result is String) {
+                          f.barcodeCtrl.text = result;
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: _kPrimaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.qr_code_scanner,
+                          color: _kPrimaryColor,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildUnitInput(
+                        label: "ราคาต้นทุน",
+                        ctrl: f.costPriceCtrl,
+                        hint: "0.00",
+                        isNumber: true,
+                        allowDecimal: true,
+                        prefixText: "฿ ",
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildUnitInput(
+                        label: "ราคาขาย",
+                        ctrl: f.sellPriceCtrl,
+                        hint: "0.00",
+                        isNumber: true,
+                        allowDecimal: true,
+                        prefixText: "฿ ",
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: f.barcodeCtrl,
-                  decoration: const InputDecoration(
-                    labelText: "บาร์โค้ด (ถ้ามี)",
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: () async {
-                  var result = await Get.to(() => const ScanBarcodePage());
-                  if (result != null && result is String) {
-                    f.barcodeCtrl.text = result;
-                  }
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _kPrimaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.qr_code_scanner,
-                    color: _kPrimaryColor,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: f.sellPriceCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: "ราคาขาย",
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: f.costPriceCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: "ราคาต้นทุน",
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
