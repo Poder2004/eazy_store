@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../api/api_health.dart';
 import '../../api/api_user.dart';
 import '../../utils/auth_guard.dart';
 import '../auth/login.dart';
@@ -20,9 +21,20 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
+  // ปลุกเซิร์ฟเวอร์ (Render ฟรีหลับเมื่อไม่มีคนใช้) — ถ้ารอเกิน 4 วิ ให้บอกผู้ใช้ว่ากำลังเชื่อมต่อ
+  bool _serverReady = false;
+  bool _showSlowHint = false;
+
   @override
   void initState() {
     super.initState();
+
+    ApiHealth.wakeUp().whenComplete(() {
+      if (mounted) setState(() => _serverReady = true);
+    });
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted && !_serverReady) setState(() => _showSlowHint = true);
+    });
 
     _controller = AnimationController(
       vsync: this,
@@ -96,11 +108,29 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: Image.asset("assets/image/playstore-icon.png", width: 200),
-        ),
+      body: Stack(
+        children: [
+          Center(
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: Image.asset("assets/image/playstore-icon.png", width: 200),
+            ),
+          ),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 80,
+            child: AnimatedOpacity(
+              opacity: _showSlowHint && !_serverReady ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                'กำลังเชื่อมต่อเซิร์ฟเวอร์... อาจใช้เวลาครู่หนึ่ง',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
