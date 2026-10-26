@@ -394,33 +394,33 @@ class _LoginPageState extends State<LoginPage> {
                           height: 40,
                         ), // ระยะห่างดันส่วนสมัครไปข้างล่างสุด
                         // --- ส่วนสมัครสมาชิก ---
-                        Center(
-                          child: Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                "คุณยังไม่มีบัญชีผู้ใช้หรือไม่ ",
-                                style: TextStyle(
-                                  color: Colors.grey[800],
-                                  fontSize: 14,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: controller.goToSignup,
-                                child: Text(
-                                  "สมัคร",
-                                  style: TextStyle(
-                                    color: Colors.purpleAccent[400],
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // Center(
+                        //   child: Wrap(
+                        //     alignment: WrapAlignment.center,
+                        //     crossAxisAlignment: WrapCrossAlignment.center,
+                        //     children: [
+                        //       Text(
+                        //         "คุณยังไม่มีบัญชีผู้ใช้หรือไม่ ",
+                        //         style: TextStyle(
+                        //           color: Colors.grey[800],
+                        //           fontSize: 14,
+                        //         ),
+                        //       ),
+                        //       GestureDetector(
+                        //         onTap: controller.goToSignup,
+                        //         child: Text(
+                        //           "สมัคร",
+                        //           style: TextStyle(
+                        //             color: Colors.purpleAccent[400],
+                        //             fontWeight: FontWeight.bold,
+                        //             fontSize: 14,
+                        //             decoration: TextDecoration.underline,
+                        //           ),
+                        //         ),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),

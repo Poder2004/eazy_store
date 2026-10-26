@@ -2,6 +2,7 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:eazy_store/model/request/category_model.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
+import 'package:eazy_store/utils/internal_barcode.dart';
 import 'package:eazy_store/widgets/category_bottom_sheet.dart';
 import 'package:eazy_store/widgets/category_disable_dialog.dart';
 import 'package:eazy_store/widgets/inactive_categories_sheet.dart';
@@ -138,12 +139,19 @@ class AddProductScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: Colors.grey[400]),
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Colors.grey[400],
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           "นับจำนวนเป็นหน่วยเล็กสุดเสมอ (เช่น ขวด) แม้สินค้านี้จะขายได้หลายหน่วยก็ตาม",
-                          style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colors.grey[500],
+                          ),
                         ),
                       ),
                     ],
@@ -202,7 +210,10 @@ class AddProductScreen extends StatelessWidget {
                                     controller.unitForms.isEmpty
                                         ? "ไม่บังคับ — เช่น ขายทั้งลังและขายแยกขวด (แตะเพื่อเพิ่ม)"
                                         : "ไม่บังคับ · เพิ่มแล้ว ${controller.unitForms.length} หน่วย",
-                                    style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.grey[500],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -211,9 +222,14 @@ class AddProductScreen extends StatelessWidget {
                         ),
                         Obx(
                           () => AnimatedRotation(
-                            turns: controller.isUnitsSectionExpanded.value ? 0.5 : 0,
+                            turns: controller.isUnitsSectionExpanded.value
+                                ? 0.5
+                                : 0,
                             duration: const Duration(milliseconds: 200),
-                            child: Icon(Icons.keyboard_arrow_down, color: Colors.grey[400]),
+                            child: Icon(
+                              Icons.keyboard_arrow_down,
+                              color: Colors.grey[400],
+                            ),
                           ),
                         ),
                       ],
@@ -233,20 +249,31 @@ class AddProductScreen extends StatelessWidget {
                                 children: [
                                   const Divider(height: 1),
                                   const SizedBox(height: 16),
-                                  for (int i = 0; i < controller.unitForms.length; i++) ...[
+                                  for (
+                                    int i = 0;
+                                    i < controller.unitForms.length;
+                                    i++
+                                  ) ...[
                                     if (i > 0) const SizedBox(height: 14),
                                     _buildUnitFormRow(controller, i),
                                   ],
-                                  if (controller.unitForms.isNotEmpty) const SizedBox(height: 14),
+                                  if (controller.unitForms.isNotEmpty)
+                                    const SizedBox(height: 14),
                                   OutlinedButton.icon(
                                     onPressed: controller.addUnitForm,
-                                    icon: const Icon(Icons.add, size: 18, color: _kPrimaryColor),
+                                    icon: const Icon(
+                                      Icons.add,
+                                      size: 18,
+                                      color: _kPrimaryColor,
+                                    ),
                                     label: const Text(
                                       "เพิ่มหน่วยขาย",
                                       style: TextStyle(color: _kPrimaryColor),
                                     ),
                                     style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: _kPrimaryColor),
+                                      side: const BorderSide(
+                                        color: _kPrimaryColor,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -286,11 +313,7 @@ class AddProductScreen extends StatelessWidget {
 
   // ==================== Widget Helpers ====================
 
-  Widget _buildSectionCard({
-    required Widget child,
-    String? title,
-    int? step,
-  }) {
+  Widget _buildSectionCard({required Widget child, String? title, int? step}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -1034,7 +1057,10 @@ class AddProductScreen extends StatelessWidget {
                         widthFactor: 1,
                         child: Text(
                           prefixText.trim(),
-                          style: const TextStyle(fontSize: 15, color: Colors.black54),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.black54,
+                          ),
                         ),
                       ),
                     ),
@@ -1077,7 +1103,10 @@ class AddProductScreen extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _kPrimaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -1118,7 +1147,10 @@ class AddProductScreen extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () => controller.removeUnitForm(index),
-                icon: Icon(Icons.delete_outline_rounded, color: Colors.red[300]),
+                icon: Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.red[300],
+                ),
                 tooltip: "ลบหน่วยนี้",
                 visualDensity: VisualDensity.compact,
               ),
@@ -1148,13 +1180,19 @@ class AddProductScreen extends StatelessWidget {
                                 textCtrl: f.nameCtrl,
                                 // ตัดชื่อที่ซ้ำกับหน่วยฐานออก (ระบบไม่ให้ใช้ชื่อซ้ำ)
                                 options: controller.packUnitOptions
-                                    .where((u) =>
-                                        u != controller.unitController.text.trim())
+                                    .where(
+                                      (u) =>
+                                          u !=
+                                          controller.unitController.text.trim(),
+                                    )
                                     .toList(),
                                 title: "เลือกชื่อหน่วยขาย",
                               );
                             },
-                            child: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                            child: const Icon(
+                              Icons.arrow_drop_down,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
                       ),
@@ -1174,7 +1212,10 @@ class AddProductScreen extends StatelessWidget {
                               baseUnitLabel(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[500],
+                              ),
                             ),
                           ),
                         ),
@@ -1197,7 +1238,9 @@ class AddProductScreen extends StatelessWidget {
                     const SizedBox(width: 10),
                     InkWell(
                       onTap: () async {
-                        var result = await Get.to(() => const ScanBarcodePage());
+                        var result = await Get.to(
+                          () => const ScanBarcodePage(),
+                        );
                         if (result != null && result is String) {
                           f.barcodeCtrl.text = result;
                         }
@@ -1214,6 +1257,28 @@ class AddProductScreen extends StatelessWidget {
                           Icons.qr_code_scanner,
                           color: _kPrimaryColor,
                           size: 22,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Tooltip(
+                      message: 'สร้างบาร์โค้ดให้อัตโนมัติ',
+                      child: InkWell(
+                        onTap: () =>
+                            f.barcodeCtrl.text = generateInternalBarcode(),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: _kPrimaryColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.auto_awesome,
+                            color: Colors.white,
+                            size: 22,
+                          ),
                         ),
                       ),
                     ),
@@ -1278,9 +1343,7 @@ class AddProductScreen extends StatelessWidget {
                 child: TextField(
                   controller: controller.idController,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: InputDecoration(
                     hintText: "พิมพ์หรือสแกน",
                     hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
@@ -1330,7 +1393,30 @@ class AddProductScreen extends StatelessWidget {
                 child: const Icon(Icons.qr_code_scanner, color: _kPrimaryColor),
               ),
             ),
+            const SizedBox(width: 10),
+            Tooltip(
+              message:
+                  'สร้างบาร์โค้ดให้อัตโนมัติ (สำหรับสินค้าที่ไม่มีบาร์โค้ด)',
+              child: InkWell(
+                onTap: () =>
+                    controller.idController.text = generateInternalBarcode(),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _kPrimaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.auto_awesome, color: Colors.white),
+                ),
+              ),
+            ),
           ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'ไม่มีบาร์โค้ด? กดปุ่มสร้างให้ แล้วนำไปพิมพ์ติดได้ที่เมนู "พิมพ์บาร์โค้ดสินค้า"',
+          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
         ),
       ],
     );

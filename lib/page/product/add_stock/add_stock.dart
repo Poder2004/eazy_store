@@ -1,6 +1,7 @@
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
+import 'package:eazy_store/widgets/hardware_barcode_listener.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -42,7 +43,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
     // ไว้ในรอบก่อนหน้าค้างอยู่ (โดยเฉพาะตอนระบุ initialProduct มาจากหน้าอื่น
     // ถ้ายังใช้ controller ตัวเดิมที่ Get.put ค้างไว้ ค่านี้จะถูกมองข้ามไปเงียบๆ)
     Get.delete<AddStockController>(force: true);
-    controller = Get.put(AddStockController(initialProduct: widget.initialProduct));
+    controller = Get.put(
+      AddStockController(initialProduct: widget.initialProduct),
+    );
   }
 
   @override
@@ -53,73 +56,84 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _kBackgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'เพิ่มสต็อกสินค้า',
-          style: GoogleFonts.prompt(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            color: Colors.black87,
-          ),
-        ),
-        centerTitle: true,
+    return HardwareBarcodeListener(
+      allowInTextField: (f) => f.controller == controller.searchController,
+      onBarcode: (barcode) {
+        // แทนที่ตัวอักษรที่เครื่องยิงพิมพ์ลงช่องค้นหา แล้วค้นหาด้วยบาร์โค้ดเหมือนปุ่มสแกนในช่อง
+        FocusManager.instance.primaryFocus?.unfocus();
+        controller.searchController.text = barcode;
+        controller.handleSearch();
+      },
+      child: Scaffold(
         backgroundColor: _kBackgroundColor,
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => controller.refreshCurrentProduct(),
-        color: _kPrimaryColor,
-        child: SingleChildScrollView(
-          // ต้องกำหนด AlwaysScrollable เพื่อให้รูดได้แม้เนื้อหาน้อย
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              _buildSearchSection(controller),
-              const SizedBox(height: 20),
+        appBar: AppBar(
+          title: Text(
+            'เพิ่มสต็อกสินค้า',
+            style: GoogleFonts.prompt(
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              color: Colors.black87,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: _kBackgroundColor,
+          elevation: 0,
+        ),
+        body: RefreshIndicator(
+          onRefresh: () => controller.refreshCurrentProduct(),
+          color: _kPrimaryColor,
+          child: SingleChildScrollView(
+            // ต้องกำหนด AlwaysScrollable เพื่อให้รูดได้แม้เนื้อหาน้อย
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _buildSearchSection(controller),
+                const SizedBox(height: 20),
 
-              Obx(() {
-                if (controller.foundProduct.value != null) {
-                  return Column(
-                    children: [
-                      _buildProductCard(controller),
-                      const SizedBox(height: 20),
-                      _buildStockInputSection(controller),
-                      const SizedBox(height: 20),
-                      _buildPriceEditSection(controller),
-                      const SizedBox(height: 30),
-                      _buildActionButtons(controller),
-                    ],
-                  );
-                } else if (controller.showDropdown.value && controller.searchMatches.isNotEmpty) {
-                  // dropdown จากช่องค้นหาด้านบนกำลังให้เลือกอยู่แล้ว ไม่ต้องซ้อนข้อความอื่น
-                  return const SizedBox.shrink();
-                } else if (controller.isSearching.value && controller.searchController.text.length > 2) {
-                   // โชว์ Loading เฉพาะตอนค้นหาคำยาวๆ
-                  return const Padding(
-                    padding: EdgeInsets.only(top: 50),
-                    child: CircularProgressIndicator(color: _kPrimaryColor),
-                  );
-                } else if (controller.noResults.value) {
-                  return _buildNotFoundState();
-                } else {
-                  return _buildEmptyState();
-                }
-              }),
-              // เพิ่มพื้นที่ด้านล่างเพื่อให้ Scroll ได้สะดวกขึ้น
-              const SizedBox(height: 100), 
-            ],
+                Obx(() {
+                  if (controller.foundProduct.value != null) {
+                    return Column(
+                      children: [
+                        _buildProductCard(controller),
+                        const SizedBox(height: 20),
+                        _buildStockInputSection(controller),
+                        const SizedBox(height: 20),
+                        _buildPriceEditSection(controller),
+                        const SizedBox(height: 30),
+                        _buildActionButtons(controller),
+                      ],
+                    );
+                  } else if (controller.showDropdown.value &&
+                      controller.searchMatches.isNotEmpty) {
+                    // dropdown จากช่องค้นหาด้านบนกำลังให้เลือกอยู่แล้ว ไม่ต้องซ้อนข้อความอื่น
+                    return const SizedBox.shrink();
+                  } else if (controller.isSearching.value &&
+                      controller.searchController.text.length > 2) {
+                    // โชว์ Loading เฉพาะตอนค้นหาคำยาวๆ
+                    return const Padding(
+                      padding: EdgeInsets.only(top: 50),
+                      child: CircularProgressIndicator(color: _kPrimaryColor),
+                    );
+                  } else if (controller.noResults.value) {
+                    return _buildNotFoundState();
+                  } else {
+                    return _buildEmptyState();
+                  }
+                }),
+                // เพิ่มพื้นที่ด้านล่างเพื่อให้ Scroll ได้สะดวกขึ้น
+                const SizedBox(height: 100),
+              ],
+            ),
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
-        onTap: (index) {
-          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
-          print("Tab tapped: $index");
-        },
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
+          onTap: (index) {
+            // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
+            print("Tab tapped: $index");
+          },
+        ),
       ),
     );
   }
@@ -196,7 +210,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
           ),
         ),
         Obx(() {
-          if (!controller.showDropdown.value || controller.searchMatches.isEmpty) {
+          if (!controller.showDropdown.value ||
+              controller.searchMatches.isEmpty) {
             return const SizedBox.shrink();
           }
           return Container(
@@ -235,13 +250,20 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         width: 36,
                         height: 36,
                         color: Colors.grey.shade100,
-                        child: const Icon(Icons.image_not_supported, size: 16, color: Colors.grey),
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
                       ),
                     ),
                   ),
                   title: Text(
                     p.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -333,10 +355,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
               : Image.network(
                   controller.foundProduct.value!.imgProduct,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.image_not_supported,
-                    color: Colors.grey,
-                  ),
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.image_not_supported, color: Colors.grey),
                 ),
         ),
       ],
@@ -414,7 +434,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
                       ),
                       Text(
                         "ไม่บังคับ — กดเพื่อขยาย",
-                        style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -423,7 +446,10 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   () => AnimatedRotation(
                     turns: controller.isPriceEditExpanded.value ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade400),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.grey.shade400,
+                    ),
                   ),
                 ),
               ],
@@ -484,7 +510,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
           Expanded(
             child: TextField(
               controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
               ],
@@ -507,10 +535,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
           ),
           Text(
             unit,
-            style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
           ),
         ],
       ),
@@ -624,7 +649,8 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   for (final u in units)
                     _buildUnitChip(
                       label: u.unitName,
-                      selected: controller.selectedRestockUnit.value?.productUnitId ==
+                      selected:
+                          controller.selectedRestockUnit.value?.productUnitId ==
                           u.productUnitId,
                       onTap: () => controller.selectRestockUnit(u),
                     ),
@@ -634,21 +660,17 @@ class _AddStockScreenState extends State<AddStockScreen> {
           }),
           Row(
             children: [
-              _buildStepBtn(
-                Icons.remove,
-                () {
-                  int v = int.tryParse(controller.addAmountController.text) ?? 0;
-                  if (v > 0) controller.addAmountController.text = (v - 1).toString();
-                },
-              ),
+              _buildStepBtn(Icons.remove, () {
+                int v = int.tryParse(controller.addAmountController.text) ?? 0;
+                if (v > 0)
+                  controller.addAmountController.text = (v - 1).toString();
+              }),
               const SizedBox(width: 10),
               Expanded(
                 child: TextField(
                   controller: controller.addAmountController,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -669,31 +691,35 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              _buildStepBtn(
-                Icons.add,
-                () {
-                  int v = int.tryParse(controller.addAmountController.text) ?? 0;
-                  controller.addAmountController.text = (v + 1).toString();
-                },
-              ),
+              _buildStepBtn(Icons.add, () {
+                int v = int.tryParse(controller.addAmountController.text) ?? 0;
+                controller.addAmountController.text = (v + 1).toString();
+              }),
             ],
           ),
           const SizedBox(height: 12),
           Center(
             child: Obx(() {
               final unit = controller.selectedRestockUnit.value;
-              final qty = int.tryParse(controller.addAmountController.text) ?? 0;
+              final qty =
+                  int.tryParse(controller.addAmountController.text) ?? 0;
               return Column(
                 children: [
                   if (unit != null && qty > 0) ...[
                     Text(
                       "$qty ${unit.unitName} = ${qty * unit.conversionQty} ${controller.unitController.text}",
-                      style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const SizedBox(height: 6),
                   ],
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: _kPrimaryColor.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(20),
@@ -969,4 +995,3 @@ class _AddStockScreenState extends State<AddStockScreen> {
     );
   }
 }
-

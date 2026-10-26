@@ -1,11 +1,11 @@
-﻿import 'package:eazy_store/page/product/checkStock/check_stock_controller.dart';
+import 'package:eazy_store/page/product/checkStock/check_stock_controller.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
 import 'package:eazy_store/widgets/product_filter_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
-import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
+import 'package:eazy_store/widgets/hardware_barcode_listener.dart';
 import 'package:eazy_store/model/response/product_response.dart';
 import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/utils/stock_format.dart';
@@ -35,120 +35,132 @@ class CheckStockScreen extends StatelessWidget {
     const Color primaryColor = Color(0xFF6B8E23);
     const Color warningColor = Color(0xFFFFCC00);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
-      appBar: AppBar(
-        title: const Text(
-          'เช็คสต็อกสินค้า',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+    return HardwareBarcodeListener(
+      allowInTextField: (f) => f.controller == controller.searchCtrl,
+      onBarcode: (barcode) {
+        // แทนที่ตัวอักษรที่เครื่องยิงพิมพ์ลงช่องค้นหา แล้วค้นหาด้วยบาร์โค้ดเหมือนปุ่มสแกนในช่อง
+        FocusManager.instance.primaryFocus?.unfocus();
+        controller.searchCtrl.text = barcode;
+        controller.searchProduct(barcode);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7F7F7),
+        appBar: AppBar(
+          title: const Text(
+            'เช็คสต็อกสินค้า',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: MediaQuery.textScalerOf(
-            context,
-          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: _buildSearchBar(controller, primaryColor)),
-                      const SizedBox(width: 12),
-                      Obx(
-                        () => ProductFilterButton(
-                          categories: controller.categories,
-                          selectedCategoryId: controller.selectedCategoryId.value,
-                          sortFields: defaultProductSortFields,
-                          selectedSortValue: controller.selectedSortOption.value,
-                          defaultSortValue: 'stock_asc',
-                          onApply: (categoryId, sortValue) =>
-                              controller.applyFilter(
-                                categoryId: categoryId,
-                                sortOption: sortValue,
-                              ),
-                          onClear: controller.clearFilter,
+        body: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.textScalerOf(
+              context,
+            ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.2),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSearchBar(controller, primaryColor),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                ],
+                        const SizedBox(width: 12),
+                        Obx(
+                          () => ProductFilterButton(
+                            categories: controller.categories,
+                            selectedCategoryId:
+                                controller.selectedCategoryId.value,
+                            sortFields: defaultProductSortFields,
+                            selectedSortValue:
+                                controller.selectedSortOption.value,
+                            defaultSortValue: 'stock_asc',
+                            onApply: (categoryId, sortValue) =>
+                                controller.applyFilter(
+                                  categoryId: categoryId,
+                                  sortOption: sortValue,
+                                ),
+                            onClear: controller.clearFilter,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
               ),
-            ),
 
-            // 📦 รายการสินค้า
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value && controller.products.isEmpty) {
-                  final fake = _fakeProducts();
-                  return Skeletonizer(
-                    enabled: true,
+              // 📦 รายการสินค้า
+              Expanded(
+                child: Obx(() {
+                  if (controller.isLoading.value &&
+                      controller.products.isEmpty) {
+                    final fake = _fakeProducts();
+                    return Skeletonizer(
+                      enabled: true,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        itemCount: fake.length,
+                        itemBuilder: (context, index) =>
+                            _buildProductCard(fake[index], warningColor),
+                      ),
+                    );
+                  }
+                  if (controller.filteredProducts.isEmpty) {
+                    return const Center(child: Text("ไม่พบข้อมูลสินค้า"));
+                  }
+
+                  return RefreshIndicator(
+                    color: primaryColor,
+                    onRefresh: () => controller.fetchStockData(),
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      itemCount: fake.length,
-                      itemBuilder: (context, index) =>
-                          _buildProductCard(fake[index], warningColor),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: controller.filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = controller.filteredProducts[index];
+                        return InkWell(
+                          onTap: () async {
+                            var result = await Get.to(
+                              () => const ProductDetailScreen(),
+                              arguments: product,
+                              transition: Transition.rightToLeft,
+                            );
+                            if (result == true) {
+                              controller.fetchStockData();
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(13),
+                          child: _buildProductCard(product, warningColor),
+                        );
+                      },
                     ),
                   );
-                }
-                if (controller.filteredProducts.isEmpty) {
-                  return const Center(child: Text("ไม่พบข้อมูลสินค้า"));
-                }
+                }),
+              ),
 
-                return RefreshIndicator(
-                  color: primaryColor,
-                  onRefresh: () => controller.fetchStockData(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: controller.filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = controller.filteredProducts[index];
-                      return InkWell(
-                        onTap: () async {
-                          var result = await Get.to(
-                            () => const ProductDetailScreen(),
-                            arguments: product,
-                            transition: Transition.rightToLeft,
-                          );
-                          if (result == true) {
-                            controller.fetchStockData();
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(13),
-                        child: _buildProductCard(product, warningColor),
-                      );
-                    },
-                  ),
-                );
-              }),
-            ),
-
-            PaginationControls(
-              currentPage: controller.currentPage,
-              totalPages: controller.totalPages,
-              itemsPerPage: controller.itemsPerPage,
-              updateLimit: controller.updateLimit,
-              changePage: controller.changePage,
-              primaryColor: primaryColor,
-              isLoading: controller.isLoading,
-            ),
-          ],
+              // เว้นระยะจากแถบนำทางของระบบ (ไม่มี navbar ของแอปแล้ว) กันตัวเลือกหน้าจมใต้ปุ่มระบบ
+              SafeArea(
+                top: false,
+                child: PaginationControls(
+                  currentPage: controller.currentPage,
+                  totalPages: controller.totalPages,
+                  itemsPerPage: controller.itemsPerPage,
+                  updateLimit: controller.updateLimit,
+                  changePage: controller.changePage,
+                  primaryColor: primaryColor,
+                  isLoading: controller.isLoading,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: -1,
-        onTap: (index) {
-          print("Tab tapped: $index");
-        },
       ),
     );
   }
@@ -217,7 +229,10 @@ class CheckStockScreen extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -283,7 +298,11 @@ class CheckStockScreen extends StatelessWidget {
                 ),
                 if (product.activeUnits.isNotEmpty)
                   Text(
-                    formatStockBreakdown(product.stock, product.unit, product.units),
+                    formatStockBreakdown(
+                      product.stock,
+                      product.unit,
+                      product.units,
+                    ),
                     style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
                   ),
               ],

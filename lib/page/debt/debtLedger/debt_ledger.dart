@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 // --- Imports ไฟล์ของคุณ ---
+import 'package:eazy_store/page/debt/debtRegister/debt_register.dart';
 import 'package:eazy_store/page/debt/debtorDetail/debtor_detail.dart';
 import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/widgets/pagination_controls.dart';
@@ -210,6 +211,18 @@ class DebtLedgerScreen extends StatelessWidget {
         backgroundColor: _kBackgroundColor,
         elevation: 0,
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            color: Colors.black87,
+            tooltip: 'สร้างบัญชีลูกหนี้',
+            onPressed: () async {
+              await Get.to(() => DebtRegisterScreen());
+              controller.fetchAllDebtors();
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       // ✨ หุ้ม MediaQuery จำกัดการขยายฟอนต์
       body: MediaQuery(

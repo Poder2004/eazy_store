@@ -6,6 +6,7 @@ import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/widgets/category_bottom_sheet.dart';
 import 'package:eazy_store/widgets/category_disable_dialog.dart';
 import 'package:eazy_store/widgets/inactive_categories_sheet.dart';
+import 'package:eazy_store/utils/internal_barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -275,6 +276,32 @@ class _EditProductViewState extends State<_EditProductView> {
                           ),
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Tooltip(
+                          message: 'สร้างบาร์โค้ดให้อัตโนมัติ',
+                          child: InkWell(
+                            onTap: () {
+                              final code = generateInternalBarcode();
+                              controller.barcodeCtrl.text = code;
+                              controller.onBarcodeChanged(code);
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: primaryColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.auto_awesome,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(height: 1),
@@ -297,49 +324,49 @@ class _EditProductViewState extends State<_EditProductView> {
                 ),
                 child: Column(
                   children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        label: "จำนวนคงเหลือ",
-                        controller: controller.stockCtrl,
-                        icon: Icons.add_box_rounded,
-                        readOnly: true,
-                        onIconTap: () => Get.to(
-                          () => AddStockScreen(
-                            initialProduct: controller.originalProduct,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            label: "จำนวนคงเหลือ",
+                            controller: controller.stockCtrl,
+                            icon: Icons.add_box_rounded,
+                            readOnly: true,
+                            onIconTap: () => Get.to(
+                              () => AddStockScreen(
+                                initialProduct: controller.originalProduct,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => Get.to(
-                        () => AddStockScreen(
-                          initialProduct: controller.originalProduct,
-                        ),
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6B8E23).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          "เพิ่มสต็อก",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF6B8E23),
+                        GestureDetector(
+                          onTap: () => Get.to(
+                            () => AddStockScreen(
+                              initialProduct: controller.originalProduct,
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6B8E23).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              "เพิ่มสต็อก",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF6B8E23),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
                     const Divider(height: 1),
                     _buildTextField(
                       label: "แจ้งเตือนเมื่อสต็อกเหลือไม่เกิน (หน่วยเล็กสุด)",
@@ -357,7 +384,10 @@ class _EditProductViewState extends State<_EditProductView> {
               _buildCardContainer(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     child: Row(
                       children: [
                         Icon(Icons.straighten, color: Colors.grey.shade400),
@@ -368,12 +398,20 @@ class _EditProductViewState extends State<_EditProductView> {
                             children: [
                               Text(
                                 "หน่วยฐาน",
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                controller.unitCtrl.text.isEmpty ? '-' : controller.unitCtrl.text,
-                                style: const TextStyle(fontSize: 16, color: Colors.black87),
+                                controller.unitCtrl.text.isEmpty
+                                    ? '-'
+                                    : controller.unitCtrl.text,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ],
                           ),
@@ -388,7 +426,10 @@ class _EditProductViewState extends State<_EditProductView> {
                         padding: const EdgeInsets.all(16),
                         child: Text(
                           "ยังไม่มีหน่วยขายเพิ่มเติม เช่น ลัง/แพ็ค",
-                          style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                          ),
                         ),
                       );
                     }
@@ -396,7 +437,11 @@ class _EditProductViewState extends State<_EditProductView> {
                       children: [
                         for (int i = 0; i < controller.units.length; i++) ...[
                           if (i > 0) const Divider(height: 1),
-                          _buildUnitTile(context, controller, controller.units[i]),
+                          _buildUnitTile(
+                            context,
+                            controller,
+                            controller.units[i],
+                          ),
                         ],
                       ],
                     );
@@ -413,7 +458,10 @@ class _EditProductViewState extends State<_EditProductView> {
                           SizedBox(width: 6),
                           Text(
                             "เพิ่มหน่วยขาย",
-                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -775,7 +823,10 @@ class _EditProductViewState extends State<_EditProductView> {
               children: [
                 Text(
                   "${unit.unitName} = ${unit.conversionQty} ${controller.unitCtrl.text}",
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -787,19 +838,31 @@ class _EditProductViewState extends State<_EditProductView> {
             ),
           ),
           IconButton(
-            onPressed: () => _showUnitFormSheet(context, controller, existing: unit),
-            icon: Icon(Icons.edit_outlined, size: 18, color: Colors.grey.shade600),
+            onPressed: () =>
+                _showUnitFormSheet(context, controller, existing: unit),
+            icon: Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: Colors.grey.shade600,
+            ),
           ),
           IconButton(
             onPressed: () => _confirmDeleteUnit(controller, unit),
-            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+            icon: const Icon(
+              Icons.delete_outline,
+              size: 18,
+              color: Colors.redAccent,
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _confirmDeleteUnit(EditProductController controller, ProductUnitResponse unit) {
+  void _confirmDeleteUnit(
+    EditProductController controller,
+    ProductUnitResponse unit,
+  ) {
     Get.dialog(
       AlertDialog(
         title: const Text("ลบหน่วยขายนี้?"),
@@ -822,7 +885,16 @@ class _EditProductViewState extends State<_EditProductView> {
 
   // ชื่อหน่วยขายที่พบบ่อย (หน่วยใหญ่) ให้เลือกเป็นทางลัด พิมพ์เองได้เหมือนเดิม
   static const List<String> _packUnitNames = [
-    'ลัง', 'แพ็ค', 'โหล', 'กล่อง', 'ถุง', 'ห่อ', 'เซ็ต', 'แผง', 'กระสอบ', 'ถัง',
+    'ลัง',
+    'แพ็ค',
+    'โหล',
+    'กล่อง',
+    'ถุง',
+    'ห่อ',
+    'เซ็ต',
+    'แผง',
+    'กระสอบ',
+    'ถัง',
   ];
 
   // ช่องกรอกในฟอร์มหน่วยขาย — label ด้านบน พื้นเทาอ่อน มุมโค้ง เหมือนหน้าเพิ่มสินค้า
@@ -992,7 +1064,9 @@ class _EditProductViewState extends State<_EditProductView> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -1017,7 +1091,10 @@ class _EditProductViewState extends State<_EditProductView> {
                   ),
                   Text(
                     existing == null ? "เพิ่มหน่วยขาย" : "แก้ไขหน่วยขาย",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   // สรุปสดว่า "1 ลัง = 12 ขวด" อัปเดตตามที่พิมพ์
@@ -1124,7 +1201,9 @@ class _EditProductViewState extends State<_EditProductView> {
                       const SizedBox(width: 10),
                       InkWell(
                         onTap: () async {
-                          var result = await Get.to(() => const ScanBarcodePage());
+                          var result = await Get.to(
+                            () => const ScanBarcodePage(),
+                          );
                           if (result != null && result is String) {
                             barcodeCtrl.text = result;
                           }
@@ -1141,6 +1220,28 @@ class _EditProductViewState extends State<_EditProductView> {
                             Icons.qr_code_scanner,
                             color: primaryColor,
                             size: 22,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Tooltip(
+                        message: 'สร้างบาร์โค้ดให้อัตโนมัติ',
+                        child: InkWell(
+                          onTap: () =>
+                              barcodeCtrl.text = generateInternalBarcode(),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.auto_awesome,
+                              color: Colors.white,
+                              size: 22,
+                            ),
                           ),
                         ),
                       ),
@@ -1192,18 +1293,30 @@ class _EditProductViewState extends State<_EditProductView> {
                         final bc = barcodeCtrl.text.trim();
 
                         if (name.isEmpty) {
-                          Get.snackbar("แจ้งเตือน", "กรุณากรอกชื่อหน่วย",
-                              backgroundColor: Colors.orange, colorText: Colors.white);
+                          Get.snackbar(
+                            "แจ้งเตือน",
+                            "กรุณากรอกชื่อหน่วย",
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                          );
                           return;
                         }
                         if (conv == null || conv <= 1) {
-                          Get.snackbar("แจ้งเตือน", "จำนวนแปลงต้องเป็นตัวเลขมากกว่า 1",
-                              backgroundColor: Colors.orange, colorText: Colors.white);
+                          Get.snackbar(
+                            "แจ้งเตือน",
+                            "จำนวนแปลงต้องเป็นตัวเลขมากกว่า 1",
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                          );
                           return;
                         }
                         if (sell == null || sell <= 0) {
-                          Get.snackbar("แจ้งเตือน", "กรุณากรอกราคาขาย",
-                              backgroundColor: Colors.orange, colorText: Colors.white);
+                          Get.snackbar(
+                            "แจ้งเตือน",
+                            "กรุณากรอกราคาขาย",
+                            backgroundColor: Colors.orange,
+                            colorText: Colors.white,
+                          );
                           return;
                         }
 
@@ -1230,7 +1343,10 @@ class _EditProductViewState extends State<_EditProductView> {
                       },
                       child: Text(
                         existing == null ? "เพิ่ม" : "บันทึก",
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -1307,11 +1423,11 @@ class _EditProductViewState extends State<_EditProductView> {
         prefixIcon: icon == null
             ? null
             : onIconTap == null
-                ? Icon(icon, color: Colors.grey.shade400)
-                : IconButton(
-                    icon: Icon(icon, color: const Color(0xFF6B8E23)),
-                    onPressed: onIconTap,
-                  ),
+            ? Icon(icon, color: Colors.grey.shade400)
+            : IconButton(
+                icon: Icon(icon, color: const Color(0xFF6B8E23)),
+                onPressed: onIconTap,
+              ),
         suffixIcon: suffix,
         border: InputBorder.none,
         contentPadding: const EdgeInsets.symmetric(

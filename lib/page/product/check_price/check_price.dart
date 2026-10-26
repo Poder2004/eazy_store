@@ -4,6 +4,7 @@ import 'package:eazy_store/page/product/product_detail/product_detail.dart';
 import 'package:eazy_store/page/product/check_price/check_price_controller.dart';
 import 'package:eazy_store/page/sale_producct/bookListNoBarcode/book_list_no_barcode.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart'; // ใช้ formatMoney()
+import 'package:eazy_store/widgets/hardware_barcode_listener.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -34,104 +35,114 @@ class CheckPriceScreen extends StatelessWidget {
     const Color primaryColor = Color(0xFF6B8E23);
     const Color backgroundColor = Color(0xFFF7F7F7);
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'เช็คราคาสินค้า',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-            color: Colors.black87,
+    return HardwareBarcodeListener(
+      allowInTextField: (f) => f.controller == controller.searchCtrl,
+      onBarcode: (barcode) {
+        // แทนที่ตัวอักษรที่เครื่องยิงพิมพ์ลงช่องค้นหา แล้วให้ listener ของช่องค้นหาไปดึงราคาต่อ
+        FocusManager.instance.primaryFocus?.unfocus();
+        controller.searchCtrl.text = barcode;
+      },
+      child: Scaffold(
+        backgroundColor: backgroundColor,
+        appBar: AppBar(
+          title: const Text(
+            'เช็คราคาสินค้า',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+              color: Colors.black87,
+            ),
           ),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () =>
-            controller.refreshCurrentSearch(),
-        color: primaryColor,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            children: [
-              _buildSearchBar(controller, primaryColor),
-              const SizedBox(height: 15),
+        body: RefreshIndicator(
+          onRefresh: () => controller.refreshCurrentSearch(),
+          color: primaryColor,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              children: [
+                _buildSearchBar(controller, primaryColor),
+                const SizedBox(height: 15),
 
-              Expanded(
-                child: Obx(() {
-                  if (controller.isLoading.value) {
-                    final fake = _fakeProducts();
-                    return Skeletonizer(
-                      enabled: true,
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        itemCount: fake.length,
-                        itemBuilder: (context, index) =>
-                            _buildPriceCard(fake[index], primaryColor),
-                      ),
-                    );
-                  }
-
-                  // 🏷️ กรณีไม่พบข้อมูล หรือยังไม่ได้เริ่มค้นหา
-                  if (controller.filteredProducts.isEmpty) {
-                    return ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        const SizedBox(height: 100),
-                        Center(
-                          child: Text(
-                            controller.hasSearched.value
-                                ? "ไม่พบข้อมูลสินค้า"
-                                : "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด",
-                            style: const TextStyle(color: Colors.grey, fontSize: 16),
+                Expanded(
+                  child: Obx(() {
+                    if (controller.isLoading.value) {
+                      final fake = _fakeProducts();
+                      return Skeletonizer(
+                        enabled: true,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
                           ),
+                          itemCount: fake.length,
+                          itemBuilder: (context, index) =>
+                              _buildPriceCard(fake[index], primaryColor),
                         ),
-                      ],
-                    );
-                  }
-
-                  return ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    itemCount: controller.filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = controller.filteredProducts[index];
-
-                      return InkWell(
-                        onTap: () async {
-                          var result = await Get.to(
-                            () => const ProductDetailScreen(),
-                            arguments: product,
-                            transition: Transition.rightToLeft,
-                          );
-
-                          if (result == true) {
-                            controller.refreshCurrentSearch();
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(13),
-                        child: _buildPriceCard(product, primaryColor),
                       );
-                    },
-                  );
-                }),
-              ),
-            ],
+                    }
+
+                    // 🏷️ กรณีไม่พบข้อมูล หรือยังไม่ได้เริ่มค้นหา
+                    if (controller.filteredProducts.isEmpty) {
+                      return ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          const SizedBox(height: 100),
+                          Center(
+                            child: Text(
+                              controller.hasSearched.value
+                                  ? "ไม่พบข้อมูลสินค้า"
+                                  : "พิมพ์ชื่อสินค้าหรือสแกนบาร์โค้ด",
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      itemCount: controller.filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = controller.filteredProducts[index];
+
+                        return InkWell(
+                          onTap: () async {
+                            var result = await Get.to(
+                              () => const ProductDetailScreen(),
+                              arguments: product,
+                              transition: Transition.rightToLeft,
+                            );
+
+                            if (result == true) {
+                              controller.refreshCurrentSearch();
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(13),
+                          child: _buildPriceCard(product, primaryColor),
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-       bottomNavigationBar: BottomNavBar(
-        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
-        onTap: (index) {
-          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
-          print("Tab tapped: $index");
-        },
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
+          onTap: (index) {
+            // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
+            print("Tab tapped: $index");
+          },
+        ),
       ),
     );
   }
@@ -161,7 +172,10 @@ class CheckPriceScreen extends StatelessWidget {
                 hintStyle: const TextStyle(color: Colors.grey),
                 prefixIcon: const Icon(Icons.search, color: Colors.grey),
                 suffixIcon: IconButton(
-                  icon: Icon(Icons.qr_code_scanner_outlined, color: primaryColor),
+                  icon: Icon(
+                    Icons.qr_code_scanner_outlined,
+                    color: primaryColor,
+                  ),
                   onPressed: controller.openScanner,
                 ),
                 border: InputBorder.none,
@@ -259,7 +273,10 @@ class CheckPriceScreen extends StatelessWidget {
                     runSpacing: 6,
                     children: product.activeUnits.map((u) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: primaryColor.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(20),

@@ -3,12 +3,15 @@ import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
 import 'package:eazy_store/page/product/checkStock/check_stock.dart';
+import 'package:eazy_store/page/product/barcode_labels/barcode_labels.dart';
 import 'package:eazy_store/page/product/check_price/check_price.dart';
-import 'package:eazy_store/page/my_blank/sales_account.dart' show SalesAccountScreen;
+import 'package:eazy_store/page/my_blank/sales_account.dart'
+    show SalesAccountScreen;
 import 'package:eazy_store/page/sale_producct/sale/checkout_controller.dart';
 import 'package:eazy_store/page/sale_producct/sale/checkout_page.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/page/order_products/buyProducts/buy_products.dart';
+import 'package:eazy_store/widgets/hardware_barcode_listener.dart';
 import 'package:eazy_store/widgets/money_flow.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -28,84 +31,109 @@ class HomePage extends StatelessWidget {
 
     final HomeController controller = Get.put(HomeController());
 
-    return Scaffold(
-      backgroundColor: scaffoldBgColor,
-      // ✨ เคล็ดลับ: จำกัดการขยายฟอนต์ไม่เกิน 1.3 เท่า ป้องกัน UI แตก
-      body: MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: MediaQuery.textScalerOf(
-            context,
-          ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.3),
-        ),
-        child: RefreshIndicator(
-          onRefresh: () async => controller.fetchTodaySales(),
-          color: const Color(0xFFF4A4A4),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              children: [
-                // --- ส่วน Header สีแดง + กล่องยอดขาย ---
-                _buildHeader(context, controller, headerBgGradient: headerBgGradient),
-
-                // --- ส่วนเมนูด้านล่าง ---
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 25),
-                  child: Column(
-                    children: [
-                      const SizedBox(
-                        height: 20,
-                      ), // เพิ่มระยะห่างให้ไม่ชิดกล่องขาวเกินไป
-                      _buildScanToSellCard(context),
-                      const SizedBox(height: 25),
-                      _buildMenuTile(
-                        icon: Icons.add_circle_outline,
-                        iconColor: iconColor,
-                        title: "เพิ่มสินค้า",
-                        subtitle: "สร้างรายการสินค้าใหม่",
-                        onTap: () => Get.to(() => const AddProductScreen()),
-                      ),
-                      _buildMenuTile(
-                        icon: Icons.inventory_2_outlined,
-                        iconColor: Colors.blue.shade600,
-                        title: "เพิ่มสต็อกสินค้า",
-                        subtitle: "เติมจำนวนสินค้าในคลัง",
-                        onTap: () => Get.to(() => const AddStockScreen()),
-                      ),
-                      _buildMenuTile(
-                        icon: Icons.local_offer_outlined,
-                        iconColor: Colors.orange.shade600,
-                        title: "เช็คราคาสินค้า",
-                        subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
-                        onTap: () => Get.to(() => const CheckPriceScreen()),
-                      ),
-                      _buildMenuTile(
-                        icon: Icons.fact_check_outlined,
-                        iconColor: Colors.purple.shade500,
-                        title: "เช็คสต็อกสินค้า",
-                        subtitle: "ตรวจสอบยอดคงเหลือในคลัง",
-                        onTap: () => Get.to(() => const CheckStockScreen()),
-                      ),
-                      _buildMenuTile(
-                        icon: Icons.receipt_long,
-                        iconColor: Colors.teal.shade500,
-                        title: "ทำใบสั่งสินค้า",
-                        subtitle: "เลือกสินค้าและส่งออกเป็นไฟล์ PDF",
-                        onTap: () => Get.to(() => const BuyProductsScreen()),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
+    return HardwareBarcodeListener(
+      onBarcode: _openCheckoutWithBarcode,
+      child: Scaffold(
+        backgroundColor: scaffoldBgColor,
+        // ✨ เคล็ดลับ: จำกัดการขยายฟอนต์ไม่เกิน 1.3 เท่า ป้องกัน UI แตก
+        body: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: MediaQuery.textScalerOf(
+              context,
+            ).clamp(minScaleFactor: 1.0, maxScaleFactor: 1.3),
+          ),
+          child: RefreshIndicator(
+            onRefresh: () async => controller.fetchTodaySales(),
+            color: const Color(0xFFF4A4A4),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  // --- ส่วน Header สีแดง + กล่องยอดขาย ---
+                  _buildHeader(
+                    context,
+                    controller,
+                    headerBgGradient: headerBgGradient,
                   ),
-                ),
-              ],
+
+                  // --- ส่วนเมนูด้านล่าง ---
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 25),
+                    child: Column(
+                      children: [
+                        const SizedBox(
+                          height: 20,
+                        ), // เพิ่มระยะห่างให้ไม่ชิดกล่องขาวเกินไป
+                        _buildScanToSellCard(context),
+                        const SizedBox(height: 25),
+                        _buildMenuTile(
+                          icon: Icons.add_circle_outline,
+                          iconColor: iconColor,
+                          title: "เพิ่มสินค้า",
+                          subtitle: "สร้างรายการสินค้าใหม่",
+                          onTap: () => Get.to(() => const AddProductScreen()),
+                        ),
+                        _buildMenuTile(
+                          icon: Icons.inventory_2_outlined,
+                          iconColor: Colors.blue.shade600,
+                          title: "เพิ่มสต็อกสินค้า",
+                          subtitle: "เติมจำนวนสินค้าในคลัง",
+                          onTap: () => Get.to(() => const AddStockScreen()),
+                        ),
+                        _buildMenuTile(
+                          icon: Icons.local_offer_outlined,
+                          iconColor: Colors.orange.shade600,
+                          title: "เช็คราคาสินค้า",
+                          subtitle: "สแกนเพื่อดูราคาขายปัจจุบัน",
+                          onTap: () => Get.to(() => const CheckPriceScreen()),
+                        ),
+                        _buildMenuTile(
+                          icon: Icons.fact_check_outlined,
+                          iconColor: Colors.purple.shade500,
+                          title: "เช็คสต็อกสินค้า",
+                          subtitle: "ตรวจสอบยอดคงเหลือในคลัง",
+                          onTap: () => Get.to(() => const CheckStockScreen()),
+                        ),
+                        _buildMenuTile(
+                          icon: Icons.receipt_long,
+                          iconColor: Colors.teal.shade500,
+                          title: "ทำใบสั่งสินค้า",
+                          subtitle: "เลือกสินค้าและส่งออกเป็นไฟล์ PDF",
+                          onTap: () => Get.to(() => const BuyProductsScreen()),
+                        ),
+                        _buildMenuTile(
+                          icon: Icons.qr_code_2_rounded,
+                          iconColor: Colors.indigo.shade400,
+                          title: "พิมพ์บาร์โค้ดสินค้า",
+                          subtitle: "สร้างแผ่นบาร์โค้ดสินค้าที่ไม่มีบาร์โค้ด",
+                          onTap: () => Get.to(() => const BarcodeLabelsScreen()),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 0,
-        onTap: (_) {},
+        bottomNavigationBar: BottomNavBar(currentIndex: 0, onTap: (_) {}),
       ),
     );
+  }
+
+  // เครื่องยิงบาร์โค้ดยิงที่หน้าหลัก -> ไปหน้าขายพร้อมใส่สินค้าลงตะกร้าทันที
+  void _openCheckoutWithBarcode(String barcode) {
+    final CheckoutController checkoutCtrl =
+        Get.isRegistered<CheckoutController>()
+        ? Get.find()
+        : Get.put(CheckoutController());
+    Get.to(() => const CheckoutPage());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await checkoutCtrl.checkShopAndLoadData();
+      await checkoutCtrl.fetchFreshProducts();
+      checkoutCtrl.addProductByBarcode(barcode);
+    });
   }
 
   // ✨ โครงสร้าง Header แบบใหม่ที่คำนวณความสูงอัตโนมัติ หมดปัญหาทับซ้อน
@@ -251,7 +279,7 @@ class HomePage extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ], 
+                  ],
                 ),
               ),
 
@@ -435,7 +463,9 @@ class HomePage extends StatelessWidget {
   Widget _buildScanToSellCard(BuildContext context) {
     return InkWell(
       onTap: () async {
-        var barcode = await Get.to(() => const ScanBarcodePage(showBookButton: true));
+        var barcode = await Get.to(
+          () => const ScanBarcodePage(showBookButton: true),
+        );
         if (barcode != null && barcode is String) {
           CheckoutController checkoutCtrl =
               Get.isRegistered<CheckoutController>()

@@ -6,7 +6,7 @@
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:label="eazy_store"
+        android:label="Eazy Store"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
