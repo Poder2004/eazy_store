@@ -313,13 +313,13 @@ class _AddStockScreenState extends State<AddStockScreen> {
                 children: [
                   Expanded(
                     child: _buildInfoItem(
-                      "ราคาขาย",
+                      "ราคาขาย/${controller.unitController.text}",
                       "฿${controller.salePriceController.text}",
                     ),
                   ),
                   Expanded(
                     child: _buildInfoItem(
-                      "ต้นทุน",
+                      "ต้นทุน/${controller.unitController.text}",
                       "฿${controller.costController.text}",
                     ),
                   ),
@@ -331,6 +331,52 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     ),
                   ),
                 ],
+              ),
+              // หน่วยขายเพิ่มเติม: บอกว่า 1 หน่วย = กี่หน่วยฐาน พร้อมราคาของหน่วยนั้น
+              Builder(
+                builder: (_) {
+                  final units =
+                      controller.foundProduct.value?.activeUnits ?? [];
+                  if (units.isEmpty) return const SizedBox.shrink();
+                  final base = controller.unitController.text;
+                  return Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(top: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F8FA),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        for (final u in units)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    "1 ${u.unitName} = ${u.conversionQty} $base",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  "ขาย ฿${_fmtPrice(u.sellPrice)} · ทุน ฿${_fmtPrice(u.costPrice)}",
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -432,11 +478,13 @@ class _AddStockScreenState extends State<AddStockScreen> {
                           color: Colors.black87,
                         ),
                       ),
-                      Text(
-                        "ไม่บังคับ — กดเพื่อขยาย",
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: Colors.grey.shade500,
+                      Obx(
+                        () => Text(
+                          "ไม่บังคับ — กดเพื่อขยาย (ราคาต่อ${controller.priceUnitLabel})",
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                       ),
                     ],
@@ -468,15 +516,24 @@ class _AddStockScreenState extends State<AddStockScreen> {
                         children: [
                           const Divider(height: 1, color: Color(0xFFF0F0F0)),
                           const SizedBox(height: 16),
+                          Text(
+                            "กำลังแก้ราคาต่อ ${controller.priceUnitLabel} — เลือกหน่วยในช่อง \"เพิ่มจำนวนสต็อก\" ด้านบนเพื่อสลับไปแก้ราคาของหน่วยอื่น",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           _buildPriceInputRow(
-                            label: "ราคาขาย",
+                            label: "ราคาขาย (ต่อ${controller.priceUnitLabel})",
                             unit: "บาท",
                             icon: Icons.sell_outlined,
                             controller: controller.editSellPriceCtrl,
                           ),
                           const SizedBox(height: 12),
                           _buildPriceInputRow(
-                            label: "ราคาต้นทุน",
+                            label:
+                                "ราคาต้นทุน (ต่อ${controller.priceUnitLabel})",
                             unit: "บาท",
                             icon: Icons.shopping_bag_outlined,
                             controller: controller.editCostPriceCtrl,
@@ -705,9 +762,11 @@ class _AddStockScreenState extends State<AddStockScreen> {
                   int.tryParse(controller.addAmountController.text) ?? 0;
               return Column(
                 children: [
-                  if (unit != null && qty > 0) ...[
+                  if (unit != null) ...[
                     Text(
-                      "$qty ${unit.unitName} = ${qty * unit.conversionQty} ${controller.unitController.text}",
+                      qty > 0
+                          ? "$qty ${unit.unitName} = ${qty * unit.conversionQty} ${controller.unitController.text}"
+                          : "1 ${unit.unitName} = ${unit.conversionQty} ${controller.unitController.text}",
                       style: TextStyle(
                         fontSize: 12.5,
                         color: Colors.grey.shade600,
@@ -762,8 +821,9 @@ class _AddStockScreenState extends State<AddStockScreen> {
 
     final newSell = double.tryParse(controller.editSellPriceCtrl.text);
     final newCost = double.tryParse(controller.editCostPriceCtrl.text);
-    final origSell = controller.foundProduct.value?.sellPrice ?? 0;
-    final origCost = controller.foundProduct.value?.costPrice ?? 0;
+    final origSell = controller.originalSellPrice;
+    final origCost = controller.originalCostPrice;
+    final priceUnit = controller.priceUnitLabel;
 
     Get.dialog(
       Dialog(
@@ -819,7 +879,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                     if (hasPrice) ...[
                       _buildChangeRow(
                         icon: Icons.sell_outlined,
-                        label: "ราคาขาย",
+                        label: "ราคาขาย/$priceUnit",
                         from: "฿${_fmtPrice(origSell)}",
                         to: "฿${newSell != null ? _fmtPrice(newSell) : '-'}",
                         changed: newSell != origSell,
@@ -827,7 +887,7 @@ class _AddStockScreenState extends State<AddStockScreen> {
                       const SizedBox(height: 10),
                       _buildChangeRow(
                         icon: Icons.shopping_bag_outlined,
-                        label: "ราคาต้นทุน",
+                        label: "ต้นทุน/$priceUnit",
                         from: "฿${_fmtPrice(origCost)}",
                         to: "฿${newCost != null ? _fmtPrice(newCost) : '-'}",
                         changed: newCost != origCost,

@@ -231,7 +231,22 @@ class AddStockController extends GetxController {
     }
   }
 
-  void togglePriceEdit() => isPriceEditExpanded.value = !isPriceEditExpanded.value;
+  // ชื่อหน่วยที่ราคาในช่องแก้ไขราคาอ้างอิงอยู่ตอนนี้ (หน่วยที่เลือกเติมสต็อก หรือหน่วยฐาน)
+  String get priceUnitLabel =>
+      selectedRestockUnit.value?.unitName ?? unitController.text;
+
+  // ราคาเดิม (ก่อนแก้) ของหน่วยที่เลือกอยู่ ใช้เทียบในหน้ายืนยัน
+  double get originalSellPrice =>
+      selectedRestockUnit.value?.sellPrice ??
+      foundProduct.value?.sellPrice ??
+      0;
+  double get originalCostPrice =>
+      selectedRestockUnit.value?.costPrice ??
+      foundProduct.value?.costPrice ??
+      0;
+
+  void togglePriceEdit() =>
+      isPriceEditExpanded.value = !isPriceEditExpanded.value;
 
   // ดึงข้อมูลของสินค้าที่เลือกอยู่ตอนนี้ซ้ำ (ใช้กับ pull-to-refresh) โดยไม่ล้าง
   // การเลือกหรือเปิด dropdown ใหม่ ถ้ายังไม่ได้เลือกสินค้าเลยก็แค่ค้นหาซ้ำตามเดิม
@@ -356,15 +371,16 @@ class AddStockController extends GetxController {
 
         final unit = selectedRestockUnit.value;
         if (unit != null) {
-          final result = await ApiProduct.updateProductUnit(unit.productUnitId, {
-            "sell_price": newSell,
-            "cost_price": newCost,
-          });
+          final result = await ApiProduct.updateProductUnit(
+            unit.productUnitId,
+            {"sell_price": newSell, "cost_price": newCost},
+          );
           if (result['success'] == true) {
             final updated = result['data'] as ProductUnitResponse;
             selectedRestockUnit.value = updated;
-            final idx = foundProduct.value!.units
-                .indexWhere((u) => u.productUnitId == updated.productUnitId);
+            final idx = foundProduct.value!.units.indexWhere(
+              (u) => u.productUnitId == updated.productUnitId,
+            );
             if (idx != -1) foundProduct.value!.units[idx] = updated;
             foundProduct.refresh();
           } else {
@@ -393,8 +409,12 @@ class AddStockController extends GetxController {
       if (hasStock) {
         final amount = int.tryParse(addAmountController.text);
         if (amount == null || amount <= 0) {
-          Get.snackbar("แจ้งเตือน", "กรุณากรอกจำนวนสต็อกเป็นตัวเลขที่มากกว่า 0",
-              backgroundColor: Colors.orange, colorText: Colors.white);
+          Get.snackbar(
+            "แจ้งเตือน",
+            "กรุณากรอกจำนวนสต็อกเป็นตัวเลขที่มากกว่า 0",
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+          );
           isSavingPrice.value = false;
           return;
         }
@@ -408,9 +428,12 @@ class AddStockController extends GetxController {
       // --- แจ้งผลลัพธ์ ---
       if (priceOk && stockOk) {
         String msg = "";
-        if (hasPrice && hasStock) msg = "อัปเดตราคาและสต็อกเรียบร้อยแล้ว";
-        else if (hasPrice) msg = "อัปเดตราคาเรียบร้อยแล้ว";
-        else msg = "เพิ่มสต็อกเรียบร้อยแล้ว";
+        if (hasPrice && hasStock)
+          msg = "อัปเดตราคาและสต็อกเรียบร้อยแล้ว";
+        else if (hasPrice)
+          msg = "อัปเดตราคาเรียบร้อยแล้ว";
+        else
+          msg = "เพิ่มสต็อกเรียบร้อยแล้ว";
 
         Get.snackbar(
           "สำเร็จ",

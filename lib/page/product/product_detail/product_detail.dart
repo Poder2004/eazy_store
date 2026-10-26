@@ -124,7 +124,11 @@ class ProductDetailScreen extends StatelessWidget {
                         const Divider(height: 30),
                         const Text(
                           "หน่วยขายเพิ่มเติม",
-                          style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         for (final u in controller.product.value.activeUnits)
@@ -132,23 +136,45 @@ class ProductDetailScreen extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             child: Row(
                               children: [
-                                Icon(Icons.inventory_2_outlined, color: Colors.grey[400], size: 20),
+                                Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: Colors.grey[400],
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 15),
                                 Expanded(
                                   child: Text(
                                     "${u.unitName} = ${u.conversionQty} ${controller.product.value.unit}",
-                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                                Text(
-                                  "฿${u.sellPrice.toStringAsFixed(0)}",
-                                  style: const TextStyle(fontSize: 15, color: Colors.black54),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "ขาย ฿${u.sellPrice.toStringAsFixed(2)}",
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      "ทุน ฿${u.costPrice.toStringAsFixed(2)}",
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
                       ],
-
 
                       const SizedBox(height: 100), // เว้นที่ให้ปุ่มด้านล่าง
                     ],
@@ -188,11 +214,17 @@ class ProductDetailScreen extends StatelessWidget {
 
   // Widget แสดงราคาและสต็อกแบบช่องตาราง
   Widget _buildInfoGrid(ProductResponse product, Color color) {
+    final hasUnits = product.activeUnits.isNotEmpty;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _infoItem("ราคาขาย", "฿${product.sellPrice.toStringAsFixed(2)}", color),
         _infoItem(
-          "ต้นทุน",
+          "ราคาขาย/${product.unit}",
+          "฿${product.sellPrice.toStringAsFixed(2)}",
+          color,
+        ),
+        _infoItem(
+          "ต้นทุน/${product.unit}",
           "฿${product.costPrice.toStringAsFixed(2)}",
           Colors.blueGrey,
         ),
@@ -200,12 +232,19 @@ class ProductDetailScreen extends StatelessWidget {
           "คงเหลือ",
           formatStockBreakdown(product.stock, product.unit, product.units),
           Colors.orange,
+          // สต็อกถูกย่อเป็นหน่วยใหญ่ (เช่น ซอง) บอกยอดรวมเป็นหน่วยฐานด้วย กันสับสนกับราคาที่เป็นต่อหน่วยฐาน
+          subtitle: hasUnits ? "รวม ${product.stock} ${product.unit}" : null,
         ),
       ],
     );
   }
 
-  Widget _infoItem(String label, String value, Color color) {
+  Widget _infoItem(
+    String label,
+    String value,
+    Color color, {
+    String? subtitle,
+  }) {
     return Expanded(
       child: Column(
         children: [
@@ -213,12 +252,21 @@ class ProductDetailScreen extends StatelessWidget {
           const SizedBox(height: 5),
           Text(
             value,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
+          if (subtitle != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                subtitle,
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+              ),
+            ),
         ],
       ),
     );
@@ -259,72 +307,76 @@ class ProductDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          // ปุ่มลบ
-          // ✨ ใส่กรอบ+พื้นหลังให้ดูเป็นปุ่มชัดเจน ไม่ใช่แค่ไอคอนลอยๆ (เข้าใจง่ายขึ้นว่ากดได้)
-          Material(
-            color: Colors.red.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-            child: InkWell(
+      // เว้นระยะจากแถบนำทางของระบบ กันปุ่มโดนปุ่ม ☰ ○ ◁ ทับ
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            // ปุ่มลบ
+            // ✨ ใส่กรอบ+พื้นหลังให้ดูเป็นปุ่มชัดเจน ไม่ใช่แค่ไอคอนลอยๆ (เข้าใจง่ายขึ้นว่ากดได้)
+            Material(
+              color: Colors.red.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              onTap: () => _confirmDelete(controller),
-              child: Container(
-                width: 54,
-                height: 54,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.withOpacity(0.4)),
-                ),
-                child: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.red,
-                  size: 26,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // ปุ่มแก้ไข
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                var result = await Get.to(
-                  () => const EditProductScreen(),
-                  arguments: controller.product.value,
-                  transition: Transition.rightToLeft,
-                );
-
-                if (result != null && result is ProductResponse) {
-                  controller.product.value = result;
-                }
-                // ดึงข้อมูลล่าสุดซ้ำเสมอตอนกลับมาหน้านี้ ไม่ใช่แค่ตอนมี result
-                // ส่งกลับมาตรงๆ เพราะถ้าเข้าไปเพิ่มสต็อกต่อจากหน้าแก้ไข (Edit ->
-                // Add Stock) แล้วกดย้อนกลับโดยไม่ได้กด "บันทึก" ในหน้าแก้ไขอีกที
-                // result ตรงนี้จะเป็น null แต่สต็อกจริงถูกอัปเดตในเซิร์ฟเวอร์ไปแล้ว
-                await controller.refreshProduct();
-              },
-              icon: const Icon(Icons.edit, color: Colors.white),
-              label: const Text(
-                "แก้ไขข้อมูลสินค้า",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6B8E23),
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _confirmDelete(controller),
+                child: Container(
+                  width: 54,
+                  height: 54,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withOpacity(0.4)),
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 26,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 10),
+
+            // ปุ่มแก้ไข
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  var result = await Get.to(
+                    () => const EditProductScreen(),
+                    arguments: controller.product.value,
+                    transition: Transition.rightToLeft,
+                  );
+
+                  if (result != null && result is ProductResponse) {
+                    controller.product.value = result;
+                  }
+                  // ดึงข้อมูลล่าสุดซ้ำเสมอตอนกลับมาหน้านี้ ไม่ใช่แค่ตอนมี result
+                  // ส่งกลับมาตรงๆ เพราะถ้าเข้าไปเพิ่มสต็อกต่อจากหน้าแก้ไข (Edit ->
+                  // Add Stock) แล้วกดย้อนกลับโดยไม่ได้กด "บันทึก" ในหน้าแก้ไขอีกที
+                  // result ตรงนี้จะเป็น null แต่สต็อกจริงถูกอัปเดตในเซิร์ฟเวอร์ไปแล้ว
+                  await controller.refreshProduct();
+                },
+                icon: const Icon(Icons.edit, color: Colors.white),
+                label: const Text(
+                  "แก้ไขข้อมูลสินค้า",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6B8E23),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

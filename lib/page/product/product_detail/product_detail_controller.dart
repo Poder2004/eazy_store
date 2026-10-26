@@ -124,11 +124,7 @@ class ProductDetailController extends GetxController {
       }
     } catch (e) {
       Get.back(); // ปิดวงกลมโหลด
-      Get.snackbar(
-        "ผิดพลาด",
-        friendlyError(e),
-        backgroundColor: Colors.red,
-      );
+      Get.snackbar("ผิดพลาด", friendlyError(e), backgroundColor: Colors.red);
     }
   }
 }
