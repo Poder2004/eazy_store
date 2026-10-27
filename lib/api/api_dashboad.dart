@@ -117,10 +117,7 @@ class ApiDashboad {
   }
 
   // ✅ ฟังก์ชันดึงรายการสินค้าในบิล (รอ backend)
-  static Future<SaleDetailModel?> getSaleItems(
-    int shopId,
-    int saleId,
-  ) async {
+  static Future<SaleDetailModel?> getSaleItems(int shopId, int saleId) async {
     try {
       await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();

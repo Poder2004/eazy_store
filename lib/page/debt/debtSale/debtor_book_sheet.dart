@@ -327,12 +327,14 @@ class _DebtorBookBody extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerRight,
                       child: Text(
-                        "${remain.toInt()} ฿",
+                        debtor.hasCreditLimit
+                            ? "${remain.toInt()} ฿"
+                            : "ไม่จำกัด",
                         maxLines: 1,
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: remain > 0
+                          color: (!debtor.hasCreditLimit || remain > 0)
                               ? Colors.green.shade600
                               : Colors.red.shade600,
                         ),

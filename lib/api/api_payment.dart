@@ -6,7 +6,6 @@ import 'package:eazy_store/config/app_config.dart';
 import 'package:eazy_store/utils/auth_guard.dart';
 
 class ApiPayment {
-
   static Future<Map<String, dynamic>> payDebt(PayDebtRequest request) async {
     try {
       await AuthGuard.checkAndRefreshIfNeeded();
@@ -36,7 +35,9 @@ class ApiPayment {
           await AuthGuard.handleUnauthorized();
         }
         print("Pay Debt Error: ${responseData['error']}");
-        return {"error": responseData['error'] ?? "เกิดข้อผิดพลาดในการชำระเงิน"};
+        return {
+          "error": responseData['error'] ?? "เกิดข้อผิดพลาดในการชำระเงิน",
+        };
       }
     } catch (e) {
       print("Pay Debt Exception: $e");
@@ -45,8 +46,9 @@ class ApiPayment {
   }
 
   static Future<List<dynamic>?> getPaymentHistory(int debtorId) async {
-    final Uri url =
-        Uri.parse('${AppConfig.baseUrl}/api/debtors/$debtorId/payments');
+    final Uri url = Uri.parse(
+      '${AppConfig.baseUrl}/api/debtors/$debtorId/payments',
+    );
 
     try {
       await AuthGuard.checkAndRefreshIfNeeded();

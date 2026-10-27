@@ -25,10 +25,7 @@ class DebtorDetailController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     try {
-      await Future.wait([
-        fetchBillHistory(),
-        fetchPaymentHistory(),
-      ]);
+      await Future.wait([fetchBillHistory(), fetchPaymentHistory()]);
     } catch (e) {
       debugPrint("โหลดข้อมูลลูกหนี้ไม่สำเร็จ: $e");
     } finally {
@@ -42,7 +39,9 @@ class DebtorDetailController extends ChangeNotifier {
     final result = await ApiDebtor.getDebtorHistory(currentDebtor.debtorId!);
     if (result != null) {
       List<dynamic> rawHistories = result['histories'] ?? [];
-      historyList = rawHistories.map((bill) => DebtorHistoryResponse.fromJson(bill)).toList();
+      historyList = rawHistories
+          .map((bill) => DebtorHistoryResponse.fromJson(bill))
+          .toList();
     }
   }
 
@@ -79,7 +78,10 @@ class DebtorDetailController extends ChangeNotifier {
 
       if (newImageUrl != null) updateData["img_debtor"] = newImageUrl;
 
-      final result = await ApiDebtor.updateDebtor(currentDebtor.debtorId!, updateData);
+      final result = await ApiDebtor.updateDebtor(
+        currentDebtor.debtorId!,
+        updateData,
+      );
 
       if (result['success'] == true) {
         // อัปเดตข้อมูลในตัวแปร currentDebtor ทันที

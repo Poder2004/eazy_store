@@ -77,9 +77,16 @@ class DebtSaleController extends GetxController {
   double get creditRemain {
     final debtor = selectedDebtor;
     if (debtor == null) return 0.0;
+    // ไม่ได้ตั้งวงเงินไว้ = ไม่จำกัด ค้างได้เท่าไรก็ได้
+    if (!debtor.hasCreditLimit) return double.infinity;
     final double remain = debtor.creditLimit - debtor.currentDebt;
     return remain > 0 ? remain : 0.0;
   }
+
+  /// ข้อความวงเงินคงเหลือ (หลังหักยอด [minus] ถ้ามี) — "ไม่จำกัด" เมื่อไม่ได้ตั้งวงเงินไว้
+  String creditRemainLabel([double minus = 0]) => creditRemain.isInfinite
+      ? "ไม่จำกัด"
+      : "${formatMoney(creditRemain - minus)} ฿";
 
   /// รายการนี้ไม่มียอดค้าง (จ่ายครบ/เกิน) = ต้องบันทึกเป็นการขายเงินสดแทน
   bool isCashCase(double totalPrice) =>
@@ -165,9 +172,8 @@ class DebtSaleController extends GetxController {
       }
 
       list.sort(
-        (a, b) => a.name.trim().toLowerCase().compareTo(
-          b.name.trim().toLowerCase(),
-        ),
+        (a, b) =>
+            a.name.trim().toLowerCase().compareTo(b.name.trim().toLowerCase()),
       );
       allDebtors.assignAll(list);
       filterBook(bookSearchController.text);
@@ -381,7 +387,7 @@ class DebtSaleController extends GetxController {
                       const SizedBox(height: 10),
                       _rowPopupInfo(
                         "วงเงินคงเหลือหลังเซ็น:",
-                        "${formatMoney(creditRemain - debtValue)} ฿",
+                        creditRemainLabel(debtValue),
                       ),
                       const Divider(height: 24, thickness: 1),
                       Row(
@@ -658,7 +664,8 @@ class DebtSaleController extends GetxController {
   void clearForm(CheckoutController checkoutController) {
     debtorNameController.clear();
     debtorPhoneController.clear();
-    payAmountController.text = '0'; // กลับไปที่ default เหมือนตอนเปิดหน้าครั้งแรก
+    payAmountController.text =
+        '0'; // กลับไปที่ default เหมือนตอนเปิดหน้าครั้งแรก
     debtRemarkController.clear();
     selectedDebtorRx.value = null;
     checkoutController.clearAll();
@@ -667,7 +674,8 @@ class DebtSaleController extends GetxController {
   void confirmClearForm(CheckoutController checkoutController) {
     ConfirmDialog.show(
       title: "ล้างรายการ",
-      message: "ต้องการล้างข้อมูลที่กรอกในหน้านี้ทั้งหมด (ลูกหนี้ที่เลือกและรายการสินค้า) ใช่หรือไม่?",
+      message:
+          "ต้องการล้างข้อมูลที่กรอกในหน้านี้ทั้งหมด (ลูกหนี้ที่เลือกและรายการสินค้า) ใช่หรือไม่?",
       icon: Icons.delete_sweep_rounded,
       confirmLabel: "ล้าง",
       onConfirm: () => clearForm(checkoutController),

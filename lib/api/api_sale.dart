@@ -36,8 +36,9 @@ class ApiSale {
     }
   }
 
-
-  static Future<Map<String, dynamic>?> createCreditSale(SaleRequest saleData) async {
+  static Future<Map<String, dynamic>?> createCreditSale(
+    SaleRequest saleData,
+  ) async {
     try {
       await AuthGuard.checkAndRefreshIfNeeded();
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -45,7 +46,7 @@ class ApiSale {
 
       // ยิงไปที่ Path /api/CreateCreditSale ตามที่เราตั้งค่าไว้ใน Go
       final response = await http.post(
-        Uri.parse("${AppConfig.baseUrl}/api/sales/credit"), 
+        Uri.parse("${AppConfig.baseUrl}/api/sales/credit"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",
@@ -64,7 +65,9 @@ class ApiSale {
           print("Credit Sale Error: ${errorData['error']}");
           return {"error": errorData['error'] ?? "บันทึกไม่สำเร็จ"};
         } catch (_) {
-          return {"error": "เซิร์ฟเวอร์ตอบกลับผิดพลาด (${response.statusCode})"};
+          return {
+            "error": "เซิร์ฟเวอร์ตอบกลับผิดพลาด (${response.statusCode})",
+          };
         }
       }
     } catch (e) {

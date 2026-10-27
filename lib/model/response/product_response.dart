@@ -11,6 +11,8 @@ class ProductUnitResponse {
   final double sellPrice;
   final double costPrice;
   final bool status;
+  // เวลาที่พิมพ์ฉลากบาร์โค้ดของหน่วยนี้แล้ว (null = ยังไม่เคยพิมพ์)
+  final DateTime? barcodePrintedAt;
 
   ProductUnitResponse({
     required this.productUnitId,
@@ -21,6 +23,7 @@ class ProductUnitResponse {
     required this.sellPrice,
     required this.costPrice,
     this.status = true,
+    this.barcodePrintedAt,
   });
 
   factory ProductUnitResponse.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,9 @@ class ProductUnitResponse {
       sellPrice: (json['sell_price'] as num?)?.toDouble() ?? 0.0,
       costPrice: (json['cost_price'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? true,
+      barcodePrintedAt: json['barcode_printed_at'] != null
+          ? DateTime.tryParse(json['barcode_printed_at'].toString())?.toLocal()
+          : null,
     );
   }
 
@@ -60,6 +66,9 @@ class ProductResponse {
   int stock;
   final String unit;
   final bool status;
+
+  // เวลาที่พิมพ์ฉลากบาร์โค้ดหลักของสินค้านี้แล้ว (null = ยังไม่เคยพิมพ์)
+  final DateTime? barcodePrintedAt;
 
   // คงเหลือ (หน่วยฐาน) ที่ ≤ ค่านี้ = สินค้าใกล้หมด (ตั้งรายสินค้า ค่าเริ่มต้น 10)
   final int lowStockThreshold;
@@ -94,6 +103,7 @@ class ProductResponse {
     required this.stock,
     required this.unit,
     this.status = true,
+    this.barcodePrintedAt,
     this.lowStockThreshold = 10,
     this.category,
     this.categoryName,
@@ -150,6 +160,9 @@ class ProductResponse {
       stock: json['stock'] ?? 0,
       unit: json['unit'] ?? '',
       status: json['status'] ?? true,
+      barcodePrintedAt: json['barcode_printed_at'] != null
+          ? DateTime.tryParse(json['barcode_printed_at'].toString())?.toLocal()
+          : null,
       lowStockThreshold: (json['low_stock_threshold'] as num?)?.toInt() ?? 10,
 
       // ยัด Object Category เข้าไป (เผื่อใช้ทีหลัง)
@@ -158,7 +171,8 @@ class ProductResponse {
       // หัวใจสำคัญ! ดึงชื่อจาก Object มาใส่ตัวแปร categoryName
       categoryName: catObj?.name,
 
-      units: (json['units'] as List?)
+      units:
+          (json['units'] as List?)
               ?.map((u) => ProductUnitResponse.fromJson(u))
               .toList() ??
           [],
@@ -186,9 +200,11 @@ class ProductPagedResponse {
   factory ProductPagedResponse.fromJson(Map<String, dynamic> json) {
     return ProductPagedResponse(
       // นำรายการใน 'items' มาวนลูปสร้างเป็น List ของ ProductResponse
-      items: (json['items'] as List?)
+      items:
+          (json['items'] as List?)
               ?.map((i) => ProductResponse.fromJson(i))
-              .toList() ?? [],
+              .toList() ??
+          [],
       totalItems: json['total_items'] ?? 0,
       totalPages: json['total_pages'] ?? 0,
       currentPage: json['current_page'] ?? 1,

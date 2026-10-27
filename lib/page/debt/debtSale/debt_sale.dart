@@ -226,7 +226,7 @@ class DebtSalePage extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              "วงเงินคงเหลือ ${formatMoney(controller.creditRemain)} ฿",
+                              "วงเงินคงเหลือ ${controller.creditRemainLabel()}",
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                                 fontSize: 13,

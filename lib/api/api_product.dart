@@ -106,11 +106,7 @@ class ApiProduct {
     required int shopId,
     required String name,
   }) async {
-    return _sendCategoryRequest(
-      method: 'POST',
-      shopId: shopId,
-      name: name,
-    );
+    return _sendCategoryRequest(method: 'POST', shopId: shopId, name: name);
   }
 
   static Future<Map<String, dynamic>> updateCategory({
@@ -148,8 +144,9 @@ class ApiProduct {
         return [];
       }
 
-      final url = Uri.parse('${AppConfig.baseUrl}/api/categories/inactive')
-          .replace(queryParameters: {'shop_id': '$shopId'});
+      final url = Uri.parse(
+        '${AppConfig.baseUrl}/api/categories/inactive',
+      ).replace(queryParameters: {'shop_id': '$shopId'});
 
       var response = await http.get(
         url,
@@ -214,7 +211,7 @@ class ApiProduct {
     } catch (e) {
       return {'success': false, 'error': 'การเชื่อมต่อขัดข้อง: $e'};
     }
-  }          
+  }
 
   static Future<Map<String, dynamic>> moveCategoryProducts({
     required int fromCategoryId,
@@ -293,18 +290,20 @@ class ApiProduct {
       await AuthGuard.checkAndRefreshIfNeeded();
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
-      final path = categoryId == null ? '/api/categories' : '/api/categories/$categoryId';
+      final path = categoryId == null
+          ? '/api/categories'
+          : '/api/categories/$categoryId';
       final requestMethod = method;
       final url = Uri.parse('${AppConfig.baseUrl}$path').replace(
-        queryParameters: method == 'DELETE'
-            ? {'shop_id': '$shopId'}
-            : null,
+        queryParameters: method == 'DELETE' ? {'shop_id': '$shopId'} : null,
       );
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      final body = name == null ? null : jsonEncode({'shop_id': shopId, 'name': name});
+      final body = name == null
+          ? null
+          : jsonEncode({'shop_id': shopId, 'name': name});
       final response = switch (requestMethod) {
         'POST' => await http.post(url, headers: headers, body: body),
         'PUT' => await http.put(url, headers: headers, body: body),
@@ -317,7 +316,10 @@ class ApiProduct {
       if (AuthGuard.isUnauthorized(response.statusCode)) {
         await AuthGuard.handleUnauthorized();
       }
-      return {'success': false, 'error': data['error'] ?? 'ไม่สามารถจัดการหมวดหมู่ได้'};
+      return {
+        'success': false,
+        'error': data['error'] ?? 'ไม่สามารถจัดการหมวดหมู่ได้',
+      };
     } catch (e) {
       return {'success': false, 'error': 'การเชื่อมต่อขัดข้อง: $e'};
     }
@@ -460,6 +462,54 @@ class ApiProduct {
 
   // --- หน่วยขายเพิ่มเติม (ลัง/แพ็ค) ---
 
+  /// ทำเครื่องหมายว่าพิมพ์ฉลากบาร์โค้ดแล้ว ([printed] = true) หรือยกเลิกกลับเป็น "ใหม่" (false)
+  /// คืน {success, message}
+  static Future<Map<String, dynamic>> markBarcodesPrinted({
+    required int shopId,
+    List<int> productIds = const [],
+    List<int> unitIds = const [],
+    required bool printed,
+  }) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/products/barcode-printed');
+    try {
+      await AuthGuard.checkAndRefreshIfNeeded();
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.put(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          'shop_id': shopId,
+          'product_ids': productIds,
+          'unit_ids': unitIds,
+          'printed': printed,
+        }),
+      );
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        return {"success": true, "message": data['message']};
+      }
+      if (AuthGuard.isUnauthorized(response.statusCode)) {
+        await AuthGuard.handleUnauthorized();
+      }
+      return {
+        "success": false,
+        "message": data['error'] ?? "บันทึกสถานะการพิมพ์ไม่สำเร็จ",
+      };
+    } catch (e) {
+      return {
+        "success": false,
+        "message":
+            "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      };
+    }
+  }
+
   static Future<Map<String, dynamic>> createProductUnit(
     int productId,
     Map<String, dynamic> body,
@@ -489,7 +539,10 @@ class ApiProduct {
       if (AuthGuard.isUnauthorized(response.statusCode)) {
         await AuthGuard.handleUnauthorized();
       }
-      return {"success": false, "error": data['error'] ?? "ไม่สามารถเพิ่มหน่วยขายได้"};
+      return {
+        "success": false,
+        "error": data['error'] ?? "ไม่สามารถเพิ่มหน่วยขายได้",
+      };
     } catch (e) {
       return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
     }
@@ -524,7 +577,10 @@ class ApiProduct {
       if (AuthGuard.isUnauthorized(response.statusCode)) {
         await AuthGuard.handleUnauthorized();
       }
-      return {"success": false, "error": data['error'] ?? "ไม่สามารถแก้ไขหน่วยขายได้"};
+      return {
+        "success": false,
+        "error": data['error'] ?? "ไม่สามารถแก้ไขหน่วยขายได้",
+      };
     } catch (e) {
       return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
     }
@@ -550,7 +606,10 @@ class ApiProduct {
       if (AuthGuard.isUnauthorized(response.statusCode)) {
         await AuthGuard.handleUnauthorized();
       }
-      return {"success": false, "error": data['error'] ?? "ไม่สามารถลบหน่วยขายได้"};
+      return {
+        "success": false,
+        "error": data['error'] ?? "ไม่สามารถลบหน่วยขายได้",
+      };
     } catch (e) {
       return {"success": false, "error": "การเชื่อมต่อขัดข้อง: $e"};
     }
@@ -595,7 +654,8 @@ class ApiProduct {
       return {
         "success": false,
         "message":
-            jsonResponse['error'] ?? "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+            jsonResponse['error'] ??
+            "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
       };
     } catch (e) {
       debugPrint("แก้ไขสินค้าไม่สำเร็จ: $e");
@@ -644,7 +704,9 @@ class ApiProduct {
         throw Exception("ไม่สามารถดึงข้อมูลสินค้าได้ กรุณาลองใหม่อีกครั้ง");
       }
     } catch (e) {
-      throw Exception("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
+      throw Exception(
+        "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",
+      );
     }
   }
 
@@ -658,7 +720,7 @@ class ApiProduct {
       String? token = prefs.getString('token');
 
       final response = await http.delete(
-        url,         
+        url,
         headers: {"Authorization": "Bearer $token"},
       );
 

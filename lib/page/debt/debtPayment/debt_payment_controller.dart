@@ -19,11 +19,14 @@ class DebtPaymentController extends GetxController {
   var remainingDebt = 0.0.obs;
   var change = 0.0.obs;
   var shopQrCodeUrl = "".obs; // ✅ URL สำหรับรูปภาพ QR Code จริง
-  var isSubmitting = false.obs; // ✅ กันกดยืนยันซ้ำ/พิมพ์ PIN ซ้อนกันจนไดอะล็อกค้าง
+  var isSubmitting =
+      false.obs; // ✅ กันกดยืนยันซ้ำ/พิมพ์ PIN ซ้อนกันจนไดอะล็อกค้าง
 
   // --- Controllers ---
   final TextEditingController amountPaidController = TextEditingController();
-  final TextEditingController payerNameController = TextEditingController(text: 'เจ้าของร้าน');
+  final TextEditingController payerNameController = TextEditingController(
+    text: 'เจ้าของร้าน',
+  );
 
   DebtorResponse? debtor;
 
@@ -41,7 +44,8 @@ class DebtPaymentController extends GetxController {
         // ✅ แนบ timestamp เพื่อล้างแคชรูปภาพเก่า (Prevent caching)
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final url = shop.imgQrcode;
-        shopQrCodeUrl.value = url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
+        shopQrCodeUrl.value =
+            url + (url.contains('?') ? '&' : '?') + 't=$timestamp';
       }
     } catch (e) {
       print("Error loading shop data in DebtPayment: $e");
@@ -60,7 +64,7 @@ class DebtPaymentController extends GetxController {
   void initData(DebtorResponse? currentDebtor) {
     debtor = currentDebtor;
     totalDebtAmount.value = (debtor?.currentDebt as num?)?.toDouble() ?? 0.0;
-    
+
     remainingDebt.value = totalDebtAmount.value;
     amountPaid.value = 0.0;
 
@@ -106,8 +110,12 @@ class DebtPaymentController extends GetxController {
       final int shopId = prefs.getInt('shopId') ?? 0;
 
       if (savedPin.isEmpty) {
-        Get.snackbar('แจ้งเตือน', 'ไม่พบรหัส PIN ในระบบ กรุณา Login ใหม่',
-            backgroundColor: Colors.redAccent, colorText: Colors.white);
+        Get.snackbar(
+          'แจ้งเตือน',
+          'ไม่พบรหัส PIN ในระบบ กรุณา Login ใหม่',
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
         return;
       }
 
@@ -123,7 +131,9 @@ class DebtPaymentController extends GetxController {
             shopId: shopId,
             debtorId: debtor?.debtorId ?? 0,
             amountPaid: amountPaid.value,
-            paymentMethod: selectedMethod.value == PaymentMethod.cash ? 'จ่ายเงินสด' : 'โอนจ่าย',
+            paymentMethod: selectedMethod.value == PaymentMethod.cash
+                ? 'จ่ายเงินสด'
+                : 'โอนจ่าย',
             payWith: payerNameController.text,
             pinCode: pinCode,
           );
@@ -140,14 +150,22 @@ class DebtPaymentController extends GetxController {
           } else {
             // ❌ มี Error จาก Server
             String errorMsg = result['error'].toString();
-            Get.snackbar('ข้อผิดพลาด', errorMsg,
-                backgroundColor: Colors.redAccent, colorText: Colors.white);
+            Get.snackbar(
+              'ข้อผิดพลาด',
+              errorMsg,
+              backgroundColor: Colors.redAccent,
+              colorText: Colors.white,
+            );
           }
         } catch (e) {
           Get.back(); // ปิด Loading
           print("Error submit: $e");
-          Get.snackbar('ข้อผิดพลาด', 'เชื่อมต่อล้มเหลว: $e',
-              backgroundColor: Colors.redAccent, colorText: Colors.white);
+          Get.snackbar(
+            'ข้อผิดพลาด',
+            'เชื่อมต่อล้มเหลว: $e',
+            backgroundColor: Colors.redAccent,
+            colorText: Colors.white,
+          );
         }
       } else {
         // ❌ PIN ผิด

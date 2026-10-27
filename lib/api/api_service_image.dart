@@ -50,7 +50,9 @@ class ImageUploadService {
         return data['secure_url']; // คืนค่าเป็น URL รูปภาพ
       }
 
-      debugPrint('อัปโหลดรูปไม่สำเร็จ (${response.statusCode}): ${responseData.body}');
+      debugPrint(
+        'อัปโหลดรูปไม่สำเร็จ (${response.statusCode}): ${responseData.body}',
+      );
       return null;
     } catch (e) {
       debugPrint('เกิดข้อผิดพลาดขณะอัปโหลดรูป: $e');

@@ -21,13 +21,25 @@ class AdvancedReportResponse {
 
   factory AdvancedReportResponse.fromJson(Map<String, dynamic> json) {
     return AdvancedReportResponse(
-      salesChart: (json['sales_chart'] as List?)?.map((i) => SalesChartItem.fromJson(i)).toList() ?? [],
+      salesChart:
+          (json['sales_chart'] as List?)
+              ?.map((i) => SalesChartItem.fromJson(i))
+              .toList() ??
+          [],
       summaryStats: SummaryStats.fromJson(json['summary_stats'] ?? {}),
       paymentMethods: PaymentMethods.fromJson(json['payment_methods'] ?? {}),
-      topProducts: (json['top_products'] as List?)?.map((i) => TopProductItem.fromJson(i)).toList() ?? [],
+      topProducts:
+          (json['top_products'] as List?)
+              ?.map((i) => TopProductItem.fromJson(i))
+              .toList() ??
+          [],
       debtSummary: DebtSummary.fromJson(json['debt_summary'] ?? {}),
       agingReport: AgingReport.fromJson(json['aging_report'] ?? {}),
-      topDebtors: (json['top_debtors'] as List?)?.map((i) => TopDebtorItem.fromJson(i)).toList() ?? [],
+      topDebtors:
+          (json['top_debtors'] as List?)
+              ?.map((i) => TopDebtorItem.fromJson(i))
+              .toList() ??
+          [],
       debtCollection: DebtCollection.fromJson(json['debt_collection'] ?? {}),
     );
   }
@@ -52,7 +64,11 @@ class SummaryStats {
   final double totalSales;
   final double averageSales;
 
-  SummaryStats({required this.totalTransactions, required this.totalSales, required this.averageSales});
+  SummaryStats({
+    required this.totalTransactions,
+    required this.totalSales,
+    required this.averageSales,
+  });
 
   factory SummaryStats.fromJson(Map<String, dynamic> json) {
     return SummaryStats(
@@ -68,7 +84,11 @@ class PaymentMethods {
   final double paidTransfer;
   final double debtAmount;
 
-  PaymentMethods({required this.paidCash, required this.paidTransfer, required this.debtAmount});
+  PaymentMethods({
+    required this.paidCash,
+    required this.paidTransfer,
+    required this.debtAmount,
+  });
 
   factory PaymentMethods.fromJson(Map<String, dynamic> json) {
     return PaymentMethods(
@@ -84,7 +104,11 @@ class TopProductItem {
   final int totalQty;
   final double totalSales;
 
-  TopProductItem({required this.productName, required this.totalQty, required this.totalSales});
+  TopProductItem({
+    required this.productName,
+    required this.totalQty,
+    required this.totalSales,
+  });
 
   factory TopProductItem.fromJson(Map<String, dynamic> json) {
     return TopProductItem(
@@ -120,7 +144,11 @@ class AgingReport {
   final double warning;
   final double danger;
 
-  AgingReport({required this.safe, required this.warning, required this.danger});
+  AgingReport({
+    required this.safe,
+    required this.warning,
+    required this.danger,
+  });
 
   factory AgingReport.fromJson(Map<String, dynamic> json) {
     return AgingReport(
@@ -136,7 +164,11 @@ class TopDebtorItem {
   final String name;
   final double currentDebt;
 
-  TopDebtorItem({required this.debtorId, required this.name, required this.currentDebt});
+  TopDebtorItem({
+    required this.debtorId,
+    required this.name,
+    required this.currentDebt,
+  });
 
   factory TopDebtorItem.fromJson(Map<String, dynamic> json) {
     return TopDebtorItem(
@@ -192,7 +224,10 @@ class AgingReportDetail {
 
   factory AgingReportDetail.fromJson(Map<String, dynamic> json) {
     List<AgingBucketDebtorItem> parse(String key) =>
-        (json[key] as List?)?.map((i) => AgingBucketDebtorItem.fromJson(i)).toList() ?? [];
+        (json[key] as List?)
+            ?.map((i) => AgingBucketDebtorItem.fromJson(i))
+            .toList() ??
+        [];
     return AgingReportDetail(
       safe: parse('safe'),
       warning: parse('warning'),

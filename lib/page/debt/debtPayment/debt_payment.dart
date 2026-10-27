@@ -519,11 +519,7 @@ class DebtPaymentScreen extends StatelessWidget {
                           },
                         )
                       : const Center(
-                          child: Icon(
-                            Icons.qr_code_2,
-                            size: 80,
-                            color: _kInk3,
-                          ),
+                          child: Icon(Icons.qr_code_2, size: 80, color: _kInk3),
                         ),
                 ),
               ),

@@ -67,6 +67,7 @@ class DebtRegisterScreen extends StatelessWidget {
                   hint: 'เช่น นายสมชาย',
                   icon: Icons.person_outline,
                   controller: controller.nameController,
+                  isRequired: true,
                 ),
                 const SizedBox(height: 16),
                 Obx(
@@ -155,7 +156,7 @@ class DebtRegisterScreen extends StatelessWidget {
               children: [
                 _buildTextField(
                   label: 'วงเงินค้างชำระ',
-                  hint: '0.00',
+                  hint: 'ไม่ใส่ = ไม่จำกัดวงเงิน',
                   icon: Icons.payments_outlined,
                   suffixText: 'บาท',
                   controller: controller.creditLimitController,
@@ -216,23 +217,12 @@ class DebtRegisterScreen extends StatelessWidget {
                 child: Icon(icon, color: _kPrimaryColor, size: 18),
               ),
               const SizedBox(width: 10),
-              Text.rich(
-                TextSpan(
-                  text: title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _kLabelColor,
-                  ),
-                  children: const [
-                    TextSpan(
-                      text: ' *',
-                      style: TextStyle(
-                        color: Colors.redAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _kLabelColor,
                 ),
               ),
             ],
@@ -254,6 +244,7 @@ class DebtRegisterScreen extends StatelessWidget {
     String? errorText,
     String? suffixText,
     ValueChanged<String>? onChanged,
+    bool isRequired = false,
   }) {
     final bool hasError = errorText != null && errorText.isNotEmpty;
     return Column(
@@ -267,14 +258,23 @@ class DebtRegisterScreen extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: _kLabelColor,
             ),
-            children: const [
-              TextSpan(
-                text: ' *',
-                style: TextStyle(
-                  color: Colors.redAccent,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            children: [
+              isRequired
+                  ? const TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : TextSpan(
+                      text: ' (ไม่บังคับ)',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
             ],
           ),
         ),
@@ -457,17 +457,8 @@ class DebtRegisterScreen extends StatelessWidget {
             const SizedBox(height: 10),
             Text.rich(
               TextSpan(
-                text: 'แตะเพื่อเพิ่มรูปภาพลูกหนี้',
+                text: 'แตะเพื่อเพิ่มรูปภาพลูกหนี้ (ไม่บังคับ)',
                 style: TextStyle(fontSize: 12.5, color: Colors.grey.shade500),
-                children: const [
-                  TextSpan(
-                    text: ' *',
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
               ),
             ),
           ],

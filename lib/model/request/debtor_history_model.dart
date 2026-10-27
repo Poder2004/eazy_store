@@ -5,8 +5,8 @@ class DebtorHistoryItem {
   final String unit; // 1. เพิ่มตัวแปร unit
 
   DebtorHistoryItem({
-    required this.name, 
-    required this.qty, 
+    required this.name,
+    required this.qty,
     required this.price,
     required this.unit, // 2. บังคับรับค่า unit ใน Constructor
   });
@@ -16,7 +16,9 @@ class DebtorHistoryItem {
       name: json['name'] ?? '',
       qty: json['qty'] ?? 0,
       price: (json['price'] ?? 0).toDouble(),
-      unit: json['unit'] ?? '', // 3. ดึงค่า unit จาก JSON (ถ้าไม่มีให้เป็นค่าว่าง)
+      unit:
+          json['unit'] ??
+          '', // 3. ดึงค่า unit จาก JSON (ถ้าไม่มีให้เป็นค่าว่าง)
     );
   }
 }
@@ -40,8 +42,8 @@ class DebtorHistoryResponse {
 
   factory DebtorHistoryResponse.fromJson(Map<String, dynamic> json) {
     var list = json['items'] as List?;
-    List<DebtorHistoryItem> itemsList = list != null 
-        ? list.map((i) => DebtorHistoryItem.fromJson(i)).toList() 
+    List<DebtorHistoryItem> itemsList = list != null
+        ? list.map((i) => DebtorHistoryItem.fromJson(i)).toList()
         : [];
 
     return DebtorHistoryResponse(

@@ -121,7 +121,7 @@ class DebtLedgerScreen extends StatelessWidget {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            "(${debtor.phone})",
+                            debtor.phone.isEmpty ? "" : "(${debtor.phone})",
                             style: TextStyle(
                               fontSize: 12.5,
                               color: Colors.grey[500],
@@ -139,7 +139,10 @@ class DebtLedgerScreen extends StatelessWidget {
                       children: [
                         Text(
                           'ค้าง ',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         Text(
                           debtAmount.toStringAsFixed(2),
@@ -184,7 +187,10 @@ class DebtLedgerScreen extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       'ชำระเงิน',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

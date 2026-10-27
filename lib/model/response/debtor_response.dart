@@ -17,6 +17,9 @@ class DebtorResponse {
     required this.currentDebt,
   });
 
+  /// วงเงิน 0 = ไม่จำกัดวงเงิน (ลูกหนี้ที่ไม่ได้ตั้งวงเงินไว้)
+  bool get hasCreditLimit => creditLimit > 0;
+
   factory DebtorResponse.fromJson(Map<String, dynamic> json) {
     return DebtorResponse(
       debtorId: json['debtor_id'] ?? 0,
@@ -24,8 +27,10 @@ class DebtorResponse {
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
       imgDebtor: json['img_debtor'] ?? '',
-      creditLimit: double.tryParse(json['credit_limit']?.toString() ?? '0') ?? 0.0,
-      currentDebt: double.tryParse(json['current_debt']?.toString() ?? '0') ?? 0.0,
+      creditLimit:
+          double.tryParse(json['credit_limit']?.toString() ?? '0') ?? 0.0,
+      currentDebt:
+          double.tryParse(json['current_debt']?.toString() ?? '0') ?? 0.0,
     );
   }
 }
@@ -45,7 +50,9 @@ class DebtorPagedResponse {
 
   factory DebtorPagedResponse.fromJson(Map<String, dynamic> json) {
     return DebtorPagedResponse(
-      items: (json['items'] as List).map((i) => DebtorResponse.fromJson(i)).toList(),
+      items: (json['items'] as List)
+          .map((i) => DebtorResponse.fromJson(i))
+          .toList(),
       totalItems: json['total_items'] ?? 0,
       totalPages: json['total_pages'] ?? 1,
       currentPage: json['current_page'] ?? 1,

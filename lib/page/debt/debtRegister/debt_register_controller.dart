@@ -60,7 +60,8 @@ class DebtRegisterController extends GetxController {
   // 📌 1. Logic การโหลดข้อมูลที่อยู่
   Future<void> loadAddressData() async {
     try {
-      const assetPath = 'assets/data_address/province_with_district_and_sub_district.json';
+      const assetPath =
+          'assets/data_address/province_with_district_and_sub_district.json';
       final String response = await rootBundle.loadString(assetPath);
       final List<dynamic> rawData = jsonDecode(response);
 
@@ -72,7 +73,8 @@ class DebtRegisterController extends GetxController {
 
       final Map<String, dynamic> structuredData = {};
       for (var province in rawData) {
-        String provinceName = province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
+        String provinceName =
+            province['name_th'] as String? ?? 'ไม่ระบุจังหวัด';
         structuredData[provinceName] = province;
       }
       fullAddressData.value = structuredData;
@@ -91,8 +93,10 @@ class DebtRegisterController extends GetxController {
     subdistricts.clear();
 
     final provinceData = fullAddressData.value![newValue];
-    final List<dynamic>? rawDistricts = provinceData?['districts'] as List<dynamic>?;
-    final districtList = rawDistricts?.map((d) => d['name_th'] as String).toList() ?? [];
+    final List<dynamic>? rawDistricts =
+        provinceData?['districts'] as List<dynamic>?;
+    final districtList =
+        rawDistricts?.map((d) => d['name_th'] as String).toList() ?? [];
     districtList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
     districts.value = districtList;
   }
@@ -103,14 +107,16 @@ class DebtRegisterController extends GetxController {
     selectedSubdistrict.value = null;
 
     final provinceData = fullAddressData.value![selectedProvince.value!];
-    final List<dynamic>? rawDistricts = provinceData?['districts'] as List<dynamic>?;
+    final List<dynamic>? rawDistricts =
+        provinceData?['districts'] as List<dynamic>?;
     if (rawDistricts == null) return;
     final selectedDistrictData = rawDistricts.firstWhere(
       (d) => d['name_th'] == newValue,
       orElse: () => null,
     );
     if (selectedDistrictData == null) return;
-    final List<dynamic>? rawSubs = selectedDistrictData['sub_districts'] as List<dynamic>?;
+    final List<dynamic>? rawSubs =
+        selectedDistrictData['sub_districts'] as List<dynamic>?;
     final subList = rawSubs?.map((s) => s['name_th'] as String).toList() ?? [];
     subList.sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));
     subdistricts.value = subList;
@@ -122,7 +128,8 @@ class DebtRegisterController extends GetxController {
   String? _phoneValidationMessage(String phone) {
     if (phone.isEmpty) return null;
     if (!phone.startsWith('0')) return 'เบอร์โทรต้องขึ้นต้นด้วยเลข 0';
-    if (phone.length != 10) return 'เบอร์โทรต้องมี 10 หลัก (ตอนนี้ ${phone.length} หลัก)';
+    if (phone.length != 10)
+      return 'เบอร์โทรต้องมี 10 หลัก (ตอนนี้ ${phone.length} หลัก)';
     return null;
   }
 
@@ -185,33 +192,26 @@ class DebtRegisterController extends GetxController {
     );
   }
 
-  /// 📌 ตรวจสอบว่ากรอกข้อมูลครบถ้วนหรือยัง (ชื่อ / เบอร์โทร / ที่อยู่ / วงเงิน / รูปภาพ)
-  /// คืนค่า true เมื่อข้อมูลครบและถูกต้อง
+  /// 📌 ตรวจสอบข้อมูลก่อนบันทึก — บังคับกรอกแค่ "ชื่อ" เท่านั้น
+  /// เบอร์โทร/ที่อยู่/รูป/วงเงินเป็นตัวเลือก แต่ถ้ากรอกแล้วต้องถูกรูปแบบ
+  /// คืนค่า true เมื่อข้อมูลถูกต้อง
   bool validateForm() {
-    // 1) รูปภาพลูกหนี้
-    if (imageFile.value == null || imageBytes.value == null) {
-      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเพิ่มรูปภาพลูกหนี้");
-      return false;
-    }
-
-    // 2) ชื่อคนค้างชำระ
+    // 1) ชื่อคนค้างชำระ (บังคับ)
     final name = nameController.text.trim();
     if (name.isEmpty) {
       _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกชื่อคนค้างชำระ");
       return false;
     }
     if (name.length < 2) {
-      _showWarning("ชื่อไม่ถูกต้อง", "ชื่อคนค้างชำระต้องมีอย่างน้อย 2 ตัวอักษร");
+      _showWarning(
+        "ชื่อไม่ถูกต้อง",
+        "ชื่อคนค้างชำระต้องมีอย่างน้อย 2 ตัวอักษร",
+      );
       return false;
     }
 
-    // 3) เบอร์โทรศัพท์ (ต้องขึ้นต้นด้วย 0 และครบ 10 หลักเท่านั้น)
+    // 2) เบอร์โทรศัพท์ (ไม่บังคับ แต่ถ้ากรอกต้องขึ้นต้นด้วย 0 และครบ 10 หลัก)
     final phone = phoneController.text.trim();
-    if (phone.isEmpty) {
-      phoneError.value = null;
-      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกเบอร์โทรศัพท์");
-      return false;
-    }
     final phoneMsg = _phoneValidationMessage(phone);
     if (phoneMsg != null) {
       phoneError.value = phoneMsg;
@@ -220,38 +220,18 @@ class DebtRegisterController extends GetxController {
     }
     phoneError.value = null;
 
-    // 4) ที่อยู่ (จังหวัด / อำเภอ / ตำบล / รายละเอียด)
-    if (selectedProvince.value == null) {
-      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกจังหวัด");
-      return false;
-    }
-    if (selectedDistrict.value == null) {
-      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกอำเภอ/เขต");
-      return false;
-    }
-    if (selectedSubdistrict.value == null) {
-      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณาเลือกตำบล/แขวง");
-      return false;
-    }
-    if (addressDetailController.text.trim().isEmpty) {
-      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกบ้านเลขที่/ซอย/ถนน");
-      return false;
-    }
-
-    // 5) วงเงินค้างชำระ
+    // 3) วงเงินค้างชำระ (ไม่บังคับ ว่าง/0 = ไม่จำกัดวงเงิน)
     final creditText = creditLimitController.text.trim();
-    if (creditText.isEmpty) {
-      _showWarning("ข้อมูลไม่ครบถ้วน", "กรุณากรอกวงเงินค้างชำระ");
-      return false;
-    }
-    final credit = double.tryParse(creditText);
-    if (credit == null) {
-      _showWarning("วงเงินไม่ถูกต้อง", "กรุณากรอกวงเงินค้างชำระเป็นตัวเลข");
-      return false;
-    }
-    if (credit <= 0) {
-      _showWarning("วงเงินไม่ถูกต้อง", "วงเงินค้างชำระต้องมากกว่า 0 บาท");
-      return false;
+    if (creditText.isNotEmpty) {
+      final credit = double.tryParse(creditText);
+      if (credit == null) {
+        _showWarning("วงเงินไม่ถูกต้อง", "กรุณากรอกวงเงินค้างชำระเป็นตัวเลข");
+        return false;
+      }
+      if (credit < 0) {
+        _showWarning("วงเงินไม่ถูกต้อง", "วงเงินค้างชำระต้องไม่ติดลบ");
+        return false;
+      }
     }
 
     return true;
@@ -292,25 +272,31 @@ class DebtRegisterController extends GetxController {
         return;
       }
 
-      // อัปโหลดรูปภาพ (ผ่านการตรวจสอบจาก validateForm มาแล้วว่ามีรูปแน่นอน)
-      final uploadService = ImageUploadService();
-      final String? uploadedUrl = await uploadService.uploadBytes(
-        imageBytes.value!,
-        fileName: imageFile.value!.name,
-      );
-
-      if (uploadedUrl == null) {
-        Get.back(); // ปิด loading
-        _showError(
-          "อัปโหลดรูปภาพไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
+      // รูปภาพไม่บังคับ: มีรูปถึงอัปโหลด ไม่มีก็ส่งค่าว่าง
+      String uploadedUrl = '';
+      if (imageBytes.value != null && imageFile.value != null) {
+        final String? url = await ImageUploadService().uploadBytes(
+          imageBytes.value!,
+          fileName: imageFile.value!.name,
         );
-        return;
+        if (url == null) {
+          Get.back(); // ปิด loading
+          _showError(
+            "อัปโหลดรูปภาพไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง",
+          );
+          return;
+        }
+        uploadedUrl = url;
       }
 
-      String fullAddress = "${addressDetailController.text.trim()} "
-          "ต.${selectedSubdistrict.value} "
-          "อ.${selectedDistrict.value} "
-          "จ.${selectedProvince.value}";
+      // ที่อยู่ไม่บังคับ: ประกอบเฉพาะส่วนที่กรอก/เลือกไว้
+      final addressParts = <String>[
+        addressDetailController.text.trim(),
+        if (selectedSubdistrict.value != null) "ต.${selectedSubdistrict.value}",
+        if (selectedDistrict.value != null) "อ.${selectedDistrict.value}",
+        if (selectedProvince.value != null) "จ.${selectedProvince.value}",
+      ]..removeWhere((e) => e.isEmpty);
+      final String fullAddress = addressParts.join(" ");
 
       DebtorRequest newDebtor = DebtorRequest(
         shopId: shopId,
@@ -318,6 +304,7 @@ class DebtRegisterController extends GetxController {
         phone: phoneController.text.trim(),
         address: fullAddress,
         imgDebtor: uploadedUrl,
+        // ว่าง = 0 = ไม่จำกัดวงเงิน
         creditLimit: double.tryParse(creditLimitController.text.trim()) ?? 0.0,
         currentDebt: 0.0,
       );

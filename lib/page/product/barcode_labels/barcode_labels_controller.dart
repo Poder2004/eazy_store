@@ -14,12 +14,25 @@ class BarcodeLabel {
   final String key;
   final String name;
   final String barcode;
+  // ถ้าเป็นฉลากของสินค้าหลักมี productId ถ้าเป็นของหน่วยขายมี unitId (ใช้ทำเครื่องหมายพิมพ์แล้วที่ backend)
+  final int? productId;
+  final int? unitId;
+  // เวลาที่พิมพ์ไปแล้ว (null = ใหม่ ยังไม่เคยพิมพ์)
+  final DateTime? printedAt;
   const BarcodeLabel({
     required this.key,
     required this.name,
     required this.barcode,
+    this.productId,
+    this.unitId,
+    this.printedAt,
   });
+
+  bool get isPrinted => printedAt != null;
 }
+
+/// แท็บกรองรายการในหน้าพิมพ์บาร์โค้ด
+enum LabelFilter { unprinted, printed, all }
 
 class BarcodeLabelsController extends GetxController {
   var isLoading = true.obs;
@@ -27,8 +40,20 @@ class BarcodeLabelsController extends GetxController {
   // สินค้าที่ยังไม่มีบาร์โค้ดเลย (ให้กดสร้างให้ทีเดียวได้)
   var missing = <ProductResponse>[].obs;
   var isGenerating = false.obs;
-  // เก็บ productId ที่ถูกติ๊กเลือก (ค่าเริ่มต้น เลือกทั้งหมด)
+  // เก็บ key ที่ถูกติ๊กเลือก (ค่าเริ่มต้น เลือกเฉพาะรายการ "ใหม่" ที่ยังไม่เคยพิมพ์)
   var selectedIds = <String>{}.obs;
+  var filter = LabelFilter.unprinted.obs;
+  var isMarking = false.obs;
+
+  int get unprintedCount => products.where((l) => !l.isPrinted).length;
+  int get printedCount => products.where((l) => l.isPrinted).length;
+
+  // รายการที่แสดงตามแท็บที่เลือก
+  List<BarcodeLabel> get visibleLabels => switch (filter.value) {
+    LabelFilter.unprinted => products.where((l) => !l.isPrinted).toList(),
+    LabelFilter.printed => products.where((l) => l.isPrinted).toList(),
+    LabelFilter.all => products.toList(),
+  };
 
   @override
   void onInit() {
@@ -61,6 +86,8 @@ class BarcodeLabelsController extends GetxController {
           labels.add(
             BarcodeLabel(
               key: 'p${p.productId}',
+              productId: p.productId,
+              printedAt: p.barcodePrintedAt,
               // สินค้าที่มีหลายหน่วย (เช่น ไข่ ลูก/แผง) ต้องบอกหน่วยฐานบนฉลากด้วย กันสับสน
               name: p.activeUnits.isEmpty || p.unit.isEmpty
                   ? p.name
@@ -74,6 +101,8 @@ class BarcodeLabelsController extends GetxController {
             labels.add(
               BarcodeLabel(
                 key: 'u${u.productUnitId}',
+                unitId: u.productUnitId,
+                printedAt: u.barcodePrintedAt,
                 name: '${p.name} (${u.unitName})',
                 barcode: u.barcode!,
               ),
@@ -88,9 +117,10 @@ class BarcodeLabelsController extends GetxController {
         ),
       );
       products.assignAll(labels);
+      // ค่าเริ่มต้นเลือกเฉพาะรายการใหม่ กันหลงพิมพ์ฉลากชุดเดิมซ้ำ
       selectedIds
         ..clear()
-        ..addAll(labels.map((l) => l.key));
+        ..addAll(labels.where((l) => !l.isPrinted).map((l) => l.key));
     } catch (e) {
       debugPrint('Load barcode products error: $e');
       products.clear();
@@ -99,14 +129,18 @@ class BarcodeLabelsController extends GetxController {
     }
   }
 
-  bool get allSelected =>
-      products.isNotEmpty && selectedIds.length == products.length;
+  // "เลือกทั้งหมด" นับเฉพาะรายการที่แสดงอยู่ในแท็บปัจจุบัน
+  bool get allSelected {
+    final shown = visibleLabels;
+    return shown.isNotEmpty && shown.every((l) => selectedIds.contains(l.key));
+  }
 
   void toggleAll() {
+    final shown = visibleLabels;
     if (allSelected) {
-      selectedIds.clear();
+      selectedIds.removeAll(shown.map((l) => l.key));
     } else {
-      selectedIds.addAll(products.map((l) => l.key));
+      selectedIds.addAll(shown.map((l) => l.key));
     }
   }
 
@@ -167,6 +201,72 @@ class BarcodeLabelsController extends GetxController {
     await loadProducts();
   }
 
+  Future<int> _shopId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('shopId') ?? 0;
+  }
+
+  Future<void> _askMarkPrinted(List<BarcodeLabel> labels) async {
+    final ok = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('พิมพ์เรียบร้อยแล้วใช่ไหม?'),
+        content: Text(
+          'ถ้าพิมพ์สำเร็จ จะทำเครื่องหมาย "พิมพ์แล้ว" ให้ ${labels.length} รายการ '
+          'ครั้งหน้าจะไม่ถูกเลือกพิมพ์ซ้ำโดยอัตโนมัติ',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('ยังไม่ได้พิมพ์'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('พิมพ์แล้ว'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+    if (ok == true) await _setPrinted(labels, true);
+  }
+
+  // ยกเลิกเครื่องหมาย "พิมพ์แล้ว" กลับเป็น "ใหม่" (เช่น ฉลากเก่าขาดหรือซีด ต้องพิมพ์ใหม่)
+  Future<void> markAsNew(BarcodeLabel label) async {
+    await _setPrinted([label], false);
+    // ให้ติ๊กเลือกไว้เลย เพราะตั้งใจจะพิมพ์ใหม่
+    selectedIds.add(label.key);
+  }
+
+  Future<void> _setPrinted(List<BarcodeLabel> labels, bool printed) async {
+    if (isMarking.value) return;
+    isMarking.value = true;
+    try {
+      final res = await ApiProduct.markBarcodesPrinted(
+        shopId: await _shopId(),
+        productIds: labels.map((l) => l.productId).whereType<int>().toList(),
+        unitIds: labels.map((l) => l.unitId).whereType<int>().toList(),
+        printed: printed,
+      );
+      if (res['success'] != true) {
+        Get.snackbar(
+          'บันทึกสถานะไม่สำเร็จ',
+          '${res['message']}',
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+        return;
+      }
+      // เก็บการติ๊กเลือกของรายการอื่นไว้ ไม่รีเซ็ตทั้งหมด
+      final keep = selectedIds.toSet()..removeAll(labels.map((l) => l.key));
+      await loadProducts();
+      selectedIds
+        ..clear()
+        ..addAll(keep);
+    } finally {
+      isMarking.value = false;
+    }
+  }
+
   // สร้าง PDF แผ่นบาร์โค้ด แล้วเปิดหน้าตัวอย่าง (พิมพ์ / บันทึก / แชร์ ได้จากหน้านั้น)
   Future<void> exportPdf() async {
     final chosen = products.where((l) => selectedIds.contains(l.key)).toList();
@@ -213,6 +313,8 @@ class BarcodeLabelsController extends GetxController {
         name: 'barcode-labels',
         onLayout: (_) async => bytes,
       );
+      // กดสร้างหรือดูตัวอย่างไม่ได้แปลว่าพิมพ์จริง จึงถามก่อนค่อยทำเครื่องหมาย
+      await _askMarkPrinted(chosen);
     } catch (e) {
       debugPrint('Export barcode PDF error: $e');
       if (Get.isDialogOpen ?? false) Get.back();

@@ -67,11 +67,48 @@ class _HardwareBarcodeListenerState extends State<HardwareBarcodeListener> {
       return false;
     }
 
-    final ch = event.character;
-    if (ch != null && ch.length == 1 && ch.trim().isNotEmpty) {
-      _buffer.write(ch);
-    }
+    final ch = _charFor(event);
+    if (ch != null) _buffer.write(ch);
     return false;
+  }
+
+  // เครื่องยิงคือคีย์บอร์ด ถ้าตั้งเลย์เอาต์เป็นไทย event.character จะเป็นตัวอักษร/เลขไทย
+  // (เช่น ๑ ๒ ๓) ทำให้อ่านบาร์โค้ดไม่ติด จึงดูจากปุ่มจริง (physicalKey) ก่อน ซึ่งไม่ขึ้นกับภาษา
+  static final Map<PhysicalKeyboardKey, String> _digitKeys = {
+    PhysicalKeyboardKey.digit0: '0',
+    PhysicalKeyboardKey.digit1: '1',
+    PhysicalKeyboardKey.digit2: '2',
+    PhysicalKeyboardKey.digit3: '3',
+    PhysicalKeyboardKey.digit4: '4',
+    PhysicalKeyboardKey.digit5: '5',
+    PhysicalKeyboardKey.digit6: '6',
+    PhysicalKeyboardKey.digit7: '7',
+    PhysicalKeyboardKey.digit8: '8',
+    PhysicalKeyboardKey.digit9: '9',
+    PhysicalKeyboardKey.numpad0: '0',
+    PhysicalKeyboardKey.numpad1: '1',
+    PhysicalKeyboardKey.numpad2: '2',
+    PhysicalKeyboardKey.numpad3: '3',
+    PhysicalKeyboardKey.numpad4: '4',
+    PhysicalKeyboardKey.numpad5: '5',
+    PhysicalKeyboardKey.numpad6: '6',
+    PhysicalKeyboardKey.numpad7: '7',
+    PhysicalKeyboardKey.numpad8: '8',
+    PhysicalKeyboardKey.numpad9: '9',
+  };
+
+  static const String _thaiDigits = '๐๑๒๓๔๕๖๗๘๙';
+
+  String? _charFor(KeyEvent event) {
+    final digit = _digitKeys[event.physicalKey];
+    if (digit != null) return digit;
+
+    final ch = event.character;
+    if (ch == null || ch.length != 1) return null;
+    final thai = _thaiDigits.indexOf(ch);
+    if (thai != -1) return '$thai';
+    // รับเฉพาะตัวอักษร/ตัวเลขภาษาอังกฤษ (บาร์โค้ดแบบ Code128 ที่มีตัวอักษร) ทิ้งตัวอักษรไทยที่หลุดมา
+    return RegExp(r'^[A-Za-z0-9]$').hasMatch(ch) ? ch : null;
   }
 
   @override

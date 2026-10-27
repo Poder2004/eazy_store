@@ -13,8 +13,8 @@ class DebtLedgerController extends GetxController {
   var selectedIndex = 3.obs;
   final searchController = TextEditingController();
 
-  var originalDebtors = <DebtorResponse>[].obs; 
-  var allDebtors = <DebtorResponse>[].obs; 
+  var originalDebtors = <DebtorResponse>[].obs;
+  var allDebtors = <DebtorResponse>[].obs;
   var searchResults = <DebtorResponse>[].obs;
 
   var isSearchEmpty = true.obs;
@@ -29,8 +29,8 @@ class DebtLedgerController extends GetxController {
   var itemsPerPage = 10.obs;
   var totalItems = 0.obs;
 
-   var currentIndex = 0.obs;
-  
+  var currentIndex = 0.obs;
+
   Timer? _debounce;
 
   // ป้องกัน race condition แบบเดียวกับ CheckStockController: ถ้ากดเปลี่ยนหน้า
@@ -98,8 +98,8 @@ class DebtLedgerController extends GetxController {
 
     if (result == true) {
       print("Payment Success! Refreshing list...");
-      searchController.clear(); 
-      fetchAllDebtors(); 
+      searchController.clear();
+      fetchAllDebtors();
     }
   }
 
@@ -119,7 +119,7 @@ class DebtLedgerController extends GetxController {
   // --- ฟังก์ชันค้นหา (Search) ---
   void onSearchChanged(String keyword) {
     isSearchEmpty.value = keyword.isEmpty;
-    
+
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       currentPage.value = 1; // เริ่มค้นหาจากหน้าแรกเสมอ
@@ -128,15 +128,15 @@ class DebtLedgerController extends GetxController {
   }
 
   void selectFromDropdown(DebtorResponse debtor) {
-    searchController.text = debtor.name; 
-    allDebtors.assignAll([debtor]); 
-    showDropdown.value = false; 
+    searchController.text = debtor.name;
+    allDebtors.assignAll([debtor]);
+    showDropdown.value = false;
     FocusManager.instance.primaryFocus?.unfocus(); // หุบคีย์บอร์ด
   }
 
   void clearSearch() {
     searchController.clear();
-    onSearchChanged(""); 
+    onSearchChanged("");
     isSearchEmpty.value = true;
   }
 

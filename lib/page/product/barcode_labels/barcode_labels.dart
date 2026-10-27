@@ -5,6 +5,9 @@ import 'package:get/get.dart';
 const Color _kPrimaryColor = Color(0xFF6B8E23);
 const Color _kBackgroundColor = Color(0xFFF7F7F7);
 
+String _fmtDate(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year + 543}';
+
 class BarcodeLabelsScreen extends StatelessWidget {
   const BarcodeLabelsScreen({super.key});
 
@@ -37,39 +40,38 @@ class BarcodeLabelsScreen extends StatelessWidget {
             children: [
               generateBar,
               Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'ยังไม่มีบาร์โค้ดที่ร้านสร้างให้\n\nตอนเพิ่มหรือแก้ไขสินค้า กดปุ่มสร้างบาร์โค้ด (ไอคอนประกาย) ข้างช่องบาร์โค้ด เพื่อสร้างให้อัตโนมัติ',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[600], height: 1.5),
-                    ),
-                  ),
+                child: _buildEmpty(
+                  'ยังไม่มีบาร์โค้ดที่ร้านสร้างให้\n\nตอนเพิ่มหรือแก้ไขสินค้า กดปุ่มสร้างบาร์โค้ด (ไอคอนประกาย) ข้างช่องบาร์โค้ด เพื่อสร้างให้อัตโนมัติ',
                 ),
               ),
             ],
           );
         }
+
+        final shown = controller.visibleLabels;
         return Column(
           children: [
             generateBar,
+            _buildFilterTabs(controller),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
                   Text(
-                    'เลือก ${controller.selectedIds.length}/${controller.products.length} รายการ',
+                    'เลือก ${controller.selectedIds.length} รายการ',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
-                  TextButton(
-                    onPressed: controller.toggleAll,
-                    child: Text(
-                      controller.allSelected ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด',
-                      style: const TextStyle(color: _kPrimaryColor),
+                  if (shown.isNotEmpty)
+                    TextButton(
+                      onPressed: controller.toggleAll,
+                      child: Text(
+                        controller.allSelected
+                            ? 'ยกเลิกทั้งหมด'
+                            : 'เลือกทั้งหมด',
+                        style: const TextStyle(color: _kPrimaryColor),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -77,34 +79,27 @@ class BarcodeLabelsScreen extends StatelessWidget {
               child: RefreshIndicator(
                 color: _kPrimaryColor,
                 onRefresh: controller.loadProducts,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: controller.products.length,
-                  itemBuilder: (context, i) {
-                    final p = controller.products[i];
-                    return Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                child: shown.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: 240,
+                            child: _buildEmpty(
+                              controller.filter.value == LabelFilter.unprinted
+                                  ? 'ไม่มีรายการใหม่ที่ต้องพิมพ์\nพิมพ์ครบทุกรายการแล้ว'
+                                  : 'ยังไม่มีรายการที่พิมพ์แล้ว',
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: shown.length,
+                        itemBuilder: (context, i) =>
+                            _buildLabelTile(controller, shown[i]),
                       ),
-                      child: CheckboxListTile(
-                        activeColor: _kPrimaryColor,
-                        value: controller.selectedIds.contains(p.key),
-                        onChanged: (_) => controller.toggle(p),
-                        title: Text(
-                          p.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          p.barcode,
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ),
-                    );
-                  },
-                ),
               ),
             ),
             SafeArea(
@@ -115,11 +110,15 @@ class BarcodeLabelsScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: controller.exportPdf,
+                    onPressed: controller.selectedIds.isEmpty
+                        ? null
+                        : controller.exportPdf,
                     icon: const Icon(Icons.picture_as_pdf_rounded),
-                    label: const Text(
-                      'สร้าง PDF เพื่อพิมพ์',
-                      style: TextStyle(
+                    label: Text(
+                      controller.selectedIds.isEmpty
+                          ? 'สร้าง PDF เพื่อพิมพ์'
+                          : 'สร้าง PDF เพื่อพิมพ์ (${controller.selectedIds.length})',
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -138,6 +137,123 @@ class BarcodeLabelsScreen extends StatelessWidget {
           ],
         );
       }),
+    );
+  }
+
+  Widget _buildEmpty(String text) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Text(
+          text,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey[600], height: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterTabs(BarcodeLabelsController controller) {
+    Widget chip(LabelFilter value, String label, int count) {
+      final selected = controller.filter.value == value;
+      return ChoiceChip(
+        label: Text('$label ($count)'),
+        selected: selected,
+        showCheckmark: false,
+        selectedColor: _kPrimaryColor,
+        labelStyle: TextStyle(
+          color: selected ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.w600,
+        ),
+        onSelected: (_) => controller.filter.value = value,
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          chip(LabelFilter.unprinted, 'ยังไม่พิมพ์', controller.unprintedCount),
+          chip(LabelFilter.printed, 'พิมพ์แล้ว', controller.printedCount),
+          chip(LabelFilter.all, 'ทั้งหมด', controller.products.length),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabelTile(BarcodeLabelsController controller, BarcodeLabel l) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: CheckboxListTile(
+        activeColor: _kPrimaryColor,
+        value: controller.selectedIds.contains(l.key),
+        onChanged: (_) => controller.toggle(l),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                l.name,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            _statusBadge(l),
+          ],
+        ),
+        subtitle: Row(
+          children: [
+            Expanded(
+              child: Text(
+                l.isPrinted
+                    ? '${l.barcode} · พิมพ์เมื่อ ${_fmtDate(l.printedAt!)}'
+                    : l.barcode,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12.5),
+              ),
+            ),
+            if (l.isPrinted)
+              InkWell(
+                onTap: controller.isMarking.value
+                    ? null
+                    : () => controller.markAsNew(l),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'ทำเป็นใหม่',
+                    style: TextStyle(
+                      color: _kPrimaryColor,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statusBadge(BarcodeLabel l) {
+    final printed = l.isPrinted;
+    final color = printed ? Colors.grey.shade600 : Colors.orange.shade700;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        printed ? 'พิมพ์แล้ว' : 'ใหม่',
+        style: TextStyle(
+          color: color,
+          fontSize: 11.5,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
