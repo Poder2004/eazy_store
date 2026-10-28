@@ -79,7 +79,9 @@ class CheckStockController extends GetxController {
           // ใช้คำค้นหาปัจจุบันแทนที่จะ hardcode ว่าง กันคำค้นหาหายไปเงียบๆ
           // เวลาเปลี่ยนหน้า/ตัวกรอง/เรียงลำดับระหว่างที่ยังมีคำค้นหาอยู่
           search: searchCtrl.text.trim(),
-          categoryId: selectedCategoryId.value != 0 ? selectedCategoryId.value : null,
+          categoryId: selectedCategoryId.value != 0
+              ? selectedCategoryId.value
+              : null,
           sort: selectedSortOption.value,
         );
 
@@ -122,7 +124,9 @@ class CheckStockController extends GetxController {
       var result = await ApiProduct.getProductsByShop(
         shopId,
         search: query,
-        categoryId: selectedCategoryId.value != 0 ? selectedCategoryId.value : null,
+        categoryId: selectedCategoryId.value != 0
+            ? selectedCategoryId.value
+            : null,
         sort: selectedSortOption.value,
       );
 
@@ -161,7 +165,9 @@ class CheckStockController extends GetxController {
       var result = await ApiProduct.getCategories(shopId);
       // Remove duplicates by categoryId
       final seen = <int>{};
-      final uniqueList = result.where((cat) => seen.add(cat.categoryId)).toList();
+      final uniqueList = result
+          .where((cat) => seen.add(cat.categoryId))
+          .toList();
       uniqueList.sort(
         (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
       );
@@ -206,7 +212,13 @@ class CheckStockController extends GetxController {
         );
         break;
       case "stock_asc":
-        result.sort((a, b) => a.stock.compareTo(b.stock));
+        result.sort((a, b) {
+          final statusComparison = _stockStatusOrder(
+            a,
+          ).compareTo(_stockStatusOrder(b));
+          if (statusComparison != 0) return statusComparison;
+          return a.stock.compareTo(b.stock);
+        });
         break;
       case "stock_desc":
         result.sort((a, b) => b.stock.compareTo(a.stock));
@@ -219,6 +231,12 @@ class CheckStockController extends GetxController {
         break;
     }
     filteredProducts.assignAll(result);
+  }
+
+  int _stockStatusOrder(ProductResponse product) {
+    if (product.stock <= 0) return 0;
+    if (product.stock <= product.lowStockThreshold) return 1;
+    return 2;
   }
 
   void applyFilter({required int categoryId, required String sortOption}) {

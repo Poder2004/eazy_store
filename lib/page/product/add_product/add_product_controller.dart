@@ -48,7 +48,7 @@ class AddProductController extends GetxController {
         'ขีด',
         'ด้าม',
         'แท่ง',
-        'หน่อย',
+        'ถุง',
         'กิโลกรัม',
       ]
         ..sort((a, b) => thaiSortKey(a).compareTo(thaiSortKey(b)));

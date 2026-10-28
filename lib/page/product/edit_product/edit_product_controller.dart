@@ -21,10 +21,8 @@ class EditProductController extends GetxController {
   late TextEditingController stockCtrl;
   late TextEditingController unitCtrl;
   late TextEditingController lowStockCtrl;
-
-  // เก็บราคาเดิมไว้ใช้ส่งกลับ API (ราคาแก้ไขได้ผ่านหน้า Add Stock)
-  double _currentSellPrice = 0.0;
-  double _currentCostPrice = 0.0;
+  late TextEditingController sellPriceCtrl;
+  late TextEditingController costPriceCtrl;
 
   // แคชผลเช็คบาร์โค้ดซ้ำล่าสุด กันยิงเช็ค/เตือนซ้ำถ้าค่ายังไม่เปลี่ยน
   String? _lastCheckedBarcode;
@@ -55,8 +53,12 @@ class EditProductController extends GetxController {
       // Setup ค่าเริ่มต้น
       nameCtrl = TextEditingController(text: originalProduct.name);
       barcodeCtrl = TextEditingController(text: originalProduct.barcode ?? "");
-      _currentSellPrice = originalProduct.sellPrice;
-      _currentCostPrice = originalProduct.costPrice;
+      sellPriceCtrl = TextEditingController(
+        text: originalProduct.sellPrice.toStringAsFixed(2),
+      );
+      costPriceCtrl = TextEditingController(
+        text: originalProduct.costPrice.toStringAsFixed(2),
+      );
       stockCtrl = TextEditingController(text: originalProduct.stock.toString());
       unitCtrl = TextEditingController(text: originalProduct.unit);
       lowStockCtrl = TextEditingController(
@@ -65,12 +67,16 @@ class EditProductController extends GetxController {
       units.assignAll(originalProduct.activeUnits);
 
       // กำหนดค่าหมวดหมู่เริ่มต้นจากข้อมูลสินค้าที่มีอยู่ เพื่อป้องกันไม่ให้แสดง "ไม่ระบุ" หรือ "เลือกหมวดหมู่" ระหว่างโหลดข้อมูล
-      selectedCategory.value = originalProduct.category ?? (originalProduct.categoryId != 0 ? CategoryModel(
-        categoryId: originalProduct.categoryId,
-        shopId: originalProduct.shopId,
-        name: originalProduct.categoryName ?? "ไม่ระบุ",
-        status: true,
-      ) : null);
+      selectedCategory.value =
+          originalProduct.category ??
+          (originalProduct.categoryId != 0
+              ? CategoryModel(
+                  categoryId: originalProduct.categoryId,
+                  shopId: originalProduct.shopId,
+                  name: originalProduct.categoryName ?? "ไม่ระบุ",
+                  status: true,
+                )
+              : null);
 
       // โหลดหมวดหมู่
       fetchCategories();
@@ -89,6 +95,8 @@ class EditProductController extends GetxController {
       );
       nameCtrl = TextEditingController();
       barcodeCtrl = TextEditingController();
+      sellPriceCtrl = TextEditingController(text: '0.00');
+      costPriceCtrl = TextEditingController(text: '0.00');
       stockCtrl = TextEditingController(text: '0');
       unitCtrl = TextEditingController();
       lowStockCtrl = TextEditingController(text: '10');
@@ -105,6 +113,8 @@ class EditProductController extends GetxController {
   void onClose() {
     nameCtrl.dispose();
     barcodeCtrl.dispose();
+    sellPriceCtrl.dispose();
+    costPriceCtrl.dispose();
     stockCtrl.dispose();
     unitCtrl.dispose();
     lowStockCtrl.dispose();
@@ -118,12 +128,14 @@ class EditProductController extends GetxController {
       final prefs = await SharedPreferences.getInstance();
       final shopId = prefs.getInt('shopId') ?? originalProduct.shopId;
       var list = await ApiProduct.getCategories(shopId);
-      
+
       // Remove duplicates by categoryId
       final seen = <int>{};
       final uniqueList = list.where((cat) => seen.add(cat.categoryId)).toList();
-      
-      uniqueList.sort((a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)));
+
+      uniqueList.sort(
+        (a, b) => thaiSortKey(a.name).compareTo(thaiSortKey(b.name)),
+      );
       categories.assignAll(uniqueList);
 
       final preferredCategoryId =
@@ -132,12 +144,14 @@ class EditProductController extends GetxController {
       if (preferredCategoryId != 0) {
         selectedCategory.value = categories.firstWhere(
           (cat) => cat.categoryId == preferredCategoryId,
-          orElse: () => selectedCategory.value ?? CategoryModel(
-            categoryId: preferredCategoryId,
-            shopId: shopId,
-            name: originalProduct.categoryName ?? "ไม่ระบุ",
-            status: true,
-          ),
+          orElse: () =>
+              selectedCategory.value ??
+              CategoryModel(
+                categoryId: preferredCategoryId,
+                shopId: shopId,
+                name: originalProduct.categoryName ?? "ไม่ระบุ",
+                status: true,
+              ),
         );
       }
     } catch (e) {
@@ -380,8 +394,8 @@ class EditProductController extends GetxController {
         "barcode": barcodeCtrl.text.trim().isEmpty
             ? null
             : barcodeCtrl.text.trim(),
-        "sell_price": _currentSellPrice,
-        "cost_price": _currentCostPrice,
+        "sell_price": double.parse(sellPriceCtrl.text.trim()),
+        "cost_price": double.parse(costPriceCtrl.text.trim()),
         "unit": unitCtrl.text.trim(),
         "category_id": selectedCategory.value!.categoryId,
       };
@@ -441,21 +455,30 @@ class EditProductController extends GetxController {
     required double sellPrice,
     required double costPrice,
   }) async {
-    final result = await ApiProduct.createProductUnit(originalProduct.productId!, {
-      "unit_name": unitName,
-      "conversion_qty": conversionQty,
-      "barcode": barcode,
-      "sell_price": sellPrice,
-      "cost_price": costPrice,
-    });
+    final result =
+        await ApiProduct.createProductUnit(originalProduct.productId!, {
+          "unit_name": unitName,
+          "conversion_qty": conversionQty,
+          "barcode": barcode,
+          "sell_price": sellPrice,
+          "cost_price": costPrice,
+        });
     if (result['success'] == true) {
       units.add(result['data'] as ProductUnitResponse);
-      Get.snackbar("สำเร็จ", "เพิ่มหน่วยขาย \"$unitName\" แล้ว",
-          backgroundColor: Colors.green, colorText: Colors.white);
+      Get.snackbar(
+        "สำเร็จ",
+        "เพิ่มหน่วยขาย \"$unitName\" แล้ว",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
       return true;
     }
-    Get.snackbar("ผิดพลาด", result['error'] ?? "เพิ่มหน่วยขายไม่สำเร็จ",
-        backgroundColor: Colors.red, colorText: Colors.white);
+    Get.snackbar(
+      "ผิดพลาด",
+      result['error'] ?? "เพิ่มหน่วยขายไม่สำเร็จ",
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
     return false;
   }
 
@@ -476,14 +499,24 @@ class EditProductController extends GetxController {
     });
     if (result['success'] == true) {
       final updated = result['data'] as ProductUnitResponse;
-      final idx = units.indexWhere((u) => u.productUnitId == unit.productUnitId);
+      final idx = units.indexWhere(
+        (u) => u.productUnitId == unit.productUnitId,
+      );
       if (idx != -1) units[idx] = updated;
-      Get.snackbar("สำเร็จ", "แก้ไขหน่วยขาย \"$unitName\" แล้ว",
-          backgroundColor: Colors.green, colorText: Colors.white);
+      Get.snackbar(
+        "สำเร็จ",
+        "แก้ไขหน่วยขาย \"$unitName\" แล้ว",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
       return true;
     }
-    Get.snackbar("ผิดพลาด", result['error'] ?? "แก้ไขหน่วยขายไม่สำเร็จ",
-        backgroundColor: Colors.red, colorText: Colors.white);
+    Get.snackbar(
+      "ผิดพลาด",
+      result['error'] ?? "แก้ไขหน่วยขายไม่สำเร็จ",
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
     return false;
   }
 
@@ -500,12 +533,20 @@ class EditProductController extends GetxController {
           duration: const Duration(seconds: 4),
         );
       } else {
-        Get.snackbar("ลบแล้ว", "ลบหน่วยขาย \"${unit.unitName}\" ออกจากระบบสำเร็จ",
-            backgroundColor: Colors.green, colorText: Colors.white);
+        Get.snackbar(
+          "ลบแล้ว",
+          "ลบหน่วยขาย \"${unit.unitName}\" ออกจากระบบสำเร็จ",
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
       }
     } else {
-      Get.snackbar("ผิดพลาด", result['error'] ?? "ลบหน่วยขายไม่สำเร็จ",
-          backgroundColor: Colors.red, colorText: Colors.white);
+      Get.snackbar(
+        "ผิดพลาด",
+        result['error'] ?? "ลบหน่วยขายไม่สำเร็จ",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -519,7 +560,10 @@ class EditProductController extends GetxController {
         throw Exception("ไม่พบข้อมูลร้านค้า กรุณาเลือกร้านค้าก่อน");
       }
 
-      final result = await ApiProduct.createCategory(shopId: shopId, name: name);
+      final result = await ApiProduct.createCategory(
+        shopId: shopId,
+        name: name,
+      );
       if (result['success'] != true) {
         throw Exception(result['error'] ?? "เพิ่มหมวดหมู่ไม่สำเร็จ");
       }
@@ -542,7 +586,10 @@ class EditProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        friendlyError(e, fallback: "เพิ่มหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
+        friendlyError(
+          e,
+          fallback: "เพิ่มหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        ),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -591,7 +638,10 @@ class EditProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        friendlyError(e, fallback: "แก้ไขหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
+        friendlyError(
+          e,
+          fallback: "แก้ไขหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        ),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -643,7 +693,10 @@ class EditProductController extends GetxController {
     } catch (e) {
       Get.snackbar(
         "ผิดพลาด",
-        friendlyError(e, fallback: "ปิดใช้งานหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"),
+        friendlyError(
+          e,
+          fallback: "ปิดใช้งานหมวดหมู่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        ),
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );

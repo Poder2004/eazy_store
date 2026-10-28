@@ -197,9 +197,11 @@ class CheckStockScreen extends StatelessWidget {
   }
 
   Widget _buildProductCard(ProductResponse product, Color warningColor) {
-    final bool isOutOfStock = product.stock == 0;
-    final bool isLowStock = product.stock <= product.lowStockThreshold;
-    final Color stockColor = isLowStock
+    final bool isOutOfStock = product.stock <= 0;
+    final bool isLowStock =
+        product.stock > 0 && product.stock <= product.lowStockThreshold;
+    final bool needsAttention = isOutOfStock || isLowStock;
+    final Color stockColor = needsAttention
         ? const Color(0xFFE53935)
         : const Color(0xFF2E7D32);
     return Card(
@@ -236,7 +238,7 @@ class CheckStockScreen extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (isLowStock) ...[
+                  if (needsAttention) ...[
                     const SizedBox(height: 3),
                     Row(
                       mainAxisSize: MainAxisSize.min,

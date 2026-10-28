@@ -1,6 +1,5 @@
 import 'package:dotted_border/dotted_border.dart';
 import 'package:eazy_store/model/request/category_model.dart';
-import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/sale_producct/scanBarcode/scan_barcode.dart';
 import 'package:eazy_store/utils/internal_barcode.dart';
 import 'package:eazy_store/widgets/category_bottom_sheet.dart';
@@ -300,13 +299,6 @@ class AddProductScreen extends StatelessWidget {
             const SizedBox(height: 30),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: -1, // ใส่ -1 จะไม่มีปุ่มไหนถูกเลือก (ไม่มีสีแดงโชว์)
-        onTap: (index) {
-          // ใส่ Logic การเปลี่ยนหน้าตามปกติของคุณ
-          print("Tab tapped: $index");
-        },
       ),
     );
   }

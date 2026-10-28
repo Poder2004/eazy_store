@@ -314,6 +314,50 @@ class _EditProductViewState extends State<_EditProductView> {
               ),
               const SizedBox(height: 25),
 
+              // 💰 ราคา
+              _buildSectionTitle("ราคา (บาท)"),
+              _buildCardContainer(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          label: "ราคาต้นทุน",
+                          controller: controller.costPriceCtrl,
+                          icon: Icons.monetization_on_outlined,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          allowDecimal: true,
+                          isPrice: true,
+                          validator: _validatePrice,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey.shade300,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildTextField(
+                          label: "ราคาขาย",
+                          controller: controller.sellPriceCtrl,
+                          icon: Icons.sell_outlined,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          allowDecimal: true,
+                          isPrice: true,
+                          validator: _validatePrice,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 25),
+
               // 📦 คลังสินค้า
               _buildSectionTitle("คลังสินค้า"),
               Container(
@@ -1392,6 +1436,7 @@ class _EditProductViewState extends State<_EditProductView> {
     IconData? icon,
     bool readOnly = false,
     bool isPrice = false,
+    bool allowDecimal = false,
     Color? textColor,
     Widget? suffix,
     TextInputType? keyboardType,
@@ -1410,6 +1455,8 @@ class _EditProductViewState extends State<_EditProductView> {
       onFieldSubmitted: onEditingDone,
       inputFormatters: keyboardType == TextInputType.number
           ? [FilteringTextInputFormatter.digitsOnly]
+          : allowDecimal
+          ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))]
           : null,
       validator: validator,
       style: TextStyle(
@@ -1436,5 +1483,13 @@ class _EditProductViewState extends State<_EditProductView> {
         ),
       ),
     );
+  }
+
+  String? _validatePrice(String? value) {
+    final price = double.tryParse(value?.trim() ?? '');
+    if (price == null || !price.isFinite || price < 0) {
+      return "กรุณากรอกราคาที่ถูกต้อง";
+    }
+    return null;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:eazy_store/page/checkToken/splash_screen.dart';
 import 'package:eazy_store/page/sale_producct/sale/park_order_controller.dart';
+import 'package:eazy_store/widgets/edge_swipe_back.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -33,6 +34,8 @@ class MyApp extends StatelessWidget {
 
       debugShowCheckedModeBanner: false,
       title: 'Eazy Store',
+      builder: (context, child) =>
+          EdgeSwipeBack(child: child ?? const SizedBox.shrink()),
 
       theme: ThemeData(
         useMaterial3: true,

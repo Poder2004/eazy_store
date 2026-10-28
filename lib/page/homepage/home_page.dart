@@ -3,6 +3,7 @@ import 'package:eazy_store/page/menu_bar/bottom_navbar.dart';
 import 'package:eazy_store/page/product/add_product/add_product.dart';
 import 'package:eazy_store/page/product/add_stock/add_stock.dart';
 import 'package:eazy_store/page/product/checkStock/check_stock.dart';
+import 'package:eazy_store/page/product/product_summary/product_summary_page.dart';
 import 'package:eazy_store/page/product/barcode_labels/barcode_labels.dart';
 import 'package:eazy_store/page/product/check_price/check_price.dart';
 import 'package:eazy_store/page/my_blank/sales_account.dart'
@@ -93,6 +94,13 @@ class HomePage extends StatelessWidget {
                           title: "เช็คสต็อกสินค้า",
                           subtitle: "ตรวจสอบยอดคงเหลือในคลัง",
                           onTap: () => Get.to(() => const CheckStockScreen()),
+                        ),
+                        _buildMenuTile(
+                          icon: Icons.analytics_outlined,
+                          iconColor: Colors.deepPurple.shade500,
+                          title: "สรุปสินค้า",
+                          subtitle: "ดูจำนวนสินค้าและสถานะสต็อก",
+                          onTap: () => Get.to(() => const ProductSummaryPage()),
                         ),
                         _buildMenuTile(
                           icon: Icons.receipt_long,
